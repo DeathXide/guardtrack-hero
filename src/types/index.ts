@@ -1,4 +1,3 @@
-
 export type UserRole = 'admin' | 'supervisor' | 'guard';
 
 export interface User {
@@ -21,16 +20,15 @@ export interface Site {
 
 export interface PaymentRecord {
   id: string;
-  guardId: string; // Added guardId property
+  guardId: string;
   date: string;
   amount: number;
   note?: string;
   type: 'bonus' | 'deduction';
-  month?: string; // Added month field for tracking monthly payments
+  month?: string;
   created_at?: string;
 }
 
-// New interface for monthly earnings tracking
 export interface MonthlyEarning {
   month: string;
   totalShifts: number;
@@ -49,10 +47,10 @@ export interface Guard {
   avatar?: string;
   status: 'active' | 'inactive';
   type?: 'permanent' | 'temporary';
-  payRate?: number; // Monthly pay rate
-  shiftRate?: number; // Per shift rate calculated from monthly rate
+  payRate?: number;
+  shiftRate?: number;
   paymentHistory?: PaymentRecord[];
-  monthlyEarnings?: { [key: string]: MonthlyEarning }; // Track earnings by month
+  monthlyEarnings?: { [key: string]: MonthlyEarning };
   created_at?: string;
 }
 
@@ -61,9 +59,9 @@ export interface Shift {
   siteId: string;
   type: 'day' | 'night';
   guardId: string;
-  assignedGuardId?: string; // For replacement guards
-  locked?: boolean; // To lock assignments
-  date?: string; // Date for the shift
+  assignedGuardId?: string;
+  locked?: boolean;
+  date?: string;
   created_at?: string;
 }
 
@@ -74,7 +72,7 @@ export interface AttendanceRecord {
   guardId: string;
   status: 'present' | 'absent' | 'replaced' | 'reassigned';
   replacementGuardId?: string;
-  reassignedSiteId?: string; // For tracking site reassignments
+  reassignedSiteId?: string;
   approvedBy?: string;
   approvedAt?: string;
   notes?: string;
@@ -113,7 +111,6 @@ export interface ScheduleAssignment {
   locked: boolean;
 }
 
-// Database types
 export type SiteDB = {
   id: string;
   name: string;
