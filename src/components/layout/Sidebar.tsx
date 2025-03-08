@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -49,12 +48,6 @@ const navItems: NavItem[] = [
     href: '/guards',
     icon: Users,
     roles: ['admin', 'supervisor'],
-  },
-  {
-    title: 'Schedule',
-    href: '/schedule',
-    icon: CalendarCheck,
-    roles: ['admin', 'supervisor', 'guard'],
   },
   {
     title: 'Reports',

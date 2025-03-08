@@ -26,6 +26,8 @@ import {
   X,
   ArrowRight,
   Building,
+  UserPlus,
+  UserCheck,
 } from 'lucide-react';
 import { 
   attendanceRecords, 
@@ -39,6 +41,7 @@ import {
 } from '@/lib/data';
 import { AttendanceRecord, Guard, Site, Shift } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Function to format date for display
 const formatDate = (dateString: string) => {
@@ -60,6 +63,39 @@ const getInitials = (name: string) => {
     .toUpperCase();
 };
 
+// Function to get month name
+const getMonthName = (date: Date): string => {
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+};
+
+// Function to calculate guard's daily rate
+const calculateDailyRate = (guard: Guard | undefined): number => {
+  if (!guard || !guard.payRate) return 0;
+  
+  // Get days in current month
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  
+  // Calculate daily rate based on monthly pay
+  return guard.payRate / daysInMonth;
+};
+
+// Function to calculate guard's earnings for current month
+const calculateMonthlyEarnings = (guard: Guard | undefined, currentDate: Date): number => {
+  if (!guard) return 0;
+  
+  const month = getMonthName(currentDate);
+  const monthRecords = attendanceRecords.filter(record => {
+    const recordDate = new Date(record.date);
+    return getMonthName(recordDate) === month && 
+           record.guardId === guard.id && 
+           (record.status === 'present' || record.status === 'reassigned');
+  });
+  
+  const dailyRate = calculateDailyRate(guard);
+  return monthRecords.length * dailyRate;
+};
+
 const Attendance = () => {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -68,11 +104,14 @@ const Attendance = () => {
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [replacementDialogOpen, setReplacementDialogOpen] = useState(false);
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
+  const [guardAllocationDialogOpen, setGuardAllocationDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
   const [selectedGuard, setSelectedGuard] = useState<Guard | null>(null);
+  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [attendanceStatus, setAttendanceStatus] = useState<'present' | 'absent' | 'reassigned'>('present');
   const [replacementGuard, setReplacementGuard] = useState<string | undefined>();
   const [reassignedSite, setReassignedSite] = useState<string | undefined>();
+  const [allocatedGuard, setAllocatedGuard] = useState<string | undefined>();
   const [notes, setNotes] = useState('');
   const { toast } = useToast();
   
@@ -127,7 +166,8 @@ const Attendance = () => {
       reassignedSite: record.reassignedSiteId
         ? getSiteById(record.reassignedSiteId)
         : undefined,
-      isPresentElsewhere
+      isPresentElsewhere,
+      dailyRate: calculateDailyRate(guard)
     };
   });
   
@@ -178,6 +218,13 @@ const Attendance = () => {
     setReassignedSite(undefined);
     setNotes('');
     setReassignDialogOpen(true);
+  };
+
+  // Handle guard allocation for shift
+  const handleAllocateGuard = (shift: Shift) => {
+    setSelectedShift(shift);
+    setAllocatedGuard(undefined);
+    setGuardAllocationDialogOpen(true);
   };
   
   // Save attendance
@@ -242,12 +289,38 @@ const Attendance = () => {
     
     setReassignDialogOpen(false);
   };
+
+  // Save guard allocation
+  const saveGuardAllocation = () => {
+    if (!selectedShift || !allocatedGuard) return;
+    
+    const guard = getGuardById(allocatedGuard);
+    
+    // Check if guard is already marked present elsewhere
+    if (isGuardMarkedPresentElsewhere(allocatedGuard, dateString, selectedShiftType, selectedSiteDetails?.id)) {
+      toast({
+        title: "Guard already assigned",
+        description: `${guard?.name} is already assigned to another site for this shift`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // In a real app, this would call an API to save the guard allocation
+    
+    toast({
+      title: 'Guard allocated',
+      description: `${guard?.name} has been allocated to this shift`,
+    });
+    
+    setGuardAllocationDialogOpen(false);
+  };
   
   // Get available guards for replacement (exclude guards already present elsewhere)
-  const getAvailableReplacementGuards = () => {
+  const getAvailableGuards = () => {
     return guards.filter(guard => {
-      // Exclude the current guard and inactive guards
-      if (guard.id === selectedGuard?.id || guard.status === 'inactive') {
+      // Exclude inactive guards
+      if (guard.status === 'inactive') {
         return false;
       }
       
@@ -270,10 +343,14 @@ const Attendance = () => {
             Mark and manage daily attendance for all sites
           </p>
         </div>
+        <Button onClick={() => handleAllocateGuard(siteShifts[0])} disabled={!selectedSite || siteShifts.length === 0}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Allocate Guard
+        </Button>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <Card className="lg:row-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>Select Date</CardTitle>
             <CardDescription>
@@ -338,7 +415,7 @@ const Attendance = () => {
           </CardContent>
         </Card>
         
-        <Card className="lg:col-span-3">
+        <Card className="lg:col-span-8">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle>Attendance Sheet</CardTitle>
@@ -372,127 +449,139 @@ const Attendance = () => {
                 </p>
               </div>
             ) : (
-              <div className="rounded-md border overflow-x-auto">
-                <div className="min-w-[800px]">
-                  <div className="grid grid-cols-12 bg-muted py-3 px-4 text-sm font-medium">
-                    <div className="col-span-1">#</div>
-                    <div className="col-span-4">Guard</div>
-                    <div className="col-span-3">Status</div>
-                    <div className="col-span-4">Actions</div>
-                  </div>
-                  
-                  <div className="divide-y">
-                    {shiftsWithAttendance.map((item, index) => (
-                      <div key={item.shift.id} className="grid grid-cols-12 py-3 px-4 items-center">
-                        <div className="col-span-1 text-muted-foreground">{index + 1}</div>
-                        
-                        <div className="col-span-4">
-                          <div className="flex items-center space-x-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={item.guard?.avatar} alt={item.guard?.name} />
-                              <AvatarFallback>{item.guard ? getInitials(item.guard.name) : 'N/A'}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="flex items-center">
-                                <p className="font-medium text-sm">{item.guard?.name || 'Unassigned'}</p>
-                                {item.isPresentElsewhere && (
-                                  <Badge variant="outline" className="ml-2 text-xs bg-yellow-100 text-yellow-800 border-yellow-300">
-                                    Assigned Elsewhere
-                                  </Badge>
+              <div className="rounded-md border overflow-hidden">
+                <div className="min-w-full overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-muted">
+                        <th className="py-3 px-4 text-left text-sm font-medium">#</th>
+                        <th className="py-3 px-4 text-left text-sm font-medium">Guard</th>
+                        <th className="py-3 px-4 text-left text-sm font-medium">Status</th>
+                        <th className="py-3 px-4 text-left text-sm font-medium">Pay</th>
+                        <th className="py-3 px-4 text-left text-sm font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {shiftsWithAttendance.map((item, index) => (
+                        <tr key={item.shift.id}>
+                          <td className="py-3 px-4 text-muted-foreground">{index + 1}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={item.guard?.avatar} alt={item.guard?.name} />
+                                <AvatarFallback>{item.guard ? getInitials(item.guard.name) : 'N/A'}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="flex items-center flex-wrap">
+                                  <p className="font-medium text-sm">{item.guard?.name || 'Unassigned'}</p>
+                                  {item.isPresentElsewhere && (
+                                    <Badge variant="outline" className="ml-2 text-xs bg-yellow-100 text-yellow-800 border-yellow-300">
+                                      Assigned Elsewhere
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {item.guard?.type || 'Permanent'} • Badge #{item.guard?.badgeNumber || 'N/A'}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            {item.record.status === 'present' ? (
+                              <Badge className="bg-success/10 text-success border-success/20 hover:bg-success/20">
+                                <Check className="h-3.5 w-3.5 mr-1" />
+                                Present
+                              </Badge>
+                            ) : item.record.status === 'absent' ? (
+                              <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20">
+                                <X className="h-3.5 w-3.5 mr-1" />
+                                Absent
+                              </Badge>
+                            ) : item.record.status === 'reassigned' ? (
+                              <div className="space-y-1">
+                                <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20">
+                                  <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                                  Reassigned
+                                </Badge>
+                                {item.reassignedSite && (
+                                  <div className="flex items-center text-xs text-muted-foreground">
+                                    <span className="truncate max-w-[120px]">
+                                      To: {item.reassignedSite.name}
+                                    </span>
+                                  </div>
                                 )}
                               </div>
-                              <p className="text-xs text-muted-foreground">
-                                {item.guard?.type || 'Permanent'} • Badge #{item.guard?.badgeNumber || 'N/A'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="col-span-3">
-                          {item.record.status === 'present' ? (
-                            <Badge className="bg-success/10 text-success border-success/20 hover:bg-success/20">
-                              <Check className="h-3.5 w-3.5 mr-1" />
-                              Present
-                            </Badge>
-                          ) : item.record.status === 'absent' ? (
-                            <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20">
-                              <X className="h-3.5 w-3.5 mr-1" />
-                              Absent
-                            </Badge>
-                          ) : item.record.status === 'reassigned' ? (
-                            <div className="space-y-1">
-                              <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20">
-                                <ArrowRight className="h-3.5 w-3.5 mr-1" />
-                                Reassigned
-                              </Badge>
-                              {item.reassignedSite && (
-                                <div className="flex items-center text-xs text-muted-foreground">
-                                  <span className="truncate max-w-[120px]">
-                                    To: {item.reassignedSite.name}
-                                  </span>
-                                </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20">
+                                  <User className="h-3.5 w-3.5 mr-1" />
+                                  Replaced
+                                </Badge>
+                                {item.replacementGuard && (
+                                  <div className="flex items-center text-xs text-muted-foreground">
+                                    <span className="truncate max-w-[120px]">
+                                      By: {item.replacementGuard.name}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            {item.record.status === 'present' || item.record.status === 'reassigned' ? (
+                              <div className="text-sm font-medium">
+                                ${item.dailyRate.toFixed(2)}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-muted-foreground">-</div>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex flex-wrap gap-2">
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleMarkAttendance(item.shift, item.guard || undefined)}
+                                disabled={item.isPresentElsewhere}
+                                title={item.isPresentElsewhere ? "Guard is already marked present at another site" : ""}
+                              >
+                                <Pencil className="h-3.5 w-3.5 mr-1" />
+                                Mark
+                              </Button>
+                              
+                              {item.record.status === 'absent' && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => handleAssignReplacement(item.record, item.guard || undefined)}
+                                >
+                                  <User className="h-3.5 w-3.5 mr-1" />
+                                  Replace
+                                </Button>
+                              )}
+                              
+                              {item.record.status === 'absent' && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => handleReassignToSite(item.record, item.guard || undefined)}
+                                >
+                                  <Building className="h-3.5 w-3.5 mr-1" />
+                                  Reassign
+                                </Button>
                               )}
                             </div>
-                          ) : (
-                            <div className="space-y-1">
-                              <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20">
-                                <User className="h-3.5 w-3.5 mr-1" />
-                                Replaced
-                              </Badge>
-                              {item.replacementGuard && (
-                                <div className="flex items-center text-xs text-muted-foreground">
-                                  <span className="truncate max-w-[120px]">
-                                    By: {item.replacementGuard.name}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="col-span-4 flex space-x-2">
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleMarkAttendance(item.shift, item.guard || undefined)}
-                            disabled={item.isPresentElsewhere}
-                            title={item.isPresentElsewhere ? "Guard is already marked present at another site" : ""}
-                          >
-                            <Pencil className="h-3.5 w-3.5 mr-1" />
-                            Mark Attendance
-                          </Button>
-                          
-                          {item.record.status === 'absent' && (
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => handleAssignReplacement(item.record, item.guard || undefined)}
-                            >
-                              <User className="h-3.5 w-3.5 mr-1" />
-                              Assign Replacement
-                            </Button>
-                          )}
-                          
-                          {item.record.status === 'absent' && (
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => handleReassignToSite(item.record, item.guard || undefined)}
-                            >
-                              <Building className="h-3.5 w-3.5 mr-1" />
-                              Reassign to Site
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
         
-        <Card className="lg:col-span-3">
+        <Card className="lg:col-span-12">
           <CardHeader>
             <CardTitle>Attendance Statistics</CardTitle>
             <CardDescription>
@@ -505,114 +594,44 @@ const Attendance = () => {
                 Select a site to view statistics
               </div>
             ) : (
-              <>
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-muted p-4 rounded-md text-center">
-                    <p className="text-sm text-muted-foreground">Present</p>
-                    <p className="text-2xl font-bold text-success mt-1">
-                      {shiftsWithAttendance.filter(i => 
-                        i.record.status === 'present' || i.record.status === 'replaced' || i.record.status === 'reassigned'
-                      ).length}
-                    </p>
-                  </div>
-                  <div className="bg-muted p-4 rounded-md text-center">
-                    <p className="text-sm text-muted-foreground">Absent</p>
-                    <p className="text-2xl font-bold text-destructive mt-1">
-                      {shiftsWithAttendance.filter(i => i.record.status === 'absent').length}
-                    </p>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-muted p-4 rounded-md text-center">
+                  <p className="text-sm text-muted-foreground">Present</p>
+                  <p className="text-2xl font-bold text-success mt-1">
+                    {shiftsWithAttendance.filter(i => 
+                      i.record.status === 'present' || i.record.status === 'replaced' || i.record.status === 'reassigned'
+                    ).length}
+                  </p>
                 </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Attendance Rate</span>
-                      <span className="font-medium">
-                        {shiftsWithAttendance.length > 0
-                          ? Math.round(
-                              (shiftsWithAttendance.filter(
-                                i => i.record.status === 'present' || i.record.status === 'replaced' || i.record.status === 'reassigned'
-                              ).length / 
-                              shiftsWithAttendance.length) * 100
-                            )
-                          : 0}%
-                      </span>
-                    </div>
-                    <div className="h-2 bg-muted rounded overflow-hidden">
-                      <div 
-                        className="h-full bg-primary" 
-                        style={{ 
-                          width: `${
-                            shiftsWithAttendance.length > 0
-                              ? Math.round(
-                                  (shiftsWithAttendance.filter(
-                                    i => i.record.status === 'present' || i.record.status === 'replaced' || i.record.status === 'reassigned'
-                                  ).length / 
-                                  shiftsWithAttendance.length) * 100
-                                )
-                              : 0}%` 
-                        }}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Replacement Rate</span>
-                      <span className="font-medium">
-                        {shiftsWithAttendance.length > 0
-                          ? Math.round(
-                              (shiftsWithAttendance.filter(i => i.record.status === 'replaced').length / 
-                              shiftsWithAttendance.length) * 100
-                            )
-                          : 0}%
-                      </span>
-                    </div>
-                    <div className="h-2 bg-muted rounded overflow-hidden">
-                      <div 
-                        className="h-full bg-amber-500" 
-                        style={{ 
-                          width: `${
-                            shiftsWithAttendance.length > 0
-                              ? Math.round(
-                                  (shiftsWithAttendance.filter(i => i.record.status === 'replaced').length / 
-                                  shiftsWithAttendance.length) * 100
-                                )
-                              : 0}%` 
-                        }}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Reassignment Rate</span>
-                      <span className="font-medium">
-                        {shiftsWithAttendance.length > 0
-                          ? Math.round(
-                              (shiftsWithAttendance.filter(i => i.record.status === 'reassigned').length / 
-                              shiftsWithAttendance.length) * 100
-                            )
-                          : 0}%
-                      </span>
-                    </div>
-                    <div className="h-2 bg-muted rounded overflow-hidden">
-                      <div 
-                        className="h-full bg-blue-500" 
-                        style={{ 
-                          width: `${
-                            shiftsWithAttendance.length > 0
-                              ? Math.round(
-                                  (shiftsWithAttendance.filter(i => i.record.status === 'reassigned').length / 
-                                  shiftsWithAttendance.length) * 100
-                                )
-                              : 0}%` 
-                        }}
-                      />
-                    </div>
-                  </div>
+                <div className="bg-muted p-4 rounded-md text-center">
+                  <p className="text-sm text-muted-foreground">Absent</p>
+                  <p className="text-2xl font-bold text-destructive mt-1">
+                    {shiftsWithAttendance.filter(i => i.record.status === 'absent').length}
+                  </p>
                 </div>
-              </>
+                <div className="bg-muted p-4 rounded-md text-center">
+                  <p className="text-sm text-muted-foreground">Attendance Rate</p>
+                  <p className="text-2xl font-bold mt-1">
+                    {shiftsWithAttendance.length > 0
+                      ? Math.round(
+                          (shiftsWithAttendance.filter(
+                            i => i.record.status === 'present' || i.record.status === 'replaced' || i.record.status === 'reassigned'
+                          ).length / 
+                          shiftsWithAttendance.length) * 100
+                        )
+                      : 0}%
+                  </p>
+                </div>
+                <div className="bg-muted p-4 rounded-md text-center">
+                  <p className="text-sm text-muted-foreground">Monthly Earnings</p>
+                  <p className="text-2xl font-bold text-primary mt-1">
+                    ${shiftsWithAttendance
+                      .filter(i => i.record.status === 'present' || i.record.status === 'reassigned')
+                      .reduce((total, item) => total + item.dailyRate, 0)
+                      .toFixed(2)}
+                  </p>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -725,20 +744,19 @@ const Attendance = () => {
             
             <div className="space-y-2">
               <Label htmlFor="replacement">Replacement Guard</Label>
-              <select 
-                id="replacement" 
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={replacementGuard}
-                onChange={(e) => setReplacementGuard(e.target.value)}
-              >
-                <option value="">Select a guard</option>
-                {getAvailableReplacementGuards().map(guard => (
-                  <option key={guard.id} value={guard.id}>
-                    {guard.name} ({guard.type || 'Permanent'}) - ${guard.payRate?.toFixed(2)}/shift
-                  </option>
-                ))}
-              </select>
-              {getAvailableReplacementGuards().length === 0 && (
+              <Select value={replacementGuard} onValueChange={setReplacementGuard}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a guard" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAvailableGuards().map(guard => (
+                    <SelectItem key={guard.id} value={guard.id}>
+                      {guard.name} ({guard.type || 'Permanent'}) - ${guard.payRate?.toFixed(2)}/month
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {getAvailableGuards().length === 0 && (
                 <p className="text-xs text-amber-500 mt-1">
                   No available guards found. All guards may be assigned elsewhere.
                 </p>
@@ -797,19 +815,18 @@ const Attendance = () => {
             
             <div className="space-y-2">
               <Label htmlFor="reassigned-site">Reassigned to Site</Label>
-              <select 
-                id="reassigned-site" 
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={reassignedSite}
-                onChange={(e) => setReassignedSite(e.target.value)}
-              >
-                <option value="">Select a site</option>
-                {getAvailableReassignmentSites().map(site => (
-                  <option key={site.id} value={site.id}>
-                    {site.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={reassignedSite} onValueChange={setReassignedSite}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a site" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAvailableReassignmentSites().map(site => (
+                    <SelectItem key={site.id} value={site.id}>
+                      {site.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="space-y-2">
@@ -829,6 +846,77 @@ const Attendance = () => {
             </Button>
             <Button onClick={saveReassignment} disabled={!reassignedSite}>
               Confirm Reassignment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Guard Allocation Dialog */}
+      <Dialog open={guardAllocationDialogOpen} onOpenChange={setGuardAllocationDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Allocate Guard to Shift</DialogTitle>
+            <DialogDescription>
+              Select a guard to allocate to this shift
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="site-info">Site</Label>
+                <Badge>{selectedSiteDetails?.name}</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="shift-info">Shift</Label>
+                <Badge>{selectedShiftType === 'day' ? 'Day Shift' : 'Night Shift'}</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="date-info">Date</Label>
+                <Badge>{dateString}</Badge>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-2">
+              <Label htmlFor="guard-allocation">Select Guard</Label>
+              <Select value={allocatedGuard} onValueChange={setAllocatedGuard}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a guard" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAvailableGuards().map(guard => (
+                    <SelectItem key={guard.id} value={guard.id}>
+                      {guard.name} ({guard.type || 'Permanent'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {getAvailableGuards().length === 0 && (
+                <p className="text-xs text-amber-500 mt-1">
+                  No available guards found. All guards may be assigned elsewhere.
+                </p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="allocation-notes">Notes (Optional)</Label>
+              <Textarea
+                id="allocation-notes"
+                placeholder="Add any additional information..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGuardAllocationDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveGuardAllocation} disabled={!allocatedGuard}>
+              Allocate Guard
             </Button>
           </DialogFooter>
         </DialogContent>
