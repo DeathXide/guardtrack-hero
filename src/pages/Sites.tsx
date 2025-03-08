@@ -6,25 +6,32 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Plus, User, Edit, Trash, Building } from 'lucide-react';
+import { MapPin, Building, Edit, Trash, User, AlertTriangle } from 'lucide-react';
 import { Site } from '@/types';
 import { sites, users } from '@/lib/data';
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const Sites = () => {
   const [siteList, setSiteList] = useState<Site[]>(sites);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Form state
-  const [newSite, setNewSite] = useState({
+  const initialFormState = {
+    id: '',
     name: '',
     location: '',
     daySlots: 0,
     nightSlots: 0,
     supervisorId: ''
-  });
+  };
+  
+  const [newSite, setNewSite] = useState(initialFormState);
 
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -34,6 +41,46 @@ const Sites = () => {
       [id === 'site-name' ? 'name' : id === 'day-slots' ? 'daySlots' : id === 'night-slots' ? 'nightSlots' : id]: 
         (id === 'day-slots' || id === 'night-slots') ? parseInt(value) || 0 : value
     });
+  };
+
+  // Open edit dialog
+  const handleEditSite = (site: Site) => {
+    setNewSite({
+      id: site.id,
+      name: site.name,
+      location: site.location,
+      daySlots: site.daySlots,
+      nightSlots: site.nightSlots,
+      supervisorId: site.supervisorId
+    });
+    setIsEditMode(true);
+    setIsDialogOpen(true);
+  };
+
+  // Open delete dialog
+  const handleDeleteClick = (siteId: string) => {
+    setSelectedSiteId(siteId);
+    setDeleteDialogOpen(true);
+  };
+
+  // Confirm delete
+  const confirmDelete = () => {
+    if (selectedSiteId) {
+      setSiteList(siteList.filter(site => site.id !== selectedSiteId));
+      toast({
+        title: "Site Deleted",
+        description: "The site has been successfully removed",
+      });
+      setDeleteDialogOpen(false);
+      setSelectedSiteId(null);
+    }
+  };
+
+  // Handle dialog close
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
+    setIsEditMode(false);
+    setNewSite(initialFormState);
   };
 
   // Handle form submission
@@ -48,34 +95,41 @@ const Sites = () => {
       return;
     }
 
-    // Create new site
-    const newSiteObject: Site = {
-      id: `s${siteList.length + 1}`,
-      name: newSite.name,
-      location: newSite.location,
-      supervisorId: newSite.supervisorId,
-      daySlots: newSite.daySlots,
-      nightSlots: newSite.nightSlots
-    };
+    if (isEditMode) {
+      // Update existing site
+      setSiteList(siteList.map(site => 
+        site.id === newSite.id ? newSite : site
+      ));
+      
+      toast({
+        title: "Site Updated",
+        description: `${newSite.name} has been successfully updated`,
+      });
+    } else {
+      // Create new site
+      const newSiteObject: Site = {
+        id: `s${siteList.length + 1}`,
+        name: newSite.name,
+        location: newSite.location,
+        supervisorId: newSite.supervisorId,
+        daySlots: newSite.daySlots,
+        nightSlots: newSite.nightSlots
+      };
 
-    // Add to list and close dialog
-    setSiteList([...siteList, newSiteObject]);
+      // Add to list
+      setSiteList([...siteList, newSiteObject]);
+      
+      // Show success message
+      toast({
+        title: "Site Added",
+        description: `${newSite.name} has been successfully added`,
+      });
+    }
+    
+    // Close dialog and reset form
     setIsDialogOpen(false);
-    
-    // Reset form
-    setNewSite({
-      name: '',
-      location: '',
-      daySlots: 0,
-      nightSlots: 0,
-      supervisorId: ''
-    });
-    
-    // Show success message
-    toast({
-      title: "Site Added",
-      description: `${newSite.name} has been successfully added`,
-    });
+    setIsEditMode(false);
+    setNewSite(initialFormState);
   };
   
   // Filter sites based on search term
@@ -130,10 +184,20 @@ const Sites = () => {
                 <div className="flex justify-between">
                   <CardTitle>{site.name}</CardTitle>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => handleEditSite(site)}
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => handleDeleteClick(site.id)}
+                    >
                       <Trash className="h-4 w-4" />
                     </Button>
                   </div>
@@ -166,9 +230,11 @@ const Sites = () => {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Add New Site</DialogTitle>
+            <DialogTitle>{isEditMode ? 'Edit Site' : 'Add New Site'}</DialogTitle>
             <DialogDescription>
-              Create a new security site with assigned slots and supervisor
+              {isEditMode 
+                ? 'Update site details and assigned supervisor' 
+                : 'Create a new security site with assigned slots and supervisor'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -235,11 +301,28 @@ const Sites = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit}>Add Site</Button>
+            <Button variant="outline" onClick={handleDialogClose}>Cancel</Button>
+            <Button onClick={handleSubmit}>{isEditMode ? 'Save Changes' : 'Add Site'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the site and all associated records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

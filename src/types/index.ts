@@ -18,6 +18,13 @@ export interface Site {
   nightSlots: number;
 }
 
+export interface PaymentRecord {
+  id: string;
+  date: string;
+  amount: number;
+  note?: string;
+}
+
 export interface Guard {
   id: string;
   name: string;
@@ -26,6 +33,8 @@ export interface Guard {
   badgeNumber: string;
   avatar?: string;
   status: 'active' | 'inactive';
+  type?: 'permanent' | 'temporary';
+  paymentHistory?: PaymentRecord[];
 }
 
 export interface Shift {
@@ -34,6 +43,8 @@ export interface Shift {
   type: 'day' | 'night';
   guardId: string;
   assignedGuardId?: string; // For replacement guards
+  locked?: boolean; // To lock assignments
+  date?: string; // Date for the shift
 }
 
 export interface AttendanceRecord {
@@ -41,8 +52,9 @@ export interface AttendanceRecord {
   date: string;
   shiftId: string;
   guardId: string;
-  status: 'present' | 'absent' | 'replaced';
+  status: 'present' | 'absent' | 'replaced' | 'reassigned';
   replacementGuardId?: string;
+  reassignedSiteId?: string; // New field to track site reassignments
   approvedBy?: string;
   approvedAt?: string;
   notes?: string;
@@ -55,6 +67,7 @@ export interface AttendanceReport {
   presentCount: number;
   absentCount: number;
   replacedCount: number;
+  reassignedCount: number; // New field for tracking reassignments
   attendancePercentage: number;
 }
 
@@ -68,4 +81,13 @@ export interface SiteReport {
   dayPercentage: number;
   nightPercentage: number;
   overallPercentage: number;
+}
+
+export interface ScheduleAssignment {
+  id: string;
+  date: string;
+  siteId: string;
+  shiftType: 'day' | 'night';
+  guardId: string;
+  locked: boolean;
 }

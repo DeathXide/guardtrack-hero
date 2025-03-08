@@ -6,33 +6,132 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { User, Plus, Search, Phone, Mail, Shield, Edit, Trash, UserPlus } from 'lucide-react';
+import { User, Search, Phone, Mail, Shield, Edit, Trash, UserPlus, DollarSign } from 'lucide-react';
 import { guards } from '@/lib/data';
 import { Guard } from '@/types';
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Guards = () => {
   const [guardList, setGuardList] = useState<Guard[]>(guards);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedGuardId, setSelectedGuardId] = useState<string | null>(null);
+  const [guardType, setGuardType] = useState<'permanent' | 'temporary'>('permanent');
   const { toast } = useToast();
   
+  // Payment state
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentNote, setPaymentNote] = useState('');
+  const [selectedGuard, setSelectedGuard] = useState<Guard | null>(null);
+  
   // Form state
-  const [newGuard, setNewGuard] = useState({
+  const initialFormState: Omit<Guard, 'id'> & { id?: string } = {
     name: '',
     email: '',
     phone: '',
     badgeNumber: '',
-    status: 'active' as 'active' | 'inactive'
-  });
+    status: 'active',
+    type: 'permanent',
+    paymentHistory: []
+  };
+  
+  const [newGuard, setNewGuard] = useState(initialFormState);
 
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     setNewGuard({
       ...newGuard,
-      [id]: id === 'status' ? value as 'active' | 'inactive' : value
+      [id]: id === 'status' ? value as 'active' | 'inactive' : 
+             id === 'type' ? value as 'permanent' | 'temporary' : value
     });
+  };
+
+  // Open edit dialog
+  const handleEditGuard = (guard: Guard) => {
+    setNewGuard({
+      id: guard.id,
+      name: guard.name,
+      email: guard.email,
+      phone: guard.phone,
+      badgeNumber: guard.badgeNumber,
+      status: guard.status,
+      type: guard.type || 'permanent',
+      paymentHistory: guard.paymentHistory || []
+    });
+    setIsEditMode(true);
+    setIsDialogOpen(true);
+  };
+
+  // Open payment dialog
+  const handlePaymentDialog = (guard: Guard) => {
+    setSelectedGuard(guard);
+    setPaymentAmount('');
+    setPaymentNote('');
+    setIsPaymentDialogOpen(true);
+  };
+
+  // Save payment
+  const handleSavePayment = () => {
+    if (!selectedGuard || !paymentAmount || parseFloat(paymentAmount) <= 0) {
+      toast({
+        title: "Invalid Payment",
+        description: "Please enter a valid payment amount",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const payment = {
+      id: `pay-${Date.now()}`,
+      amount: parseFloat(paymentAmount),
+      date: new Date().toISOString(),
+      note: paymentNote
+    };
+
+    const updatedGuard = {
+      ...selectedGuard,
+      paymentHistory: [...(selectedGuard.paymentHistory || []), payment]
+    };
+
+    setGuardList(guardList.map(g => g.id === selectedGuard.id ? updatedGuard : g));
+    
+    setIsPaymentDialogOpen(false);
+    toast({
+      title: "Payment Recorded",
+      description: `Payment of $${paymentAmount} recorded for ${selectedGuard.name}`,
+    });
+  };
+
+  // Open delete dialog
+  const handleDeleteClick = (guardId: string) => {
+    setSelectedGuardId(guardId);
+    setDeleteDialogOpen(true);
+  };
+
+  // Confirm delete
+  const confirmDelete = () => {
+    if (selectedGuardId) {
+      setGuardList(guardList.filter(guard => guard.id !== selectedGuardId));
+      toast({
+        title: "Guard Deleted",
+        description: "The guard has been successfully removed",
+      });
+      setDeleteDialogOpen(false);
+      setSelectedGuardId(null);
+    }
+  };
+
+  // Handle dialog close
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
+    setIsEditMode(false);
+    setNewGuard(initialFormState);
   };
 
   // Handle form submission
@@ -58,8 +157,8 @@ const Guards = () => {
       return;
     }
     
-    // Check for duplicate badge number
-    if (guardList.some(guard => guard.badgeNumber === newGuard.badgeNumber)) {
+    // Check for duplicate badge number (only for new guards)
+    if (!isEditMode && guardList.some(guard => guard.badgeNumber === newGuard.badgeNumber)) {
       toast({
         title: "Badge Number Already Exists",
         description: "Please provide a unique badge number",
@@ -68,43 +167,62 @@ const Guards = () => {
       return;
     }
 
-    // Create new guard
-    const newGuardObject: Guard = {
-      id: `g${guardList.length + 1}`,
-      name: newGuard.name,
-      email: newGuard.email,
-      phone: newGuard.phone,
-      badgeNumber: newGuard.badgeNumber,
-      status: newGuard.status,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newGuard.name)}&background=0D8ABC&color=fff`
-    };
+    if (isEditMode && newGuard.id) {
+      // Update existing guard
+      setGuardList(guardList.map(guard => 
+        guard.id === newGuard.id ? 
+          { ...newGuard, paymentHistory: guard.paymentHistory || [] } as Guard : 
+          guard
+      ));
+      
+      toast({
+        title: "Guard Updated",
+        description: `${newGuard.name} has been successfully updated`,
+      });
+    } else {
+      // Create new guard
+      const newGuardObject: Guard = {
+        id: `g${guardList.length + 1}`,
+        name: newGuard.name,
+        email: newGuard.email,
+        phone: newGuard.phone,
+        badgeNumber: newGuard.badgeNumber,
+        status: newGuard.status,
+        type: newGuard.type || 'permanent',
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newGuard.name)}&background=0D8ABC&color=fff`,
+        paymentHistory: []
+      };
 
-    // Add to list and close dialog
-    setGuardList([...guardList, newGuardObject]);
+      // Add to list
+      setGuardList([...guardList, newGuardObject]);
+      
+      toast({
+        title: "Guard Added",
+        description: `${newGuard.name} has been successfully added`,
+      });
+    }
+    
+    // Close dialog and reset form
     setIsDialogOpen(false);
-    
-    // Reset form
-    setNewGuard({
-      name: '',
-      email: '',
-      phone: '',
-      badgeNumber: '',
-      status: 'active'
-    });
-    
-    // Show success message
-    toast({
-      title: "Guard Added",
-      description: `${newGuard.name} has been successfully added`,
-    });
+    setIsEditMode(false);
+    setNewGuard(initialFormState);
   };
   
-  // Filter guards based on search term
+  // Filter guards based on search term and guard type
   const filteredGuards = guardList.filter(guard => 
-    guard.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    guard.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    guard.badgeNumber.includes(searchTerm)
+    (guard.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     guard.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     guard.badgeNumber.includes(searchTerm)) &&
+    (guardType === 'permanent' ? 
+      guard.type === 'permanent' || !guard.type : 
+      guard.type === 'temporary')
   );
+
+  // Calculate total payments for a guard
+  const calculateTotalPayments = (guard: Guard) => {
+    if (!guard.paymentHistory || guard.paymentHistory.length === 0) return 0;
+    return guard.paymentHistory.reduce((total, payment) => total + payment.amount, 0);
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -122,7 +240,7 @@ const Guards = () => {
         </Button>
       </div>
       
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -133,6 +251,13 @@ const Guards = () => {
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
+        
+        <Tabs defaultValue="permanent" className="w-full md:w-auto" onValueChange={(v) => setGuardType(v as 'permanent' | 'temporary')}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="permanent">Permanent</TabsTrigger>
+            <TabsTrigger value="temporary">Temporary</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -144,7 +269,15 @@ const Guards = () => {
           filteredGuards.map(guard => (
             <Card key={guard.id} className="overflow-hidden border border-border/60">
               <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-base font-medium">{guard.name}</CardTitle>
+                <div>
+                  <CardTitle className="text-base font-medium">{guard.name}</CardTitle>
+                  <Badge 
+                    variant={guard.type === 'temporary' ? 'outline' : 'default'}
+                    className={`mt-1 ${guard.type === 'temporary' ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500' : ''}`}
+                  >
+                    {guard.type || 'Permanent'} Guard
+                  </Badge>
+                </div>
                 <Badge 
                   variant={guard.status === 'active' ? 'default' : 'secondary'}
                   className={`${guard.status === 'active' ? 'bg-success/80 hover:bg-success/70' : 'bg-muted text-muted-foreground'}`}
@@ -170,12 +303,22 @@ const Guards = () => {
                     <span className="truncate">{guard.email}</span>
                   </div>
                   
+                  <div className="flex items-center text-sm">
+                    <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-muted-foreground">Total Payments:</span>
+                    <span className="font-medium ml-2">${calculateTotalPayments(guard).toFixed(2)}</span>
+                  </div>
+                  
                   <div className="flex justify-end gap-2 pt-4">
-                    <Button variant="outline" size="sm" className="h-8 px-2">
+                    <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => handlePaymentDialog(guard)}>
+                      <DollarSign className="h-3.5 w-3.5 mr-1" />
+                      Record Payment
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => handleEditGuard(guard)}>
                       <Edit className="h-3.5 w-3.5 mr-1" />
                       Edit
                     </Button>
-                    <Button variant="outline" size="sm" className="h-8 px-2 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30">
+                    <Button variant="outline" size="sm" className="h-8 px-2 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30" onClick={() => handleDeleteClick(guard.id)}>
                       <Trash className="h-3.5 w-3.5 mr-1" />
                       Delete
                     </Button>
@@ -190,9 +333,11 @@ const Guards = () => {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Add New Guard</DialogTitle>
+            <DialogTitle>{isEditMode ? 'Edit Guard' : 'Add New Guard'}</DialogTitle>
             <DialogDescription>
-              Create a new security guard profile with contact details
+              {isEditMode 
+                ? 'Update guard profile and contact details' 
+                : 'Create a new security guard profile with contact details'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -231,7 +376,20 @@ const Guards = () => {
                 placeholder="Enter badge number" 
                 value={newGuard.badgeNumber}
                 onChange={handleInputChange}
+                disabled={isEditMode} // Don't allow badge number change for existing guards
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="type">Guard Type</Label>
+              <select 
+                id="type" 
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={newGuard.type || 'permanent'}
+                onChange={handleInputChange}
+              >
+                <option value="permanent">Permanent</option>
+                <option value="temporary">Temporary</option>
+              </select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
@@ -247,11 +405,66 @@ const Guards = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit}>Add Guard</Button>
+            <Button variant="outline" onClick={handleDialogClose}>Cancel</Button>
+            <Button onClick={handleSubmit}>{isEditMode ? 'Save Changes' : 'Add Guard'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>
+              Add payment information for {selectedGuard?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="payment-amount">Payment Amount ($)</Label>
+              <Input 
+                id="payment-amount" 
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Enter amount" 
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="payment-note">Note (Optional)</Label>
+              <Input 
+                id="payment-note" 
+                placeholder="Enter payment details" 
+                value={paymentNote}
+                onChange={(e) => setPaymentNote(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSavePayment}>Record Payment</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the guard and all associated records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

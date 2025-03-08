@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -23,7 +23,9 @@ import {
   ShieldAlert, 
   Sun, 
   User,
-  X 
+  X,
+  ArrowRight,
+  Building,
 } from 'lucide-react';
 import { 
   attendanceRecords, 
@@ -35,7 +37,7 @@ import {
   getAttendanceByDate 
 } from '@/lib/data';
 import { AttendanceRecord, Guard, Site, Shift } from '@/types';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 // Function to format date for display
 const formatDate = (dateString: string) => {
@@ -64,11 +66,14 @@ const Attendance = () => {
   const [selectedShiftType, setSelectedShiftType] = useState<'day' | 'night'>('day');
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [replacementDialogOpen, setReplacementDialogOpen] = useState(false);
+  const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
   const [selectedGuard, setSelectedGuard] = useState<Guard | null>(null);
-  const [attendanceStatus, setAttendanceStatus] = useState<'present' | 'absent'>('present');
+  const [attendanceStatus, setAttendanceStatus] = useState<'present' | 'absent' | 'reassigned'>('present');
   const [replacementGuard, setReplacementGuard] = useState<string | undefined>();
+  const [reassignedSite, setReassignedSite] = useState<string | undefined>();
   const [notes, setNotes] = useState('');
+  const { toast } = useToast();
   
   // Get the date string in YYYY-MM-DD format
   const dateString = selectedDate 
@@ -106,6 +111,9 @@ const Attendance = () => {
       guard,
       replacementGuard: record.replacementGuardId 
         ? getGuardById(record.replacementGuardId) 
+        : undefined,
+      reassignedSite: record.reassignedSiteId
+        ? getSiteById(record.reassignedSiteId)
         : undefined
     };
   });
@@ -138,6 +146,17 @@ const Attendance = () => {
     setReplacementDialogOpen(true);
   };
   
+  // Handle reassign to different site
+  const handleReassignToSite = (record: AttendanceRecord, guard: Guard | undefined) => {
+    if (!guard) return;
+    
+    setSelectedRecord(record);
+    setSelectedGuard(guard);
+    setReassignedSite(undefined);
+    setNotes('');
+    setReassignDialogOpen(true);
+  };
+  
   // Save attendance
   const saveAttendance = () => {
     if (!selectedRecord || !selectedGuard) return;
@@ -154,6 +173,8 @@ const Attendance = () => {
     // If marked as absent, open replacement dialog
     if (attendanceStatus === 'absent') {
       setReplacementDialogOpen(true);
+    } else if (attendanceStatus === 'reassigned') {
+      setReassignDialogOpen(true);
     }
   };
   
@@ -171,6 +192,22 @@ const Attendance = () => {
     });
     
     setReplacementDialogOpen(false);
+  };
+  
+  // Save reassignment
+  const saveReassignment = () => {
+    if (!selectedRecord || !selectedGuard || !reassignedSite) return;
+    
+    const targetSite = getSiteById(reassignedSite);
+    
+    // In a real app, this would call an API to save the reassignment
+    
+    toast({
+      title: 'Guard reassigned',
+      description: `${selectedGuard.name} reassigned to ${targetSite?.name}`,
+    });
+    
+    setReassignDialogOpen(false);
   };
   
   return (
@@ -239,24 +276,18 @@ const Attendance = () => {
               
               <div className="space-y-2">
                 <Label>Shift Type</Label>
-                <div className="flex space-x-2">
-                  <Button
-                    variant={selectedShiftType === 'day' ? 'default' : 'outline'}
-                    className="flex-1"
-                    onClick={() => setSelectedShiftType('day')}
-                  >
-                    <Sun className="h-4 w-4 mr-2" />
-                    Day
-                  </Button>
-                  <Button
-                    variant={selectedShiftType === 'night' ? 'default' : 'outline'}
-                    className="flex-1"
-                    onClick={() => setSelectedShiftType('night')}
-                  >
-                    <Moon className="h-4 w-4 mr-2" />
-                    Night
-                  </Button>
-                </div>
+                <Tabs defaultValue="day" onValueChange={(v) => setSelectedShiftType(v as 'day' | 'night')}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="day" className="flex items-center">
+                      <Sun className="h-4 w-4 mr-2" />
+                      Day
+                    </TabsTrigger>
+                    <TabsTrigger value="night" className="flex items-center">
+                      <Moon className="h-4 w-4 mr-2" />
+                      Night
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
             </div>
           </CardContent>
@@ -318,7 +349,7 @@ const Attendance = () => {
                           <div>
                             <p className="font-medium text-sm">{item.guard?.name || 'Unassigned'}</p>
                             <p className="text-xs text-muted-foreground">
-                              Badge #{item.guard?.badgeNumber || 'N/A'}
+                              {item.guard?.type || 'Permanent'} • Badge #{item.guard?.badgeNumber || 'N/A'}
                             </p>
                           </div>
                         </div>
@@ -335,9 +366,23 @@ const Attendance = () => {
                             <X className="h-3.5 w-3.5 mr-1" />
                             Absent
                           </Badge>
+                        ) : item.record.status === 'reassigned' ? (
+                          <div className="space-y-1">
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20">
+                              <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                              Reassigned
+                            </Badge>
+                            {item.reassignedSite && (
+                              <div className="flex items-center text-xs text-muted-foreground">
+                                <span className="truncate max-w-[120px]">
+                                  To: {item.reassignedSite.name}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <div className="space-y-1">
-                            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 hover:bg-warning/20">
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20">
                               <User className="h-3.5 w-3.5 mr-1" />
                               Replaced
                             </Badge>
@@ -371,6 +416,17 @@ const Attendance = () => {
                             Assign Replacement
                           </Button>
                         )}
+                        
+                        {item.record.status === 'absent' && (
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleReassignToSite(item.record, item.guard || undefined)}
+                          >
+                            <Building className="h-3.5 w-3.5 mr-1" />
+                            Reassign to Site
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -399,7 +455,7 @@ const Attendance = () => {
                     <p className="text-sm text-muted-foreground">Present</p>
                     <p className="text-2xl font-bold text-success mt-1">
                       {shiftsWithAttendance.filter(i => 
-                        i.record.status === 'present' || i.record.status === 'replaced'
+                        i.record.status === 'present' || i.record.status === 'replaced' || i.record.status === 'reassigned'
                       ).length}
                     </p>
                   </div>
@@ -419,7 +475,7 @@ const Attendance = () => {
                         {shiftsWithAttendance.length > 0
                           ? Math.round(
                               (shiftsWithAttendance.filter(
-                                i => i.record.status === 'present' || i.record.status === 'replaced'
+                                i => i.record.status === 'present' || i.record.status === 'replaced' || i.record.status === 'reassigned'
                               ).length / 
                               shiftsWithAttendance.length) * 100
                             )
@@ -434,7 +490,7 @@ const Attendance = () => {
                             shiftsWithAttendance.length > 0
                               ? Math.round(
                                   (shiftsWithAttendance.filter(
-                                    i => i.record.status === 'present' || i.record.status === 'replaced'
+                                    i => i.record.status === 'present' || i.record.status === 'replaced' || i.record.status === 'reassigned'
                                   ).length / 
                                   shiftsWithAttendance.length) * 100
                                 )
@@ -458,12 +514,40 @@ const Attendance = () => {
                     </div>
                     <div className="h-2 bg-muted rounded overflow-hidden">
                       <div 
-                        className="h-full bg-warning" 
+                        className="h-full bg-amber-500" 
                         style={{ 
                           width: `${
                             shiftsWithAttendance.length > 0
                               ? Math.round(
                                   (shiftsWithAttendance.filter(i => i.record.status === 'replaced').length / 
+                                  shiftsWithAttendance.length) * 100
+                                )
+                              : 0}%` 
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Reassignment Rate</span>
+                      <span className="font-medium">
+                        {shiftsWithAttendance.length > 0
+                          ? Math.round(
+                              (shiftsWithAttendance.filter(i => i.record.status === 'reassigned').length / 
+                              shiftsWithAttendance.length) * 100
+                            )
+                          : 0}%
+                      </span>
+                    </div>
+                    <div className="h-2 bg-muted rounded overflow-hidden">
+                      <div 
+                        className="h-full bg-blue-500" 
+                        style={{ 
+                          width: `${
+                            shiftsWithAttendance.length > 0
+                              ? Math.round(
+                                  (shiftsWithAttendance.filter(i => i.record.status === 'reassigned').length / 
                                   shiftsWithAttendance.length) * 100
                                 )
                               : 0}%` 
@@ -499,7 +583,7 @@ const Attendance = () => {
               <div>
                 <h4 className="font-medium">{selectedGuard?.name}</h4>
                 <p className="text-sm text-muted-foreground">
-                  Badge #{selectedGuard?.badgeNumber}
+                  {selectedGuard?.type || 'Permanent'} • Badge #{selectedGuard?.badgeNumber}
                 </p>
               </div>
             </div>
@@ -508,7 +592,7 @@ const Attendance = () => {
             
             <div className="space-y-2">
               <Label>Attendance Status</Label>
-              <RadioGroup value={attendanceStatus} onValueChange={(value) => setAttendanceStatus(value as 'present' | 'absent')}>
+              <RadioGroup value={attendanceStatus} onValueChange={(value) => setAttendanceStatus(value as 'present' | 'absent' | 'reassigned')}>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="present" id="present" />
                   <Label htmlFor="present" className="flex items-center">
@@ -521,6 +605,13 @@ const Attendance = () => {
                   <Label htmlFor="absent" className="flex items-center">
                     <X className="h-4 w-4 mr-2 text-destructive" />
                     Absent
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="reassigned" id="reassigned" />
+                  <Label htmlFor="reassigned" className="flex items-center">
+                    <ArrowRight className="h-4 w-4 mr-2 text-blue-500" />
+                    Reassigned to Another Site
                   </Label>
                 </div>
               </RadioGroup>
@@ -569,7 +660,7 @@ const Attendance = () => {
               <div>
                 <h4 className="font-medium">{selectedGuard?.name}</h4>
                 <p className="text-sm text-muted-foreground">
-                  Badge #{selectedGuard?.badgeNumber}
+                  {selectedGuard?.type || 'Permanent'} • Badge #{selectedGuard?.badgeNumber}
                 </p>
               </div>
             </div>
@@ -587,7 +678,7 @@ const Attendance = () => {
                     .filter(g => g.id !== selectedGuard?.id && g.status === 'active')
                     .map(guard => (
                       <SelectItem key={guard.id} value={guard.id}>
-                        {guard.name}
+                        {guard.name} ({guard.type || 'Permanent'})
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -611,6 +702,74 @@ const Attendance = () => {
             </Button>
             <Button onClick={saveReplacement} disabled={!replacementGuard}>
               Assign Replacement
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Reassign to Site Dialog */}
+      <Dialog open={reassignDialogOpen} onOpenChange={setReassignDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Reassign to Another Site</DialogTitle>
+            <DialogDescription>
+              Select the site where {selectedGuard?.name} is working today
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="flex items-center space-x-3">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={selectedGuard?.avatar} alt={selectedGuard?.name} />
+                <AvatarFallback>
+                  {selectedGuard ? getInitials(selectedGuard.name) : 'N/A'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h4 className="font-medium">{selectedGuard?.name}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {selectedGuard?.type || 'Permanent'} • Badge #{selectedGuard?.badgeNumber}
+                </p>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-2">
+              <Label htmlFor="reassigned-site">Reassigned to Site</Label>
+              <Select value={reassignedSite} onValueChange={setReassignedSite}>
+                <SelectTrigger id="reassigned-site">
+                  <SelectValue placeholder="Select a site" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sites
+                    .filter(site => site.id !== selectedSite)
+                    .map(site => (
+                      <SelectItem key={site.id} value={site.id}>
+                        {site.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="reassignment-notes">Reason for Reassignment</Label>
+              <Textarea
+                id="reassignment-notes"
+                placeholder="Explain why the guard was reassigned..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReassignDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveReassignment} disabled={!reassignedSite}>
+              Confirm Reassignment
             </Button>
           </DialogFooter>
         </DialogContent>
