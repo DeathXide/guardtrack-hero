@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UserRole } from '@/types';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -23,6 +25,7 @@ const Index = () => {
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
+  const [signupRole, setSignupRole] = useState<UserRole>('guard');
   const [signupLoading, setSignupLoading] = useState(false);
   const [signupError, setSignupError] = useState('');
   
@@ -54,12 +57,13 @@ const Index = () => {
     setSignupError('');
     
     try {
-      await signup(signupEmail, signupPassword, signupName);
+      await signup(signupEmail, signupPassword, signupName, signupRole);
       setActiveTab('login');
       setLoginEmail(signupEmail);
       setSignupName('');
       setSignupEmail('');
       setSignupPassword('');
+      setSignupRole('guard');
     } catch (error) {
       setSignupError((error as Error).message);
     } finally {
@@ -188,6 +192,25 @@ const Index = () => {
                   />
                   <p className="text-xs text-muted-foreground">
                     Password must be at least 6 characters long
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-role">Role</Label>
+                  <Select
+                    value={signupRole}
+                    onValueChange={(value) => setSignupRole(value as UserRole)}
+                    required
+                  >
+                    <SelectTrigger id="signup-role">
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="guard">Guard</SelectItem>
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Admin accounts can only be created by existing administrators
                   </p>
                 </div>
                 
