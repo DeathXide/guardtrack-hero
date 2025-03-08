@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarCheck } from 'lucide-react';
 import { UserRole } from '@/types';
 
@@ -26,22 +26,12 @@ const DashboardHeader = ({ userRole, selectedDay, setSelectedDay }: DashboardHea
       </div>
       
       <div className="flex flex-col sm:flex-row gap-2">
-        <TabsList>
-          <TabsTrigger 
-            value="today" 
-            onClick={() => setSelectedDay('today')}
-            className={selectedDay === 'today' ? 'bg-primary text-primary-foreground' : ''}
-          >
-            Today
-          </TabsTrigger>
-          <TabsTrigger 
-            value="yesterday" 
-            onClick={() => setSelectedDay('yesterday')}
-            className={selectedDay === 'yesterday' ? 'bg-primary text-primary-foreground' : ''}
-          >
-            Yesterday
-          </TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue={selectedDay} onValueChange={(value) => setSelectedDay(value as 'today' | 'yesterday')}>
+          <TabsList>
+            <TabsTrigger value="today">Today</TabsTrigger>
+            <TabsTrigger value="yesterday">Yesterday</TabsTrigger>
+          </TabsList>
+        </Tabs>
         
         <Button asChild>
           <Link to="/attendance">
