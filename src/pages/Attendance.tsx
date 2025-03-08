@@ -42,7 +42,6 @@ import { AttendanceRecord, Guard, Site, Shift } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Function to format date for display
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', {
@@ -53,7 +52,6 @@ const formatDate = (dateString: string) => {
   });
 };
 
-// Function to get initials from name
 const getInitials = (name: string) => {
   return name
     .split(' ')
@@ -62,24 +60,19 @@ const getInitials = (name: string) => {
     .toUpperCase();
 };
 
-// Function to get month name
 const getMonthName = (date: Date): string => {
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 };
 
-// Function to calculate guard's daily rate
 const calculateDailyRate = (guard: Guard | undefined): number => {
   if (!guard || !guard.payRate) return 0;
   
-  // Get days in current month
   const now = new Date();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   
-  // Calculate daily rate based on monthly pay
   return guard.payRate / daysInMonth;
 };
 
-// Function to calculate guard's earnings for current month
 const calculateMonthlyEarnings = (guard: Guard | undefined, currentDate: Date): number => {
   if (!guard) return 0;
   
@@ -114,43 +107,35 @@ const Attendance = () => {
   const [notes, setNotes] = useState('');
   const { toast } = useToast();
   
-  // Format site options for searchable select
   const siteOptions = sites.map(site => ({
     value: site.id,
     label: site.name
   }));
   
-  // Get the date string in YYYY-MM-DD format
   const dateString = selectedDate 
     ? selectedDate.toISOString().split('T')[0] 
     : new Date().toISOString().split('T')[0];
   
-  // Get site details
   const selectedSiteDetails = getSiteById(selectedSite || '');
   
-  // Get shifts for the selected site
   const siteShifts = selectedSiteDetails 
     ? getShiftsBySite(selectedSiteDetails.id).filter(shift => shift.type === selectedShiftType)
     : [];
   
-  // Get attendance records for the selected date
   const dateRecords = getAttendanceByDate(dateString);
   
-  // Combine shifts with attendance records
   const shiftsWithAttendance = siteShifts.map(shift => {
     const attendanceRecord = dateRecords.find(record => record.shiftId === shift.id);
     const guard = getGuardById(shift.guardId);
     
-    // If there's no attendance record, create a default one
     const record = attendanceRecord || {
       id: `temp-${shift.id}-${dateString}`,
       date: dateString,
       shiftId: shift.id,
       guardId: shift.guardId,
-      status: 'present', // Default to present
+      status: 'present',
     };
     
-    // Check if guard is marked present elsewhere for this date and shift type
     const isPresentElsewhere = guard ? 
       isGuardMarkedPresentElsewhere(guard.id, dateString, selectedShiftType, selectedSiteDetails?.id) : 
       false;
@@ -170,11 +155,9 @@ const Attendance = () => {
     };
   });
   
-  // Handle mark attendance
   const handleMarkAttendance = (shift: Shift, guard: Guard | undefined) => {
     if (!guard) return;
     
-    // Check if guard is already marked present elsewhere
     if (isGuardMarkedPresentElsewhere(guard.id, dateString, selectedShiftType, selectedSiteDetails?.id)) {
       toast({
         title: "Guard already assigned",
@@ -197,7 +180,6 @@ const Attendance = () => {
     setAttendanceDialogOpen(true);
   };
   
-  // Handle assign replacement
   const handleAssignReplacement = (record: AttendanceRecord, guard: Guard | undefined) => {
     if (!guard) return;
     
@@ -208,7 +190,6 @@ const Attendance = () => {
     setReplacementDialogOpen(true);
   };
   
-  // Handle reassign to different site
   const handleReassignToSite = (record: AttendanceRecord, guard: Guard | undefined) => {
     if (!guard) return;
     
@@ -219,18 +200,14 @@ const Attendance = () => {
     setReassignDialogOpen(true);
   };
 
-  // Handle guard allocation for shift
   const handleAllocateGuard = (shift: Shift) => {
     setSelectedShift(shift);
     setAllocatedGuard(undefined);
     setGuardAllocationDialogOpen(true);
   };
   
-  // Save attendance
   const saveAttendance = () => {
     if (!selectedRecord || !selectedGuard) return;
-    
-    // In a real app, this would call an API to save the attendance
     
     toast({
       title: 'Attendance recorded',
@@ -239,7 +216,6 @@ const Attendance = () => {
     
     setAttendanceDialogOpen(false);
     
-    // If marked as absent, open replacement dialog
     if (attendanceStatus === 'absent') {
       setReplacementDialogOpen(true);
     } else if (attendanceStatus === 'reassigned') {
@@ -247,11 +223,9 @@ const Attendance = () => {
     }
   };
   
-  // Save replacement
   const saveReplacement = () => {
     if (!selectedRecord || !selectedGuard || !replacementGuard) return;
     
-    // Check if replacement guard is already marked present elsewhere
     if (isGuardMarkedPresentElsewhere(replacementGuard, dateString, selectedShiftType, selectedSiteDetails?.id)) {
       toast({
         title: "Guard already assigned",
@@ -263,8 +237,6 @@ const Attendance = () => {
     
     const replacement = getGuardById(replacementGuard);
     
-    // In a real app, this would call an API to save the replacement
-    
     toast({
       title: 'Replacement assigned',
       description: `${replacement?.name} assigned as replacement for ${selectedGuard.name}`,
@@ -273,13 +245,10 @@ const Attendance = () => {
     setReplacementDialogOpen(false);
   };
   
-  // Save reassignment
   const saveReassignment = () => {
     if (!selectedRecord || !selectedGuard || !reassignedSite) return;
     
     const targetSite = getSiteById(reassignedSite);
-    
-    // In a real app, this would call an API to save the reassignment
     
     toast({
       title: 'Guard reassigned',
@@ -289,13 +258,11 @@ const Attendance = () => {
     setReassignDialogOpen(false);
   };
 
-  // Save guard allocation
   const saveGuardAllocation = () => {
     if (!selectedShift || !allocatedGuard) return;
     
     const guard = getGuardById(allocatedGuard);
     
-    // Check if guard is already marked present elsewhere
     if (isGuardMarkedPresentElsewhere(allocatedGuard, dateString, selectedShiftType, selectedSiteDetails?.id)) {
       toast({
         title: "Guard already assigned",
@@ -305,8 +272,6 @@ const Attendance = () => {
       return;
     }
     
-    // In a real app, this would call an API to save the guard allocation
-    
     toast({
       title: 'Guard allocated',
       description: `${guard?.name} has been allocated to this shift`,
@@ -315,20 +280,16 @@ const Attendance = () => {
     setGuardAllocationDialogOpen(false);
   };
   
-  // Get available guards for replacement (exclude guards already present elsewhere)
   const getAvailableGuards = () => {
     return guards.filter(guard => {
-      // Exclude inactive guards
       if (guard.status === 'inactive') {
         return false;
       }
       
-      // Exclude guards already marked present elsewhere for this date and shift
       return !isGuardMarkedPresentElsewhere(guard.id, dateString, selectedShiftType, selectedSiteDetails?.id);
     });
   };
   
-  // Get available sites for reassignment (exclude current site)
   const getAvailableReassignmentSites = () => {
     return sites.filter(site => site.id !== selectedSite);
   };
@@ -608,7 +569,6 @@ const Attendance = () => {
         </Card>
       </div>
       
-      {/* Mark Attendance Dialog */}
       <Dialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -685,7 +645,6 @@ const Attendance = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Assign Replacement Dialog */}
       <Dialog open={replacementDialogOpen} onOpenChange={setReplacementDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -756,7 +715,6 @@ const Attendance = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Reassign to Site Dialog */}
       <Dialog open={reassignDialogOpen} onOpenChange={setReassignDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -822,7 +780,6 @@ const Attendance = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Guard Allocation Dialog */}
       <Dialog open={guardAllocationDialogOpen} onOpenChange={setGuardAllocationDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -836,4 +793,55 @@ const Attendance = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="site-info">Site</Label>
-                <Badge>{
+                <Badge>
+                  {selectedSiteDetails?.name || 'No site selected'}
+                </Badge>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <Label htmlFor="shift-type">Shift Type</Label>
+                <Badge variant="outline" className="capitalize">
+                  {selectedShiftType} Shift
+                </Badge>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-2">
+              <Label htmlFor="allocated-guard">Select Guard</Label>
+              <Select value={allocatedGuard} onValueChange={setAllocatedGuard}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a guard" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAvailableGuards().map(guard => (
+                    <SelectItem key={guard.id} value={guard.id}>
+                      {guard.name} ({guard.type || 'Permanent'}) - ${guard.payRate?.toFixed(2)}/month
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {getAvailableGuards().length === 0 && (
+                <p className="text-xs text-amber-500 mt-1">
+                  No available guards found. All guards may be assigned elsewhere.
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGuardAllocationDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveGuardAllocation} disabled={!allocatedGuard || !selectedSite}>
+              Allocate Guard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default Attendance;
