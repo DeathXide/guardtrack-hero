@@ -1,5 +1,4 @@
-
-import { User, Site, Guard, Shift, AttendanceRecord } from '@/types';
+import { User, Site, Guard, Shift, AttendanceRecord, MonthlyEarning } from '@/types';
 
 // Mock Users
 export const users: User[] = [
@@ -64,7 +63,8 @@ export const guards: Guard[] = [
     badgeNumber: 'B001',
     avatar: 'https://ui-avatars.com/api/?name=Mike+Johnson&background=0D8ABC&color=fff',
     status: 'active',
-    payRate: 15.50 // Added payRate
+    payRate: 15000, // Monthly pay rate
+    monthlyEarnings: {}
   },
   {
     id: 'g2',
@@ -74,7 +74,8 @@ export const guards: Guard[] = [
     badgeNumber: 'B002',
     avatar: 'https://ui-avatars.com/api/?name=Lisa+Chen&background=0D8ABC&color=fff',
     status: 'active',
-    payRate: 16.25 // Added payRate
+    payRate: 16000, // Monthly pay rate
+    monthlyEarnings: {}
   },
   {
     id: 'g3',
@@ -84,7 +85,8 @@ export const guards: Guard[] = [
     badgeNumber: 'B003',
     avatar: 'https://ui-avatars.com/api/?name=Robert+Smith&background=0D8ABC&color=fff',
     status: 'active',
-    payRate: 14.75 // Added payRate
+    payRate: 14800, // Monthly pay rate
+    monthlyEarnings: {}
   },
   {
     id: 'g4',
@@ -94,7 +96,8 @@ export const guards: Guard[] = [
     badgeNumber: 'B004',
     avatar: 'https://ui-avatars.com/api/?name=Aisha+Patel&background=0D8ABC&color=fff',
     status: 'active',
-    payRate: 17.00 // Added payRate
+    payRate: 17000, // Monthly pay rate
+    monthlyEarnings: {}
   },
   {
     id: 'g5',
@@ -104,7 +107,8 @@ export const guards: Guard[] = [
     badgeNumber: 'B005',
     avatar: 'https://ui-avatars.com/api/?name=Carlos+Rodriguez&background=0D8ABC&color=fff',
     status: 'active',
-    payRate: 16.50 // Added payRate
+    payRate: 16500, // Monthly pay rate
+    monthlyEarnings: {}
   },
   {
     id: 'g6',
@@ -114,7 +118,8 @@ export const guards: Guard[] = [
     badgeNumber: 'B006',
     avatar: 'https://ui-avatars.com/api/?name=Emma+Wilson&background=0D8ABC&color=fff',
     status: 'inactive',
-    payRate: 15.00 // Added payRate
+    payRate: 15000, // Monthly pay rate
+    monthlyEarnings: {}
   }
 ];
 

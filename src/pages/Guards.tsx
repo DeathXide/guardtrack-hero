@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -103,7 +102,7 @@ const Guards = () => {
         ...guard,
         shiftRate,
         monthlyEarnings
-      };
+      } as Guard;
     });
     
     setGuardList(updatedGuards);
@@ -247,7 +246,6 @@ const Guards = () => {
 
   // Handle form submission
   const handleSubmit = () => {
-    // Validate form
     if (!newGuard.name || !newGuard.email || !newGuard.phone || !newGuard.badgeNumber || !newGuard.payRate) {
       toast({
         title: "Missing Information",
@@ -257,7 +255,6 @@ const Guards = () => {
       return;
     }
     
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newGuard.email)) {
       toast({
@@ -268,7 +265,6 @@ const Guards = () => {
       return;
     }
     
-    // Check for duplicate badge number (only for new guards)
     if (!isEditMode && guardList.some(guard => guard.badgeNumber === newGuard.badgeNumber)) {
       toast({
         title: "Badge Number Already Exists",
@@ -278,11 +274,9 @@ const Guards = () => {
       return;
     }
 
-    // Calculate shift rate based on monthly pay rate
     const shiftRate = calculateShiftRate(newGuard.payRate);
     
     if (isEditMode && newGuard.id) {
-      // Update existing guard
       setGuardList(guardList.map(guard => 
         guard.id === newGuard.id ? 
           { 
@@ -299,7 +293,6 @@ const Guards = () => {
         description: `${newGuard.name} has been successfully updated`,
       });
     } else {
-      // Create new guard
       const newGuardObject: Guard = {
         id: `g${guardList.length + 1}`,
         name: newGuard.name,
@@ -315,7 +308,6 @@ const Guards = () => {
         monthlyEarnings: {}
       };
 
-      // Add to list
       setGuardList([...guardList, newGuardObject]);
       
       toast({
@@ -324,13 +316,11 @@ const Guards = () => {
       });
     }
     
-    // Close dialog and reset form
     setIsDialogOpen(false);
     setIsEditMode(false);
     setNewGuard(initialFormState);
   };
   
-  // Filter guards based on search term and guard type
   const filteredGuards = guardList.filter(guard => 
     (guard.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
      guard.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -340,7 +330,6 @@ const Guards = () => {
       guard.type === 'temporary')
   );
 
-  // Get current month's earnings for a guard
   const getCurrentMonthEarnings = (guard: Guard): MonthlyEarning => {
     const now = new Date();
     const currentMonth = format(now, 'yyyy-MM');
@@ -355,7 +344,6 @@ const Guards = () => {
     };
   };
 
-  // Format currency
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -566,7 +554,7 @@ const Guards = () => {
                 placeholder="Enter badge number" 
                 value={newGuard.badgeNumber}
                 onChange={handleInputChange}
-                disabled={isEditMode} // Don't allow badge number change for existing guards
+                disabled={isEditMode}
               />
             </div>
             <div className="space-y-2">

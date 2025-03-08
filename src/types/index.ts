@@ -27,6 +27,16 @@ export interface PaymentRecord {
   month?: string; // Added month field for tracking monthly payments
 }
 
+// New interface for monthly earnings tracking
+export interface MonthlyEarning {
+  month: string;
+  totalShifts: number;
+  baseSalary: number;
+  bonuses: number;
+  deductions: number;
+  netAmount: number;
+}
+
 export interface Guard {
   id: string;
   name: string;
@@ -39,7 +49,7 @@ export interface Guard {
   payRate?: number; // Monthly pay rate
   shiftRate?: number; // Per shift rate calculated from monthly rate
   paymentHistory?: PaymentRecord[];
-  monthlyEarnings?: { [key: string]: number }; // Track earnings by month
+  monthlyEarnings?: { [key: string]: MonthlyEarning }; // Track earnings by month
 }
 
 export interface Shift {
@@ -95,14 +105,4 @@ export interface ScheduleAssignment {
   shiftType: 'day' | 'night';
   guardId: string;
   locked: boolean;
-}
-
-// New interface for monthly earnings tracking
-export interface MonthlyEarning {
-  month: string;
-  totalShifts: number;
-  baseSalary: number;
-  bonuses: number;
-  deductions: number;
-  netAmount: number;
 }
