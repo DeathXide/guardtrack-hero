@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -350,66 +349,38 @@ const Attendance = () => {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <Card className="lg:col-span-4">
+        <Card className="lg:col-span-4 overflow-hidden">
           <CardHeader>
             <CardTitle>Select Date</CardTitle>
             <CardDescription>
               Choose a date to view or mark attendance
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              className="border rounded-md p-3"
-            />
-            
-            <div className="mt-6 space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Selected Date:</span>
-                <Badge variant="outline" className="font-mono">
-                  {dateString}
-                </Badge>
-              </div>
+          <CardContent className="flex justify-center">
+            <div className="w-full max-w-[300px]">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                className="w-full mx-auto"
+              />
               
-              <div className="flex items-center justify-between text-sm">
-                <span>Day:</span>
-                <span className="font-medium">
-                  {selectedDate 
-                    ? selectedDate.toLocaleDateString('en-US', { weekday: 'long' }) 
-                    : new Date().toLocaleDateString('en-US', { weekday: 'long' })}
-                </span>
-              </div>
-            </div>
-            
-            <Separator className="my-6" />
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="site">Select Site</Label>
-                <SearchableSelect
-                  value={selectedSite || ''}
-                  onValueChange={setSelectedSite}
-                  options={siteOptions}
-                  placeholder="Search for a site"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Shift Type</Label>
-                <Tabs defaultValue="day" onValueChange={(v) => setSelectedShiftType(v as 'day' | 'night')}>
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="day" className="flex items-center">
-                      <Sun className="h-4 w-4 mr-2" />
-                      Day
-                    </TabsTrigger>
-                    <TabsTrigger value="night" className="flex items-center">
-                      <Moon className="h-4 w-4 mr-2" />
-                      Night
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
+              <div className="mt-6 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Selected Date:</span>
+                  <Badge variant="outline" className="font-mono">
+                    {dateString}
+                  </Badge>
+                </div>
+                
+                <div className="flex items-center justify-between text-sm">
+                  <span>Day:</span>
+                  <span className="font-medium">
+                    {selectedDate 
+                      ? selectedDate.toLocaleDateString('en-US', { weekday: 'long' }) 
+                      : new Date().toLocaleDateString('en-US', { weekday: 'long' })}
+                  </span>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -865,64 +836,4 @@ const Attendance = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="site-info">Site</Label>
-                <Badge>{selectedSiteDetails?.name}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="shift-info">Shift</Label>
-                <Badge>{selectedShiftType === 'day' ? 'Day Shift' : 'Night Shift'}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="date-info">Date</Label>
-                <Badge>{dateString}</Badge>
-              </div>
-            </div>
-            
-            <Separator />
-            
-            <div className="space-y-2">
-              <Label htmlFor="guard-allocation">Select Guard</Label>
-              <Select value={allocatedGuard} onValueChange={setAllocatedGuard}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a guard" />
-                </SelectTrigger>
-                <SelectContent>
-                  {getAvailableGuards().map(guard => (
-                    <SelectItem key={guard.id} value={guard.id}>
-                      {guard.name} ({guard.type || 'Permanent'})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {getAvailableGuards().length === 0 && (
-                <p className="text-xs text-amber-500 mt-1">
-                  No available guards found. All guards may be assigned elsewhere.
-                </p>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="allocation-notes">Notes (Optional)</Label>
-              <Textarea
-                id="allocation-notes"
-                placeholder="Add any additional information..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setGuardAllocationDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={saveGuardAllocation} disabled={!allocatedGuard}>
-              Allocate Guard
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-export default Attendance;
+                <Badge>{
