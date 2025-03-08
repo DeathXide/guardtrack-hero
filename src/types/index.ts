@@ -23,7 +23,7 @@ export interface PaymentRecord {
   date: string;
   amount: number;
   note?: string;
-  type: 'salary' | 'bonus' | 'deduction';
+  type: 'bonus' | 'deduction';
   month?: string; // Added month field for tracking monthly payments
 }
 

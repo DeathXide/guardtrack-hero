@@ -61,14 +61,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { user } = useAuth();
   
-  // Filter out nav items based on user role
   const filteredNavItems = user 
     ? navItems.filter(item => item.roles.includes(user.role))
     : [];
   
   return (
     <>
-      {/* Backdrop for mobile */}
       <div
         className={cn(
           "fixed inset-0 z-30 bg-background/80 backdrop-blur-sm transition-opacity duration-300 lg:hidden",
@@ -77,7 +75,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         onClick={onClose}
       />
       
-      {/* Sidebar */}
       <aside
         className={cn(
           "fixed top-0 left-0 z-40 h-full w-64 bg-background border-r pt-16 transition-transform duration-300 ease-in-out",
