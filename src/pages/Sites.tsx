@@ -3,17 +3,80 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Plus, User, Edit, Trash } from 'lucide-react';
+import { MapPin, Plus, User, Edit, Trash, Building } from 'lucide-react';
 import { Site } from '@/types';
 import { sites, users } from '@/lib/data';
+import { useToast } from "@/hooks/use-toast";
 
 const Sites = () => {
   const [siteList, setSiteList] = useState<Site[]>(sites);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const { toast } = useToast();
+  
+  // Form state
+  const [newSite, setNewSite] = useState({
+    name: '',
+    location: '',
+    daySlots: 0,
+    nightSlots: 0,
+    supervisorId: ''
+  });
+
+  // Handle form input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { id, value } = e.target;
+    setNewSite({
+      ...newSite,
+      [id === 'site-name' ? 'name' : id === 'day-slots' ? 'daySlots' : id === 'night-slots' ? 'nightSlots' : id]: 
+        (id === 'day-slots' || id === 'night-slots') ? parseInt(value) || 0 : value
+    });
+  };
+
+  // Handle form submission
+  const handleSubmit = () => {
+    // Validate form
+    if (!newSite.name || !newSite.location || !newSite.supervisorId) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create new site
+    const newSiteObject: Site = {
+      id: `s${siteList.length + 1}`,
+      name: newSite.name,
+      location: newSite.location,
+      supervisorId: newSite.supervisorId,
+      daySlots: newSite.daySlots,
+      nightSlots: newSite.nightSlots
+    };
+
+    // Add to list and close dialog
+    setSiteList([...siteList, newSiteObject]);
+    setIsDialogOpen(false);
+    
+    // Reset form
+    setNewSite({
+      name: '',
+      location: '',
+      daySlots: 0,
+      nightSlots: 0,
+      supervisorId: ''
+    });
+    
+    // Show success message
+    toast({
+      title: "Site Added",
+      description: `${newSite.name} has been successfully added`,
+    });
+  };
   
   // Filter sites based on search term
   const filteredSites = siteList.filter(site => 
@@ -37,7 +100,7 @@ const Sites = () => {
         </div>
         
         <Button onClick={() => setIsDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Building className="h-4 w-4 mr-2" />
           Add Site
         </Button>
       </div>
@@ -111,27 +174,53 @@ const Sites = () => {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="site-name">Site Name</Label>
-              <Input id="site-name" placeholder="Enter site name" />
+              <Input 
+                id="site-name" 
+                placeholder="Enter site name" 
+                value={newSite.name}
+                onChange={handleInputChange}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="location">Location</Label>
-              <Input id="location" placeholder="Enter site location" />
+              <Input 
+                id="location" 
+                placeholder="Enter site location" 
+                value={newSite.location}
+                onChange={handleInputChange}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="day-slots">Day Slots</Label>
-                <Input id="day-slots" type="number" min="0" placeholder="0" />
+                <Input 
+                  id="day-slots" 
+                  type="number" 
+                  min="0" 
+                  placeholder="0" 
+                  value={newSite.daySlots}
+                  onChange={handleInputChange}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="night-slots">Night Slots</Label>
-                <Input id="night-slots" type="number" min="0" placeholder="0" />
+                <Input 
+                  id="night-slots" 
+                  type="number" 
+                  min="0" 
+                  placeholder="0" 
+                  value={newSite.nightSlots}
+                  onChange={handleInputChange}
+                />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="supervisor">Supervisor</Label>
+              <Label htmlFor="supervisorId">Supervisor</Label>
               <select 
-                id="supervisor" 
+                id="supervisorId" 
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={newSite.supervisorId}
+                onChange={handleInputChange}
               >
                 <option value="">Select a supervisor</option>
                 {users
@@ -147,7 +236,7 @@ const Sites = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button>Add Site</Button>
+            <Button onClick={handleSubmit}>Add Site</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

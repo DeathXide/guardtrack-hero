@@ -6,14 +6,98 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { User, Plus, Search, Phone, Mail, Shield, Edit, Trash } from 'lucide-react';
+import { User, Plus, Search, Phone, Mail, Shield, Edit, Trash, UserPlus } from 'lucide-react';
 import { guards } from '@/lib/data';
 import { Guard } from '@/types';
+import { useToast } from "@/hooks/use-toast";
 
 const Guards = () => {
-  const [guardList] = useState<Guard[]>(guards);
+  const [guardList, setGuardList] = useState<Guard[]>(guards);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const { toast } = useToast();
+  
+  // Form state
+  const [newGuard, setNewGuard] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    badgeNumber: '',
+    status: 'active' as 'active' | 'inactive'
+  });
+
+  // Handle form input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { id, value } = e.target;
+    setNewGuard({
+      ...newGuard,
+      [id]: id === 'status' ? value as 'active' | 'inactive' : value
+    });
+  };
+
+  // Handle form submission
+  const handleSubmit = () => {
+    // Validate form
+    if (!newGuard.name || !newGuard.email || !newGuard.phone || !newGuard.badgeNumber) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newGuard.email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please provide a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Check for duplicate badge number
+    if (guardList.some(guard => guard.badgeNumber === newGuard.badgeNumber)) {
+      toast({
+        title: "Badge Number Already Exists",
+        description: "Please provide a unique badge number",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create new guard
+    const newGuardObject: Guard = {
+      id: `g${guardList.length + 1}`,
+      name: newGuard.name,
+      email: newGuard.email,
+      phone: newGuard.phone,
+      badgeNumber: newGuard.badgeNumber,
+      status: newGuard.status,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newGuard.name)}&background=0D8ABC&color=fff`
+    };
+
+    // Add to list and close dialog
+    setGuardList([...guardList, newGuardObject]);
+    setIsDialogOpen(false);
+    
+    // Reset form
+    setNewGuard({
+      name: '',
+      email: '',
+      phone: '',
+      badgeNumber: '',
+      status: 'active'
+    });
+    
+    // Show success message
+    toast({
+      title: "Guard Added",
+      description: `${newGuard.name} has been successfully added`,
+    });
+  };
   
   // Filter guards based on search term
   const filteredGuards = guardList.filter(guard => 
@@ -33,7 +117,7 @@ const Guards = () => {
         </div>
         
         <Button onClick={() => setIsDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+          <UserPlus className="h-4 w-4 mr-2" />
           Add Guard
         </Button>
       </div>
@@ -114,25 +198,48 @@ const Guards = () => {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" placeholder="Enter full name" />
+              <Input 
+                id="name" 
+                placeholder="Enter full name" 
+                value={newGuard.name}
+                onChange={handleInputChange}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="Enter email address" />
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="Enter email address" 
+                value={newGuard.email}
+                onChange={handleInputChange}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" placeholder="Enter phone number" />
+              <Input 
+                id="phone" 
+                placeholder="Enter phone number" 
+                value={newGuard.phone}
+                onChange={handleInputChange}
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="badge">Badge Number</Label>
-              <Input id="badge" placeholder="Enter badge number" />
+              <Label htmlFor="badgeNumber">Badge Number</Label>
+              <Input 
+                id="badgeNumber" 
+                placeholder="Enter badge number" 
+                value={newGuard.badgeNumber}
+                onChange={handleInputChange}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
               <select 
                 id="status" 
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={newGuard.status}
+                onChange={handleInputChange}
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -141,7 +248,7 @@ const Guards = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button>Add Guard</Button>
+            <Button onClick={handleSubmit}>Add Guard</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
