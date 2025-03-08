@@ -19,6 +19,8 @@ const Reports = () => {
     const presentCount = guardRecords.filter(r => r.status === 'present').length;
     const absentCount = guardRecords.filter(r => r.status === 'absent').length;
     const replacedCount = guardRecords.filter(r => r.status === 'replaced').length;
+    // Add the missing reassignedCount property
+    const reassignedCount = guardRecords.filter(r => r.status === 'reassigned').length;
     const attendancePercentage = totalShifts > 0 
       ? Math.round(((presentCount + replacedCount) / totalShifts) * 100) 
       : 0;
@@ -30,6 +32,7 @@ const Reports = () => {
       presentCount,
       absentCount,
       replacedCount,
+      reassignedCount, // Added the missing property
       attendancePercentage,
     };
   }).filter(report => report.totalShifts > 0);
@@ -208,6 +211,7 @@ const Reports = () => {
                     <TableHead className="text-right">Present</TableHead>
                     <TableHead className="text-right">Absent</TableHead>
                     <TableHead className="text-right">Replaced</TableHead>
+                    <TableHead className="text-right">Reassigned</TableHead>
                     <TableHead className="text-right">Attendance Rate</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -219,6 +223,7 @@ const Reports = () => {
                       <TableCell className="text-right">{report.presentCount}</TableCell>
                       <TableCell className="text-right">{report.absentCount}</TableCell>
                       <TableCell className="text-right">{report.replacedCount}</TableCell>
+                      <TableCell className="text-right">{report.reassignedCount}</TableCell>
                       <TableCell className="text-right font-medium">
                         <span 
                           className={`px-2 py-1 rounded-md text-xs ${
