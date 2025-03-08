@@ -1,7 +1,16 @@
+
 import { User, Site, Guard, Shift, AttendanceRecord, MonthlyEarning } from '@/types';
 
-// Empty Users
-export const users: User[] = [];
+// Default admin user
+export const users: User[] = [
+  {
+    id: "admin-1",
+    name: "Admin User",
+    email: "admin@secureGuard.com",
+    role: "admin",
+    avatar: "/placeholder.svg"
+  }
+];
 
 // Empty Sites
 export const sites: Site[] = [];
