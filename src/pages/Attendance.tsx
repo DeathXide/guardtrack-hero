@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,20 +28,25 @@ import {
   Building,
   UserPlus,
   UserCheck,
+  Loader2
 } from 'lucide-react';
-import { 
-  attendanceRecords, 
-  sites, 
-  guards, 
-  getShiftsBySite, 
-  getGuardById, 
-  getSiteById, 
-  getAttendanceByDate,
-  isGuardMarkedPresentElsewhere
-} from '@/lib/data';
 import { AttendanceRecord, Guard, Site, Shift } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  fetchSites,
+  fetchSite,
+  fetchGuards,
+  fetchGuard,
+  fetchShiftsBySite,
+  fetchAttendanceByDate,
+  createAttendanceRecord,
+  updateAttendanceRecord,
+  isGuardMarkedPresentElsewhere,
+  calculateDailyRate,
+  calculateMonthlyEarnings
+} from '@/lib/supabaseService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -64,34 +70,10 @@ const getMonthName = (date: Date): string => {
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 };
 
-const calculateDailyRate = (guard: Guard | undefined): number => {
-  if (!guard || !guard.payRate) return 0;
-  
-  const now = new Date();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  
-  return guard.payRate / daysInMonth;
-};
-
-const calculateMonthlyEarnings = (guard: Guard | undefined, currentDate: Date): number => {
-  if (!guard) return 0;
-  
-  const month = getMonthName(currentDate);
-  const monthRecords = attendanceRecords.filter(record => {
-    const recordDate = new Date(record.date);
-    return getMonthName(recordDate) === month && 
-           record.guardId === guard.id && 
-           (record.status === 'present' || record.status === 'reassigned');
-  });
-  
-  const dailyRate = calculateDailyRate(guard);
-  return monthRecords.length * dailyRate;
-};
-
 const Attendance = () => {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [selectedSite, setSelectedSite] = useState<string | undefined>(sites[0]?.id);
+  const [selectedSite, setSelectedSite] = useState<string | undefined>();
   const [selectedShiftType, setSelectedShiftType] = useState<'day' | 'night'>('day');
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [replacementDialogOpen, setReplacementDialogOpen] = useState(false);
@@ -106,59 +88,155 @@ const Attendance = () => {
   const [allocatedGuard, setAllocatedGuard] = useState<string | undefined>();
   const [notes, setNotes] = useState('');
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const dateString = selectedDate 
+    ? selectedDate.toISOString().split('T')[0] 
+    : new Date().toISOString().split('T')[0];
+  
+  // Fetch sites
+  const { 
+    data: sites = [],
+    isLoading: sitesLoading
+  } = useQuery({
+    queryKey: ['sites'],
+    queryFn: fetchSites
+  });
+  
+  // Fetch guards
+  const { 
+    data: guards = [],
+    isLoading: guardsLoading
+  } = useQuery({
+    queryKey: ['guards'],
+    queryFn: fetchGuards
+  });
+  
+  // Set selected site when sites are loaded
+  useEffect(() => {
+    if (sites.length > 0 && !selectedSite) {
+      setSelectedSite(sites[0].id);
+    }
+  }, [sites, selectedSite]);
+  
+  // Fetch selected site details
+  const { 
+    data: selectedSiteDetails,
+    isLoading: siteDetailsLoading
+  } = useQuery({
+    queryKey: ['site', selectedSite],
+    queryFn: () => selectedSite ? fetchSite(selectedSite) : null,
+    enabled: !!selectedSite
+  });
+  
+  // Fetch shifts for selected site
+  const { 
+    data: siteShifts = [],
+    isLoading: shiftsLoading
+  } = useQuery({
+    queryKey: ['shifts', selectedSite],
+    queryFn: () => selectedSite ? fetchShiftsBySite(selectedSite) : Promise.resolve([]),
+    enabled: !!selectedSite
+  });
+  
+  // Filter shifts by type
+  const filteredShifts = siteShifts.filter(shift => shift.type === selectedShiftType);
+  
+  // Fetch attendance records for selected date
+  const { 
+    data: dateRecords = [],
+    isLoading: attendanceLoading
+  } = useQuery({
+    queryKey: ['attendance', dateString],
+    queryFn: () => fetchAttendanceByDate(dateString),
+    enabled: !!dateString
+  });
+  
+  // Mutations
+  const createAttendanceMutation = useMutation({
+    mutationFn: createAttendanceRecord,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    }
+  });
+  
+  const updateAttendanceMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<AttendanceRecord> }) => 
+      updateAttendanceRecord(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    }
+  });
+  
+  // Prepare shifts with attendance data
+  const shiftsWithAttendance = React.useMemo(() => {
+    if (shiftsLoading || attendanceLoading || guardsLoading || siteDetailsLoading) {
+      return [];
+    }
+    
+    return Promise.all(filteredShifts.map(async (shift) => {
+      const attendanceRecord = dateRecords.find(record => record.shiftId === shift.id);
+      const guard = shift.guardId ? await fetchGuard(shift.guardId) : null;
+      
+      // Create temporary record if none exists
+      const record = attendanceRecord || {
+        id: `temp-${shift.id}-${dateString}`,
+        date: dateString,
+        shiftId: shift.id,
+        guardId: shift.guardId || '',
+        status: 'present',
+      };
+      
+      const isPresentElsewhere = guard ? 
+        await isGuardMarkedPresentElsewhere(guard.id, dateString, selectedShiftType, selectedSiteDetails?.id) : 
+        false;
+      
+      const replacementGuard = record.replacementGuardId 
+        ? await fetchGuard(record.replacementGuardId) 
+        : null;
+      
+      const reassignedSite = record.reassignedSiteId
+        ? await fetchSite(record.reassignedSiteId)
+        : null;
+      
+      const dailyRate = guard ? calculateDailyRate(guard) : 0;
+      
+      return {
+        shift,
+        record,
+        guard,
+        replacementGuard,
+        reassignedSite,
+        isPresentElsewhere,
+        dailyRate
+      };
+    }));
+  }, [filteredShifts, dateRecords, selectedShiftType, dateString, selectedSiteDetails?.id, shiftsLoading, attendanceLoading, guardsLoading, siteDetailsLoading]);
+  
+  const [resolvedShifts, setResolvedShifts] = useState<any[]>([]);
+  
+  // Resolve promises from shiftsWithAttendance
+  useEffect(() => {
+    if (shiftsWithAttendance instanceof Promise) {
+      shiftsWithAttendance.then(resolved => {
+        setResolvedShifts(resolved);
+      });
+    } else if (Array.isArray(shiftsWithAttendance)) {
+      setResolvedShifts(shiftsWithAttendance);
+    }
+  }, [shiftsWithAttendance]);
   
   const siteOptions = sites.map(site => ({
     value: site.id,
     label: site.name
   }));
   
-  const dateString = selectedDate 
-    ? selectedDate.toISOString().split('T')[0] 
-    : new Date().toISOString().split('T')[0];
-  
-  const selectedSiteDetails = getSiteById(selectedSite || '');
-  
-  const siteShifts = selectedSiteDetails 
-    ? getShiftsBySite(selectedSiteDetails.id).filter(shift => shift.type === selectedShiftType)
-    : [];
-  
-  const dateRecords = getAttendanceByDate(dateString);
-  
-  const shiftsWithAttendance = siteShifts.map(shift => {
-    const attendanceRecord = dateRecords.find(record => record.shiftId === shift.id);
-    const guard = getGuardById(shift.guardId);
-    
-    const record = attendanceRecord || {
-      id: `temp-${shift.id}-${dateString}`,
-      date: dateString,
-      shiftId: shift.id,
-      guardId: shift.guardId,
-      status: 'present',
-    };
-    
-    const isPresentElsewhere = guard ? 
-      isGuardMarkedPresentElsewhere(guard.id, dateString, selectedShiftType, selectedSiteDetails?.id) : 
-      false;
-    
-    return {
-      shift,
-      record,
-      guard,
-      replacementGuard: record.replacementGuardId 
-        ? getGuardById(record.replacementGuardId) 
-        : undefined,
-      reassignedSite: record.reassignedSiteId
-        ? getSiteById(record.reassignedSiteId)
-        : undefined,
-      isPresentElsewhere,
-      dailyRate: calculateDailyRate(guard)
-    };
-  });
-  
-  const handleMarkAttendance = (shift: Shift, guard: Guard | undefined) => {
+  const handleMarkAttendance = async (shift: Shift, guard: Guard | undefined) => {
     if (!guard) return;
     
-    if (isGuardMarkedPresentElsewhere(guard.id, dateString, selectedShiftType, selectedSiteDetails?.id)) {
+    const isPresentElsewhere = await isGuardMarkedPresentElsewhere(guard.id, dateString, selectedShiftType, selectedSiteDetails?.id);
+    
+    if (isPresentElsewhere) {
       toast({
         title: "Guard already assigned",
         description: `${guard.name} is already marked present at another site for this shift`,
@@ -206,27 +284,58 @@ const Attendance = () => {
     setGuardAllocationDialogOpen(true);
   };
   
-  const saveAttendance = () => {
+  const saveAttendance = async () => {
     if (!selectedRecord || !selectedGuard) return;
     
-    toast({
-      title: 'Attendance recorded',
-      description: `${selectedGuard.name} marked as ${attendanceStatus} for ${formatDate(dateString)}`,
-    });
+    const existingRecord = dateRecords.find(r => r.shiftId === selectedRecord.shiftId);
     
-    setAttendanceDialogOpen(false);
+    const recordData = {
+      date: dateString,
+      shiftId: selectedRecord.shiftId,
+      guardId: selectedGuard.id,
+      status: attendanceStatus,
+      notes: notes || undefined
+    };
     
-    if (attendanceStatus === 'absent') {
-      setReplacementDialogOpen(true);
-    } else if (attendanceStatus === 'reassigned') {
-      setReassignDialogOpen(true);
+    try {
+      if (existingRecord) {
+        await updateAttendanceMutation.mutateAsync({ 
+          id: existingRecord.id, 
+          data: recordData 
+        });
+      } else {
+        await createAttendanceMutation.mutateAsync(recordData);
+      }
+      
+      toast({
+        title: 'Attendance recorded',
+        description: `${selectedGuard.name} marked as ${attendanceStatus} for ${formatDate(dateString)}`,
+      });
+      
+      setAttendanceDialogOpen(false);
+      
+      // Open follow-up dialogs if needed
+      if (attendanceStatus === 'absent') {
+        setReplacementDialogOpen(true);
+      } else if (attendanceStatus === 'reassigned') {
+        setReassignDialogOpen(true);
+      }
+    } catch (error) {
+      console.error('Error saving attendance:', error);
+      toast({
+        title: 'Error saving attendance',
+        description: 'There was a problem saving the attendance record.',
+        variant: 'destructive'
+      });
     }
   };
   
-  const saveReplacement = () => {
+  const saveReplacement = async () => {
     if (!selectedRecord || !selectedGuard || !replacementGuard) return;
     
-    if (isGuardMarkedPresentElsewhere(replacementGuard, dateString, selectedShiftType, selectedSiteDetails?.id)) {
+    const isPresentElsewhere = await isGuardMarkedPresentElsewhere(replacementGuard, dateString, selectedShiftType, selectedSiteDetails?.id);
+    
+    if (isPresentElsewhere) {
       toast({
         title: "Guard already assigned",
         description: `Selected replacement is already marked present at another site for this shift`,
@@ -235,35 +344,96 @@ const Attendance = () => {
       return;
     }
     
-    const replacement = getGuardById(replacementGuard);
+    const existingRecord = dateRecords.find(r => r.shiftId === selectedRecord.shiftId);
     
-    toast({
-      title: 'Replacement assigned',
-      description: `${replacement?.name} assigned as replacement for ${selectedGuard.name}`,
-    });
-    
-    setReplacementDialogOpen(false);
+    try {
+      if (existingRecord) {
+        await updateAttendanceMutation.mutateAsync({
+          id: existingRecord.id,
+          data: {
+            status: 'replaced',
+            replacementGuardId: replacementGuard,
+            notes: notes || existingRecord.notes
+          }
+        });
+      } else {
+        await createAttendanceMutation.mutateAsync({
+          date: dateString,
+          shiftId: selectedRecord.shiftId,
+          guardId: selectedGuard.id,
+          status: 'replaced',
+          replacementGuardId: replacementGuard,
+          notes
+        });
+      }
+      
+      const replacement = await fetchGuard(replacementGuard);
+      
+      toast({
+        title: 'Replacement assigned',
+        description: `${replacement?.name} assigned as replacement for ${selectedGuard.name}`,
+      });
+      
+      setReplacementDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving replacement:', error);
+      toast({
+        title: 'Error assigning replacement',
+        description: 'There was a problem assigning the replacement guard.',
+        variant: 'destructive'
+      });
+    }
   };
   
-  const saveReassignment = () => {
+  const saveReassignment = async () => {
     if (!selectedRecord || !selectedGuard || !reassignedSite) return;
     
-    const targetSite = getSiteById(reassignedSite);
+    const existingRecord = dateRecords.find(r => r.shiftId === selectedRecord.shiftId);
+    const targetSite = await fetchSite(reassignedSite);
     
-    toast({
-      title: 'Guard reassigned',
-      description: `${selectedGuard.name} reassigned to ${targetSite?.name}`,
-    });
-    
-    setReassignDialogOpen(false);
+    try {
+      if (existingRecord) {
+        await updateAttendanceMutation.mutateAsync({
+          id: existingRecord.id,
+          data: {
+            status: 'reassigned',
+            reassignedSiteId: reassignedSite,
+            notes: notes || existingRecord.notes
+          }
+        });
+      } else {
+        await createAttendanceMutation.mutateAsync({
+          date: dateString,
+          shiftId: selectedRecord.shiftId,
+          guardId: selectedGuard.id,
+          status: 'reassigned',
+          reassignedSiteId: reassignedSite,
+          notes
+        });
+      }
+      
+      toast({
+        title: 'Guard reassigned',
+        description: `${selectedGuard.name} reassigned to ${targetSite?.name}`,
+      });
+      
+      setReassignDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving reassignment:', error);
+      toast({
+        title: 'Error reassigning guard',
+        description: 'There was a problem reassigning the guard.',
+        variant: 'destructive'
+      });
+    }
   };
 
-  const saveGuardAllocation = () => {
+  const saveGuardAllocation = async () => {
     if (!selectedShift || !allocatedGuard) return;
     
-    const guard = getGuardById(allocatedGuard);
+    const guard = await fetchGuard(allocatedGuard);
     
-    if (isGuardMarkedPresentElsewhere(allocatedGuard, dateString, selectedShiftType, selectedSiteDetails?.id)) {
+    if (await isGuardMarkedPresentElsewhere(allocatedGuard, dateString, selectedShiftType, selectedSiteDetails?.id)) {
       toast({
         title: "Guard already assigned",
         description: `${guard?.name} is already assigned to another site for this shift`,
@@ -272,12 +442,29 @@ const Attendance = () => {
       return;
     }
     
-    toast({
-      title: 'Guard allocated',
-      description: `${guard?.name} has been allocated to this shift`,
-    });
-    
-    setGuardAllocationDialogOpen(false);
+    try {
+      // Create attendance record for the allocated guard
+      await createAttendanceMutation.mutateAsync({
+        date: dateString,
+        shiftId: selectedShift.id,
+        guardId: allocatedGuard,
+        status: 'present'
+      });
+      
+      toast({
+        title: 'Guard allocated',
+        description: `${guard?.name} has been allocated to this shift`,
+      });
+      
+      setGuardAllocationDialogOpen(false);
+    } catch (error) {
+      console.error('Error allocating guard:', error);
+      toast({
+        title: 'Error allocating guard',
+        description: 'There was a problem allocating the guard to the shift.',
+        variant: 'destructive'
+      });
+    }
   };
   
   const getAvailableGuards = () => {
@@ -286,13 +473,30 @@ const Attendance = () => {
         return false;
       }
       
-      return !isGuardMarkedPresentElsewhere(guard.id, dateString, selectedShiftType, selectedSiteDetails?.id);
+      // This is a simplified check - we should ideally use the async function
+      // but that would complicate this component even more
+      return !resolvedShifts.some(item => 
+        item.guard?.id === guard.id && item.isPresentElsewhere
+      );
     });
   };
   
   const getAvailableReassignmentSites = () => {
     return sites.filter(site => site.id !== selectedSite);
   };
+  
+  const isLoading = sitesLoading || guardsLoading || shiftsLoading || attendanceLoading;
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading attendance data...</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-8 animate-fade-in">
@@ -303,7 +507,7 @@ const Attendance = () => {
             Mark and manage daily attendance for all sites
           </p>
         </div>
-        <Button onClick={() => handleAllocateGuard(siteShifts[0])} disabled={!selectedSite || siteShifts.length === 0}>
+        <Button onClick={() => filteredShifts.length > 0 && handleAllocateGuard(filteredShifts[0])} disabled={!selectedSite || filteredShifts.length === 0}>
           <UserPlus className="h-4 w-4 mr-2" />
           Allocate Guard
         </Button>
@@ -355,13 +559,36 @@ const Attendance = () => {
                 {selectedSiteDetails ? selectedSiteDetails.name : 'No site selected'} • {selectedShiftType === 'day' ? 'Day Shift' : 'Night Shift'} • {formatDate(dateString)}
               </CardDescription>
             </div>
-            <Badge className="text-xs">
-              {selectedSiteDetails 
-                ? (selectedShiftType === 'day' 
-                  ? `${selectedSiteDetails.daySlots} slots` 
-                  : `${selectedSiteDetails.nightSlots} slots`)
-                : '0 slots'}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Select value={selectedSite} onValueChange={setSelectedSite}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select a site" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sites.map(site => (
+                    <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={selectedShiftType} onValueChange={(value) => setSelectedShiftType(value as 'day' | 'night')}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Shift type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="day">Day Shift</SelectItem>
+                  <SelectItem value="night">Night Shift</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Badge className="text-xs">
+                {selectedSiteDetails 
+                  ? (selectedShiftType === 'day' 
+                    ? `${selectedSiteDetails.daySlots} slots` 
+                    : `${selectedSiteDetails.nightSlots} slots`)
+                  : '0 slots'}
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent>
             {!selectedSiteDetails ? (
@@ -369,15 +596,15 @@ const Attendance = () => {
                 <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-lg font-medium">No Site Selected</p>
                 <p className="text-sm text-muted-foreground max-w-sm mt-2">
-                  Please select a site from the sidebar to view attendance records.
+                  Please select a site from the dropdown to view attendance records.
                 </p>
               </div>
-            ) : shiftsWithAttendance.length === 0 ? (
+            ) : resolvedShifts.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-[400px] text-center">
                 <Clock className="h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-lg font-medium">No Shifts Found</p>
                 <p className="text-sm text-muted-foreground max-w-sm mt-2">
-                  There are no {selectedShiftType} shifts assigned for this site.
+                  There are no {selectedShiftType} shifts assigned for this site. Create shifts first.
                 </p>
               </div>
             ) : (
@@ -394,7 +621,7 @@ const Attendance = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {shiftsWithAttendance.map((item, index) => (
+                      {resolvedShifts.map((item, index) => (
                         <tr key={item.shift.id}>
                           <td className="py-3 px-4 text-muted-foreground">{index + 1}</td>
                           <td className="py-3 px-4">
@@ -530,7 +757,7 @@ const Attendance = () => {
                 <div className="bg-muted p-4 rounded-md text-center">
                   <p className="text-sm text-muted-foreground">Present</p>
                   <p className="text-2xl font-bold text-success mt-1">
-                    {shiftsWithAttendance.filter(i => 
+                    {resolvedShifts.filter(i => 
                       i.record.status === 'present' || i.record.status === 'replaced' || i.record.status === 'reassigned'
                     ).length}
                   </p>
@@ -538,26 +765,26 @@ const Attendance = () => {
                 <div className="bg-muted p-4 rounded-md text-center">
                   <p className="text-sm text-muted-foreground">Absent</p>
                   <p className="text-2xl font-bold text-destructive mt-1">
-                    {shiftsWithAttendance.filter(i => i.record.status === 'absent').length}
+                    {resolvedShifts.filter(i => i.record.status === 'absent').length}
                   </p>
                 </div>
                 <div className="bg-muted p-4 rounded-md text-center">
                   <p className="text-sm text-muted-foreground">Attendance Rate</p>
                   <p className="text-2xl font-bold mt-1">
-                    {shiftsWithAttendance.length > 0
+                    {resolvedShifts.length > 0
                       ? Math.round(
-                          (shiftsWithAttendance.filter(
+                          (resolvedShifts.filter(
                             i => i.record.status === 'present' || i.record.status === 'replaced' || i.record.status === 'reassigned'
                           ).length / 
-                          shiftsWithAttendance.length) * 100
+                          resolvedShifts.length) * 100
                         )
                       : 0}%
                   </p>
                 </div>
                 <div className="bg-muted p-4 rounded-md text-center">
-                  <p className="text-sm text-muted-foreground">Monthly Earnings</p>
+                  <p className="text-sm text-muted-foreground">Daily Earnings</p>
                   <p className="text-2xl font-bold text-primary mt-1">
-                    ${shiftsWithAttendance
+                    ${resolvedShifts
                       .filter(i => i.record.status === 'present' || i.record.status === 'reassigned')
                       .reduce((total, item) => total + item.dailyRate, 0)
                       .toFixed(2)}
@@ -638,8 +865,15 @@ const Attendance = () => {
             <Button variant="outline" onClick={() => setAttendanceDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={saveAttendance}>
-              Save
+            <Button onClick={saveAttendance} disabled={createAttendanceMutation.isPending || updateAttendanceMutation.isPending}>
+              {createAttendanceMutation.isPending || updateAttendanceMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -708,8 +942,18 @@ const Attendance = () => {
             <Button variant="outline" onClick={() => setReplacementDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={saveReplacement} disabled={!replacementGuard}>
-              Assign Replacement
+            <Button 
+              onClick={saveReplacement} 
+              disabled={!replacementGuard || createAttendanceMutation.isPending || updateAttendanceMutation.isPending}
+            >
+              {createAttendanceMutation.isPending || updateAttendanceMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Assigning...
+                </>
+              ) : (
+                'Assign Replacement'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -773,8 +1017,18 @@ const Attendance = () => {
             <Button variant="outline" onClick={() => setReassignDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={saveReassignment} disabled={!reassignedSite}>
-              Confirm Reassignment
+            <Button 
+              onClick={saveReassignment} 
+              disabled={!reassignedSite || createAttendanceMutation.isPending || updateAttendanceMutation.isPending}
+            >
+              {createAttendanceMutation.isPending || updateAttendanceMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Confirming...
+                </>
+              ) : (
+                'Confirm Reassignment'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -834,8 +1088,18 @@ const Attendance = () => {
             <Button variant="outline" onClick={() => setGuardAllocationDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={saveGuardAllocation} disabled={!allocatedGuard || !selectedSite}>
-              Allocate Guard
+            <Button 
+              onClick={saveGuardAllocation} 
+              disabled={!allocatedGuard || !selectedSite || createAttendanceMutation.isPending}
+            >
+              {createAttendanceMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Allocating...
+                </>
+              ) : (
+                'Allocate Guard'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -9,7 +9,226 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      attendance_records: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          date: string
+          guard_id: string
+          id: string
+          notes: string | null
+          reassigned_site_id: string | null
+          replacement_guard_id: string | null
+          shift_id: string
+          status: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          date: string
+          guard_id: string
+          id?: string
+          notes?: string | null
+          reassigned_site_id?: string | null
+          replacement_guard_id?: string | null
+          shift_id: string
+          status: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          date?: string
+          guard_id?: string
+          id?: string
+          notes?: string | null
+          reassigned_site_id?: string | null
+          replacement_guard_id?: string | null
+          shift_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_guard_id_fkey"
+            columns: ["guard_id"]
+            isOneToOne: false
+            referencedRelation: "guards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_reassigned_site_id_fkey"
+            columns: ["reassigned_site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_replacement_guard_id_fkey"
+            columns: ["replacement_guard_id"]
+            isOneToOne: false
+            referencedRelation: "guards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guards: {
+        Row: {
+          avatar: string | null
+          badge_number: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          pay_rate: number | null
+          phone: string | null
+          status: string | null
+          type: string | null
+        }
+        Insert: {
+          avatar?: string | null
+          badge_number: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          pay_rate?: number | null
+          phone?: string | null
+          status?: string | null
+          type?: string | null
+        }
+        Update: {
+          avatar?: string | null
+          badge_number?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          pay_rate?: number | null
+          phone?: string | null
+          status?: string | null
+          type?: string | null
+        }
+        Relationships: []
+      }
+      payment_records: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          guard_id: string
+          id: string
+          month: string | null
+          note: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date: string
+          guard_id: string
+          id?: string
+          month?: string | null
+          note?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          guard_id?: string
+          id?: string
+          month?: string | null
+          note?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_records_guard_id_fkey"
+            columns: ["guard_id"]
+            isOneToOne: false
+            referencedRelation: "guards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shifts: {
+        Row: {
+          created_at: string
+          guard_id: string | null
+          id: string
+          site_id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          guard_id?: string | null
+          id?: string
+          site_id: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          guard_id?: string | null
+          id?: string
+          site_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_guard_id_fkey"
+            columns: ["guard_id"]
+            isOneToOne: false
+            referencedRelation: "guards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shifts_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sites: {
+        Row: {
+          created_at: string
+          day_slots: number
+          id: string
+          location: string
+          name: string
+          night_slots: number
+          supervisor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          day_slots?: number
+          id?: string
+          location: string
+          name: string
+          night_slots?: number
+          supervisor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          day_slots?: number
+          id?: string
+          location?: string
+          name?: string
+          night_slots?: number
+          supervisor_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
