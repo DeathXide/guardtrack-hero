@@ -25,14 +25,12 @@ const Guards = () => {
   const [guardType, setGuardType] = useState<'permanent' | 'temporary'>('permanent');
   const { toast } = useToast();
   
-  // Payment state
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNote, setPaymentNote] = useState('');
   const [paymentType, setPaymentType] = useState<'bonus' | 'deduction'>('bonus');
   const [selectedGuard, setSelectedGuard] = useState<Guard | null>(null);
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM'));
   
-  // Form state
   const initialFormState: Omit<Guard, 'id'> & { id?: string } = {
     name: '',
     email: '',
@@ -40,13 +38,12 @@ const Guards = () => {
     badgeNumber: '',
     status: 'active',
     type: 'permanent',
-    payRate: 15000.00, // Default monthly pay rate (15,000)
+    payRate: 15000.00,
     paymentHistory: []
   };
   
   const [newGuard, setNewGuard] = useState(initialFormState);
 
-  // Calculate shift rate based on monthly pay rate and days in the month
   const calculateShiftRate = (monthlyRate: number) => {
     const date = new Date();
     const year = date.getFullYear();
@@ -55,27 +52,20 @@ const Guards = () => {
     return monthlyRate / daysInMonth;
   };
 
-  // Calculate current month's earnings for each guard
   useEffect(() => {
     const updatedGuards = guardList.map(guard => {
       if (!guard.payRate) return guard;
       
-      // Calculate shift rate based on days in current month
       const shiftRate = calculateShiftRate(guard.payRate);
       
-      // Count attendance for current month
       const year = new Date().getFullYear();
       const month = new Date().getMonth();
       const currentMonth = `${year}-${String(month + 1).padStart(2, '0')}`;
       
-      // In a real app, this would fetch from the attendance records
-      // For this demo, we'll simulate with random shift counts
-      const shiftsWorked = Math.floor(Math.random() * 20) + 5; // Between 5-25 shifts
+      const shiftsWorked = Math.floor(Math.random() * 20) + 5;
       
-      // Calculate salary based on shifts worked and shift rate
       const monthlySalary = shiftsWorked * shiftRate;
       
-      // Get bonuses and deductions for this month
       const bonuses = guard.paymentHistory?.filter(p => 
         p.type === 'bonus' && p.date.startsWith(currentMonth)) || [];
       
@@ -85,7 +75,6 @@ const Guards = () => {
       const totalBonuses = bonuses.reduce((sum, p) => sum + p.amount, 0);
       const totalDeductions = deductions.reduce((sum, p) => sum + p.amount, 0);
       
-      // Monthly earnings object
       const monthlyEarning: MonthlyEarning = {
         month: currentMonth,
         totalShifts: shiftsWorked,
@@ -95,7 +84,6 @@ const Guards = () => {
         netAmount: monthlySalary + totalBonuses - totalDeductions
       };
       
-      // Store monthly earnings in the guard object
       const monthlyEarnings = { ...guard.monthlyEarnings, [currentMonth]: monthlyEarning };
       
       return {
@@ -108,7 +96,6 @@ const Guards = () => {
     setGuardList(updatedGuards);
   }, []);
 
-  // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     
@@ -130,7 +117,6 @@ const Guards = () => {
     }
   };
 
-  // Open edit dialog
   const handleEditGuard = (guard: Guard) => {
     setNewGuard({
       id: guard.id,
@@ -147,7 +133,6 @@ const Guards = () => {
     setIsDialogOpen(true);
   };
 
-  // Open payment dialog
   const handlePaymentDialog = (guard: Guard) => {
     setSelectedGuard(guard);
     setPaymentAmount('');
@@ -156,7 +141,6 @@ const Guards = () => {
     setIsPaymentDialogOpen(true);
   };
 
-  // Save payment
   const handleSavePayment = () => {
     if (!selectedGuard || !paymentAmount || parseFloat(paymentAmount) <= 0) {
       toast({
@@ -172,6 +156,7 @@ const Guards = () => {
     
     const payment: PaymentRecord = {
       id: `pay-${Date.now()}`,
+      guardId: selectedGuard.id,
       amount: parseFloat(paymentAmount),
       date: now.toISOString(),
       note: paymentNote,
@@ -184,7 +169,6 @@ const Guards = () => {
       paymentHistory: [...(selectedGuard.paymentHistory || []), payment]
     };
 
-    // Recalculate monthly earnings
     const currentMonthEarning = updatedGuard.monthlyEarnings?.[currentMonth] || {
       month: currentMonth,
       totalShifts: 0,
@@ -218,13 +202,11 @@ const Guards = () => {
     });
   };
 
-  // Open delete dialog
   const handleDeleteClick = (guardId: string) => {
     setSelectedGuardId(guardId);
     setDeleteDialogOpen(true);
   };
 
-  // Confirm delete
   const confirmDelete = () => {
     if (selectedGuardId) {
       setGuardList(guardList.filter(guard => guard.id !== selectedGuardId));
@@ -237,14 +219,12 @@ const Guards = () => {
     }
   };
 
-  // Handle dialog close
   const handleDialogClose = () => {
     setIsDialogOpen(false);
     setIsEditMode(false);
     setNewGuard(initialFormState);
   };
 
-  // Handle form submission
   const handleSubmit = () => {
     if (!newGuard.name || !newGuard.email || !newGuard.phone || !newGuard.badgeNumber || !newGuard.payRate) {
       toast({
