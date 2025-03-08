@@ -15,7 +15,8 @@ import {
   ShieldAlert, 
   User, 
   Users, 
-  X 
+  X,
+  ClipboardCheck 
 } from 'lucide-react';
 import { 
   attendanceRecords, 
