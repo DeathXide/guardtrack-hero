@@ -1,18 +1,18 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { 
   CalendarDays, 
   Check, 
@@ -34,7 +34,8 @@ import {
   getShiftsBySite, 
   getGuardById, 
   getSiteById, 
-  getAttendanceByDate 
+  getAttendanceByDate,
+  isGuardMarkedPresentElsewhere
 } from '@/lib/data';
 import { AttendanceRecord, Guard, Site, Shift } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -75,6 +76,12 @@ const Attendance = () => {
   const [notes, setNotes] = useState('');
   const { toast } = useToast();
   
+  // Format site options for searchable select
+  const siteOptions = sites.map(site => ({
+    value: site.id,
+    label: site.name
+  }));
+  
   // Get the date string in YYYY-MM-DD format
   const dateString = selectedDate 
     ? selectedDate.toISOString().split('T')[0] 
@@ -105,6 +112,11 @@ const Attendance = () => {
       status: 'present', // Default to present
     };
     
+    // Check if guard is marked present elsewhere for this date and shift type
+    const isPresentElsewhere = guard ? 
+      isGuardMarkedPresentElsewhere(guard.id, dateString, selectedShiftType, selectedSiteDetails?.id) : 
+      false;
+    
     return {
       shift,
       record,
@@ -114,13 +126,24 @@ const Attendance = () => {
         : undefined,
       reassignedSite: record.reassignedSiteId
         ? getSiteById(record.reassignedSiteId)
-        : undefined
+        : undefined,
+      isPresentElsewhere
     };
   });
   
   // Handle mark attendance
   const handleMarkAttendance = (shift: Shift, guard: Guard | undefined) => {
     if (!guard) return;
+    
+    // Check if guard is already marked present elsewhere
+    if (isGuardMarkedPresentElsewhere(guard.id, dateString, selectedShiftType, selectedSiteDetails?.id)) {
+      toast({
+        title: "Guard already assigned",
+        description: `${guard.name} is already marked present at another site for this shift`,
+        variant: "destructive"
+      });
+      return;
+    }
     
     setSelectedRecord({
       id: `temp-${shift.id}-${dateString}`,
@@ -182,6 +205,16 @@ const Attendance = () => {
   const saveReplacement = () => {
     if (!selectedRecord || !selectedGuard || !replacementGuard) return;
     
+    // Check if replacement guard is already marked present elsewhere
+    if (isGuardMarkedPresentElsewhere(replacementGuard, dateString, selectedShiftType, selectedSiteDetails?.id)) {
+      toast({
+        title: "Guard already assigned",
+        description: `Selected replacement is already marked present at another site for this shift`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const replacement = getGuardById(replacementGuard);
     
     // In a real app, this would call an API to save the replacement
@@ -208,6 +241,24 @@ const Attendance = () => {
     });
     
     setReassignDialogOpen(false);
+  };
+  
+  // Get available guards for replacement (exclude guards already present elsewhere)
+  const getAvailableReplacementGuards = () => {
+    return guards.filter(guard => {
+      // Exclude the current guard and inactive guards
+      if (guard.id === selectedGuard?.id || guard.status === 'inactive') {
+        return false;
+      }
+      
+      // Exclude guards already marked present elsewhere for this date and shift
+      return !isGuardMarkedPresentElsewhere(guard.id, dateString, selectedShiftType, selectedSiteDetails?.id);
+    });
+  };
+  
+  // Get available sites for reassignment (exclude current site)
+  const getAvailableReassignmentSites = () => {
+    return sites.filter(site => site.id !== selectedSite);
   };
   
   return (
@@ -260,18 +311,12 @@ const Attendance = () => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="site">Select Site</Label>
-                <Select value={selectedSite} onValueChange={setSelectedSite}>
-                  <SelectTrigger id="site">
-                    <SelectValue placeholder="Select Site" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sites.map(site => (
-                      <SelectItem key={site.id} value={site.id}>
-                        {site.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={selectedSite || ''}
+                  onValueChange={setSelectedSite}
+                  options={siteOptions}
+                  placeholder="Search for a site"
+                />
               </div>
               
               <div className="space-y-2">
@@ -327,109 +372,120 @@ const Attendance = () => {
                 </p>
               </div>
             ) : (
-              <div className="rounded-md border">
-                <div className="grid grid-cols-12 bg-muted py-3 px-4 text-sm font-medium">
-                  <div className="col-span-1">#</div>
-                  <div className="col-span-4">Guard</div>
-                  <div className="col-span-3">Status</div>
-                  <div className="col-span-4">Actions</div>
-                </div>
-                
-                <div className="divide-y">
-                  {shiftsWithAttendance.map((item, index) => (
-                    <div key={item.shift.id} className="grid grid-cols-12 py-3 px-4 items-center">
-                      <div className="col-span-1 text-muted-foreground">{index + 1}</div>
-                      
-                      <div className="col-span-4">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={item.guard?.avatar} alt={item.guard?.name} />
-                            <AvatarFallback>{item.guard ? getInitials(item.guard.name) : 'N/A'}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-sm">{item.guard?.name || 'Unassigned'}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {item.guard?.type || 'Permanent'} • Badge #{item.guard?.badgeNumber || 'N/A'}
-                            </p>
+              <div className="rounded-md border overflow-x-auto">
+                <div className="min-w-[800px]">
+                  <div className="grid grid-cols-12 bg-muted py-3 px-4 text-sm font-medium">
+                    <div className="col-span-1">#</div>
+                    <div className="col-span-4">Guard</div>
+                    <div className="col-span-3">Status</div>
+                    <div className="col-span-4">Actions</div>
+                  </div>
+                  
+                  <div className="divide-y">
+                    {shiftsWithAttendance.map((item, index) => (
+                      <div key={item.shift.id} className="grid grid-cols-12 py-3 px-4 items-center">
+                        <div className="col-span-1 text-muted-foreground">{index + 1}</div>
+                        
+                        <div className="col-span-4">
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={item.guard?.avatar} alt={item.guard?.name} />
+                              <AvatarFallback>{item.guard ? getInitials(item.guard.name) : 'N/A'}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="flex items-center">
+                                <p className="font-medium text-sm">{item.guard?.name || 'Unassigned'}</p>
+                                {item.isPresentElsewhere && (
+                                  <Badge variant="outline" className="ml-2 text-xs bg-yellow-100 text-yellow-800 border-yellow-300">
+                                    Assigned Elsewhere
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {item.guard?.type || 'Permanent'} • Badge #{item.guard?.badgeNumber || 'N/A'}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className="col-span-3">
-                        {item.record.status === 'present' ? (
-                          <Badge className="bg-success/10 text-success border-success/20 hover:bg-success/20">
-                            <Check className="h-3.5 w-3.5 mr-1" />
-                            Present
-                          </Badge>
-                        ) : item.record.status === 'absent' ? (
-                          <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20">
-                            <X className="h-3.5 w-3.5 mr-1" />
-                            Absent
-                          </Badge>
-                        ) : item.record.status === 'reassigned' ? (
-                          <div className="space-y-1">
-                            <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20">
-                              <ArrowRight className="h-3.5 w-3.5 mr-1" />
-                              Reassigned
+                        
+                        <div className="col-span-3">
+                          {item.record.status === 'present' ? (
+                            <Badge className="bg-success/10 text-success border-success/20 hover:bg-success/20">
+                              <Check className="h-3.5 w-3.5 mr-1" />
+                              Present
                             </Badge>
-                            {item.reassignedSite && (
-                              <div className="flex items-center text-xs text-muted-foreground">
-                                <span className="truncate max-w-[120px]">
-                                  To: {item.reassignedSite.name}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20">
+                          ) : item.record.status === 'absent' ? (
+                            <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20">
+                              <X className="h-3.5 w-3.5 mr-1" />
+                              Absent
+                            </Badge>
+                          ) : item.record.status === 'reassigned' ? (
+                            <div className="space-y-1">
+                              <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20">
+                                <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                                Reassigned
+                              </Badge>
+                              {item.reassignedSite && (
+                                <div className="flex items-center text-xs text-muted-foreground">
+                                  <span className="truncate max-w-[120px]">
+                                    To: {item.reassignedSite.name}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20">
+                                <User className="h-3.5 w-3.5 mr-1" />
+                                Replaced
+                              </Badge>
+                              {item.replacementGuard && (
+                                <div className="flex items-center text-xs text-muted-foreground">
+                                  <span className="truncate max-w-[120px]">
+                                    By: {item.replacementGuard.name}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="col-span-4 flex space-x-2">
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleMarkAttendance(item.shift, item.guard || undefined)}
+                            disabled={item.isPresentElsewhere}
+                            title={item.isPresentElsewhere ? "Guard is already marked present at another site" : ""}
+                          >
+                            <Pencil className="h-3.5 w-3.5 mr-1" />
+                            Mark Attendance
+                          </Button>
+                          
+                          {item.record.status === 'absent' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => handleAssignReplacement(item.record, item.guard || undefined)}
+                            >
                               <User className="h-3.5 w-3.5 mr-1" />
-                              Replaced
-                            </Badge>
-                            {item.replacementGuard && (
-                              <div className="flex items-center text-xs text-muted-foreground">
-                                <span className="truncate max-w-[120px]">
-                                  By: {item.replacementGuard.name}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                              Assign Replacement
+                            </Button>
+                          )}
+                          
+                          {item.record.status === 'absent' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => handleReassignToSite(item.record, item.guard || undefined)}
+                            >
+                              <Building className="h-3.5 w-3.5 mr-1" />
+                              Reassign to Site
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      
-                      <div className="col-span-4 flex space-x-2">
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleMarkAttendance(item.shift, item.guard || undefined)}
-                        >
-                          <Pencil className="h-3.5 w-3.5 mr-1" />
-                          Mark Attendance
-                        </Button>
-                        
-                        {item.record.status === 'absent' && (
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleAssignReplacement(item.record, item.guard || undefined)}
-                          >
-                            <User className="h-3.5 w-3.5 mr-1" />
-                            Assign Replacement
-                          </Button>
-                        )}
-                        
-                        {item.record.status === 'absent' && (
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleReassignToSite(item.record, item.guard || undefined)}
-                          >
-                            <Building className="h-3.5 w-3.5 mr-1" />
-                            Reassign to Site
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -669,20 +725,24 @@ const Attendance = () => {
             
             <div className="space-y-2">
               <Label htmlFor="replacement">Replacement Guard</Label>
-              <Select value={replacementGuard} onValueChange={setReplacementGuard}>
-                <SelectTrigger id="replacement">
-                  <SelectValue placeholder="Select a guard" />
-                </SelectTrigger>
-                <SelectContent>
-                  {guards
-                    .filter(g => g.id !== selectedGuard?.id && g.status === 'active')
-                    .map(guard => (
-                      <SelectItem key={guard.id} value={guard.id}>
-                        {guard.name} ({guard.type || 'Permanent'})
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <select 
+                id="replacement" 
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={replacementGuard}
+                onChange={(e) => setReplacementGuard(e.target.value)}
+              >
+                <option value="">Select a guard</option>
+                {getAvailableReplacementGuards().map(guard => (
+                  <option key={guard.id} value={guard.id}>
+                    {guard.name} ({guard.type || 'Permanent'}) - ${guard.payRate?.toFixed(2)}/shift
+                  </option>
+                ))}
+              </select>
+              {getAvailableReplacementGuards().length === 0 && (
+                <p className="text-xs text-amber-500 mt-1">
+                  No available guards found. All guards may be assigned elsewhere.
+                </p>
+              )}
             </div>
             
             <div className="space-y-2">
@@ -737,20 +797,19 @@ const Attendance = () => {
             
             <div className="space-y-2">
               <Label htmlFor="reassigned-site">Reassigned to Site</Label>
-              <Select value={reassignedSite} onValueChange={setReassignedSite}>
-                <SelectTrigger id="reassigned-site">
-                  <SelectValue placeholder="Select a site" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sites
-                    .filter(site => site.id !== selectedSite)
-                    .map(site => (
-                      <SelectItem key={site.id} value={site.id}>
-                        {site.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <select 
+                id="reassigned-site" 
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={reassignedSite}
+                onChange={(e) => setReassignedSite(e.target.value)}
+              >
+                <option value="">Select a site</option>
+                {getAvailableReassignmentSites().map(site => (
+                  <option key={site.id} value={site.id}>
+                    {site.name}
+                  </option>
+                ))}
+              </select>
             </div>
             
             <div className="space-y-2">

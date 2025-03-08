@@ -23,6 +23,7 @@ export interface PaymentRecord {
   date: string;
   amount: number;
   note?: string;
+  type: 'salary' | 'bonus' | 'deduction'; // Added payment type
 }
 
 export interface Guard {
@@ -34,6 +35,7 @@ export interface Guard {
   avatar?: string;
   status: 'active' | 'inactive';
   type?: 'permanent' | 'temporary';
+  payRate?: number; // Added payRate for individual guard pay
   paymentHistory?: PaymentRecord[];
 }
 
@@ -54,7 +56,7 @@ export interface AttendanceRecord {
   guardId: string;
   status: 'present' | 'absent' | 'replaced' | 'reassigned';
   replacementGuardId?: string;
-  reassignedSiteId?: string; // New field to track site reassignments
+  reassignedSiteId?: string; // For tracking site reassignments
   approvedBy?: string;
   approvedAt?: string;
   notes?: string;
@@ -67,7 +69,7 @@ export interface AttendanceReport {
   presentCount: number;
   absentCount: number;
   replacedCount: number;
-  reassignedCount: number; // New field for tracking reassignments
+  reassignedCount: number; // Field for tracking reassignments
   attendancePercentage: number;
 }
 

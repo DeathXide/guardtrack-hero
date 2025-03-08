@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { User, Search, Phone, Mail, Shield, Edit, Trash, UserPlus, DollarSign } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { User, Search, Phone, Mail, Shield, Edit, Trash, UserPlus, DollarSign, Plus, Minus } from 'lucide-react';
 import { guards } from '@/lib/data';
-import { Guard } from '@/types';
+import { Guard, PaymentRecord } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Guards = () => {
   const [guardList, setGuardList] = useState<Guard[]>(guards);
@@ -27,6 +28,7 @@ const Guards = () => {
   // Payment state
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNote, setPaymentNote] = useState('');
+  const [paymentType, setPaymentType] = useState<'salary' | 'bonus' | 'deduction'>('salary');
   const [selectedGuard, setSelectedGuard] = useState<Guard | null>(null);
   
   // Form state
@@ -37,6 +39,7 @@ const Guards = () => {
     badgeNumber: '',
     status: 'active',
     type: 'permanent',
+    payRate: 15.00, // Default pay rate
     paymentHistory: []
   };
   
@@ -48,7 +51,8 @@ const Guards = () => {
     setNewGuard({
       ...newGuard,
       [id]: id === 'status' ? value as 'active' | 'inactive' : 
-             id === 'type' ? value as 'permanent' | 'temporary' : value
+             id === 'type' ? value as 'permanent' | 'temporary' :
+             id === 'payRate' ? parseFloat(value) : value
     });
   };
 
@@ -62,6 +66,7 @@ const Guards = () => {
       badgeNumber: guard.badgeNumber,
       status: guard.status,
       type: guard.type || 'permanent',
+      payRate: guard.payRate || 15.00,
       paymentHistory: guard.paymentHistory || []
     });
     setIsEditMode(true);
@@ -73,6 +78,7 @@ const Guards = () => {
     setSelectedGuard(guard);
     setPaymentAmount('');
     setPaymentNote('');
+    setPaymentType('salary');
     setIsPaymentDialogOpen(true);
   };
 
@@ -87,11 +93,12 @@ const Guards = () => {
       return;
     }
 
-    const payment = {
+    const payment: PaymentRecord = {
       id: `pay-${Date.now()}`,
       amount: parseFloat(paymentAmount),
       date: new Date().toISOString(),
-      note: paymentNote
+      note: paymentNote,
+      type: paymentType
     };
 
     const updatedGuard = {
@@ -103,8 +110,8 @@ const Guards = () => {
     
     setIsPaymentDialogOpen(false);
     toast({
-      title: "Payment Recorded",
-      description: `Payment of $${paymentAmount} recorded for ${selectedGuard.name}`,
+      title: paymentType === 'deduction' ? "Deduction Recorded" : paymentType === 'bonus' ? "Bonus Recorded" : "Payment Recorded",
+      description: `${paymentType === 'deduction' ? 'Deduction' : paymentType === 'bonus' ? 'Bonus' : 'Payment'} of $${paymentAmount} recorded for ${selectedGuard.name}`,
     });
   };
 
@@ -137,7 +144,7 @@ const Guards = () => {
   // Handle form submission
   const handleSubmit = () => {
     // Validate form
-    if (!newGuard.name || !newGuard.email || !newGuard.phone || !newGuard.badgeNumber) {
+    if (!newGuard.name || !newGuard.email || !newGuard.phone || !newGuard.badgeNumber || !newGuard.payRate) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields",
@@ -189,6 +196,7 @@ const Guards = () => {
         badgeNumber: newGuard.badgeNumber,
         status: newGuard.status,
         type: newGuard.type || 'permanent',
+        payRate: newGuard.payRate,
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newGuard.name)}&background=0D8ABC&color=fff`,
         paymentHistory: []
       };
@@ -219,9 +227,35 @@ const Guards = () => {
   );
 
   // Calculate total payments for a guard
-  const calculateTotalPayments = (guard: Guard) => {
-    if (!guard.paymentHistory || guard.paymentHistory.length === 0) return 0;
-    return guard.paymentHistory.reduce((total, payment) => total + payment.amount, 0);
+  const calculateTotalPayments = (guard: Guard): { salary: number, bonus: number, deduction: number, net: number } => {
+    if (!guard.paymentHistory || guard.paymentHistory.length === 0) 
+      return { salary: 0, bonus: 0, deduction: 0, net: 0 };
+    
+    const result = {
+      salary: 0,
+      bonus: 0,
+      deduction: 0,
+      net: 0
+    };
+    
+    guard.paymentHistory.forEach(payment => {
+      switch (payment.type) {
+        case 'salary':
+          result.salary += payment.amount;
+          result.net += payment.amount;
+          break;
+        case 'bonus':
+          result.bonus += payment.amount;
+          result.net += payment.amount;
+          break;
+        case 'deduction':
+          result.deduction += payment.amount;
+          result.net -= payment.amount;
+          break;
+      }
+    });
+    
+    return result;
   };
 
   return (
@@ -266,67 +300,105 @@ const Guards = () => {
             No guards found. Try a different search term or add a new guard.
           </p>
         ) : (
-          filteredGuards.map(guard => (
-            <Card key={guard.id} className="overflow-hidden border border-border/60">
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <div>
-                  <CardTitle className="text-base font-medium">{guard.name}</CardTitle>
+          filteredGuards.map(guard => {
+            const paymentTotals = calculateTotalPayments(guard);
+            
+            return (
+              <Card key={guard.id} className="overflow-hidden border border-border/60">
+                <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                  <div>
+                    <CardTitle className="text-base font-medium">{guard.name}</CardTitle>
+                    <Badge 
+                      variant={guard.type === 'temporary' ? 'outline' : 'default'}
+                      className={`mt-1 ${guard.type === 'temporary' ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500' : ''}`}
+                    >
+                      {guard.type || 'Permanent'} Guard
+                    </Badge>
+                  </div>
                   <Badge 
-                    variant={guard.type === 'temporary' ? 'outline' : 'default'}
-                    className={`mt-1 ${guard.type === 'temporary' ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500' : ''}`}
+                    variant={guard.status === 'active' ? 'default' : 'secondary'}
+                    className={`${guard.status === 'active' ? 'bg-success/80 hover:bg-success/70' : 'bg-muted text-muted-foreground'}`}
                   >
-                    {guard.type || 'Permanent'} Guard
+                    {guard.status === 'active' ? 'Active' : 'Inactive'}
                   </Badge>
-                </div>
-                <Badge 
-                  variant={guard.status === 'active' ? 'default' : 'secondary'}
-                  className={`${guard.status === 'active' ? 'bg-success/80 hover:bg-success/70' : 'bg-muted text-muted-foreground'}`}
-                >
-                  {guard.status === 'active' ? 'Active' : 'Inactive'}
-                </Badge>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center text-sm">
-                    <Shield className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className="text-muted-foreground">Badge:</span>
-                    <span className="font-medium ml-2">{guard.badgeNumber}</span>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center text-sm">
+                      <Shield className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span className="text-muted-foreground">Badge:</span>
+                      <span className="font-medium ml-2">{guard.badgeNumber}</span>
+                    </div>
+                    
+                    <div className="flex items-center text-sm">
+                      <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>{guard.phone}</span>
+                    </div>
+                    
+                    <div className="flex items-center text-sm">
+                      <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span className="truncate">{guard.email}</span>
+                    </div>
+                    
+                    <div className="flex items-center text-sm">
+                      <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span className="text-muted-foreground">Pay Rate:</span>
+                      <span className="font-medium ml-2">${guard.payRate?.toFixed(2)}/shift</span>
+                    </div>
+                    
+                    <div className="pt-3 border-t">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium">Payment Summary</span>
+                        <Badge variant="outline" className="text-xs">
+                          {guard.paymentHistory?.length || 0} payments
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-1 mt-2 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Total Salary:</span>
+                          <span>${paymentTotals.salary.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground flex items-center">
+                            <Plus className="h-3 w-3 mr-1 text-green-500" />
+                            Bonuses:
+                          </span>
+                          <span className="text-green-500">+${paymentTotals.bonus.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground flex items-center">
+                            <Minus className="h-3 w-3 mr-1 text-red-500" />
+                            Deductions:
+                          </span>
+                          <span className="text-red-500">-${paymentTotals.deduction.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between pt-1 border-t font-medium">
+                          <span>Net Total:</span>
+                          <span>${paymentTotals.net.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => handlePaymentDialog(guard)}>
+                        <DollarSign className="h-3.5 w-3.5 mr-1" />
+                        Record Payment
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => handleEditGuard(guard)}>
+                        <Edit className="h-3.5 w-3.5 mr-1" />
+                        Edit
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-8 px-2 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30" onClick={() => handleDeleteClick(guard.id)}>
+                        <Trash className="h-3.5 w-3.5 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center text-sm">
-                    <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>{guard.phone}</span>
-                  </div>
-                  
-                  <div className="flex items-center text-sm">
-                    <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className="truncate">{guard.email}</span>
-                  </div>
-                  
-                  <div className="flex items-center text-sm">
-                    <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className="text-muted-foreground">Total Payments:</span>
-                    <span className="font-medium ml-2">${calculateTotalPayments(guard).toFixed(2)}</span>
-                  </div>
-                  
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => handlePaymentDialog(guard)}>
-                      <DollarSign className="h-3.5 w-3.5 mr-1" />
-                      Record Payment
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => handleEditGuard(guard)}>
-                      <Edit className="h-3.5 w-3.5 mr-1" />
-                      Edit
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-8 px-2 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30" onClick={() => handleDeleteClick(guard.id)}>
-                      <Trash className="h-3.5 w-3.5 mr-1" />
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
       
@@ -380,6 +452,18 @@ const Guards = () => {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="payRate">Pay Rate ($ per shift)</Label>
+              <Input 
+                id="payRate" 
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Enter hourly pay rate" 
+                value={newGuard.payRate?.toString() || ''}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="type">Guard Type</Label>
               <select 
                 id="type" 
@@ -421,7 +505,27 @@ const Guards = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="payment-amount">Payment Amount ($)</Label>
+              <Label htmlFor="payment-type">Payment Type</Label>
+              <Select 
+                value={paymentType} 
+                onValueChange={(value) => setPaymentType(value as 'salary' | 'bonus' | 'deduction')}
+              >
+                <SelectTrigger id="payment-type">
+                  <SelectValue placeholder="Select payment type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="salary">Regular Salary</SelectItem>
+                  <SelectItem value="bonus">Bonus Payment</SelectItem>
+                  <SelectItem value="deduction">Deduction/Advance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="payment-amount">
+                {paymentType === 'deduction' ? 'Deduction Amount ($)' : 
+                 paymentType === 'bonus' ? 'Bonus Amount ($)' : 
+                 'Payment Amount ($)'}
+              </Label>
               <Input 
                 id="payment-amount" 
                 type="number"
@@ -436,7 +540,11 @@ const Guards = () => {
               <Label htmlFor="payment-note">Note (Optional)</Label>
               <Input 
                 id="payment-note" 
-                placeholder="Enter payment details" 
+                placeholder={
+                  paymentType === 'deduction' ? 'Reason for deduction' : 
+                  paymentType === 'bonus' ? 'Reason for bonus' : 
+                  'Payment details'
+                }
                 value={paymentNote}
                 onChange={(e) => setPaymentNote(e.target.value)}
               />
@@ -444,7 +552,11 @@ const Guards = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSavePayment}>Record Payment</Button>
+            <Button onClick={handleSavePayment}>
+              {paymentType === 'deduction' ? 'Record Deduction' : 
+               paymentType === 'bonus' ? 'Record Bonus' : 
+               'Record Payment'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

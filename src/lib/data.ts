@@ -54,7 +54,7 @@ export const sites: Site[] = [
   }
 ];
 
-// Mock Guards
+// Mock Guards with added payRate
 export const guards: Guard[] = [
   {
     id: 'g1',
@@ -63,7 +63,8 @@ export const guards: Guard[] = [
     phone: '555-1234',
     badgeNumber: 'B001',
     avatar: 'https://ui-avatars.com/api/?name=Mike+Johnson&background=0D8ABC&color=fff',
-    status: 'active'
+    status: 'active',
+    payRate: 15.50 // Added payRate
   },
   {
     id: 'g2',
@@ -72,7 +73,8 @@ export const guards: Guard[] = [
     phone: '555-2345',
     badgeNumber: 'B002',
     avatar: 'https://ui-avatars.com/api/?name=Lisa+Chen&background=0D8ABC&color=fff',
-    status: 'active'
+    status: 'active',
+    payRate: 16.25 // Added payRate
   },
   {
     id: 'g3',
@@ -81,7 +83,8 @@ export const guards: Guard[] = [
     phone: '555-3456',
     badgeNumber: 'B003',
     avatar: 'https://ui-avatars.com/api/?name=Robert+Smith&background=0D8ABC&color=fff',
-    status: 'active'
+    status: 'active',
+    payRate: 14.75 // Added payRate
   },
   {
     id: 'g4',
@@ -90,7 +93,8 @@ export const guards: Guard[] = [
     phone: '555-4567',
     badgeNumber: 'B004',
     avatar: 'https://ui-avatars.com/api/?name=Aisha+Patel&background=0D8ABC&color=fff',
-    status: 'active'
+    status: 'active',
+    payRate: 17.00 // Added payRate
   },
   {
     id: 'g5',
@@ -99,7 +103,8 @@ export const guards: Guard[] = [
     phone: '555-5678',
     badgeNumber: 'B005',
     avatar: 'https://ui-avatars.com/api/?name=Carlos+Rodriguez&background=0D8ABC&color=fff',
-    status: 'active'
+    status: 'active',
+    payRate: 16.50 // Added payRate
   },
   {
     id: 'g6',
@@ -108,7 +113,8 @@ export const guards: Guard[] = [
     phone: '555-6789',
     badgeNumber: 'B006',
     avatar: 'https://ui-avatars.com/api/?name=Emma+Wilson&background=0D8ABC&color=fff',
-    status: 'inactive'
+    status: 'inactive',
+    payRate: 15.00 // Added payRate
   }
 ];
 
@@ -241,4 +247,62 @@ export const calculateSiteStaffing = (siteId: string): number => {
   ).length;
   
   return (filledShifts / records.length) * 100;
+};
+
+// New function to check if a guard is marked present anywhere for a given date and shift type
+export const isGuardMarkedPresentElsewhere = (guardId: string, date: string, shiftType: 'day' | 'night', excludeSiteId?: string): boolean => {
+  const dateRecords = getAttendanceByDate(date);
+  
+  // Get all shifts for the given shift type
+  const relevantShifts = shifts.filter(shift => shift.type === shiftType);
+  
+  // Check if the guard is marked present or reassigned in any other site for this date and shift type
+  return dateRecords.some(record => {
+    // Find the shift for this record
+    const shift = relevantShifts.find(s => s.id === record.shiftId);
+    
+    // Skip if shift is not found or is for the excluded site
+    if (!shift || (excludeSiteId && shift.siteId === excludeSiteId)) {
+      return false;
+    }
+    
+    // Check if the guard is marked present or is a replacement at this site
+    return (record.guardId === guardId && (record.status === 'present' || record.status === 'reassigned')) || 
+           (record.replacementGuardId === guardId && record.status === 'replaced');
+  });
+};
+
+// New function to calculate guard's daily earnings
+export const calculateGuardDailyEarnings = (guardId: string, date: string): number => {
+  const guard = getGuardById(guardId);
+  if (!guard || !guard.payRate) return 0;
+  
+  const dateRecords = getAttendanceByDate(date);
+  
+  // Count shifts where the guard was present or was a replacement
+  const shiftsWorked = dateRecords.filter(record => 
+    (record.guardId === guardId && record.status === 'present') ||
+    (record.replacementGuardId === guardId && record.status === 'replaced')
+  ).length;
+  
+  // Calculate earnings (pay rate per shift)
+  return shiftsWorked * guard.payRate;
+};
+
+// New function to get guard's total deductions
+export const getGuardDeductions = (guardId: string): number => {
+  const guard = getGuardById(guardId);
+  if (!guard || !guard.paymentHistory) return 0;
+  
+  const deductions = guard.paymentHistory.filter(payment => payment.type === 'deduction');
+  return deductions.reduce((total, payment) => total + payment.amount, 0);
+};
+
+// New function to get guard's total bonuses
+export const getGuardBonuses = (guardId: string): number => {
+  const guard = getGuardById(guardId);
+  if (!guard || !guard.paymentHistory) return 0;
+  
+  const bonuses = guard.paymentHistory.filter(payment => payment.type === 'bonus');
+  return bonuses.reduce((total, payment) => total + payment.amount, 0);
 };
