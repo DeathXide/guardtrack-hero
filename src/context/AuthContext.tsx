@@ -1,53 +1,118 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '@/types';
-import { users } from '@/lib/data';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabaseService';
+import { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, role?: UserRole) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  session: Session | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for saved user in local storage
-    const savedUser = localStorage.getItem('secureGuardUser');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    // Set up listener for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        setLoading(true);
+        setSession(currentSession);
+
+        if (currentSession) {
+          try {
+            // Fetch user data from our users table
+            const { data, error } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', currentSession.user.id)
+              .single();
+
+            if (error) throw error;
+
+            if (data) {
+              setUser({
+                id: data.id,
+                name: data.name,
+                email: data.email,
+                role: data.role as UserRole,
+                avatar: data.avatar,
+              });
+            }
+          } catch (error) {
+            console.error('Error fetching user data:', error);
+          }
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    // Initial session check
+    const initializeAuth = async () => {
+      setLoading(true);
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+
+      if (initialSession) {
+        try {
+          // Fetch user data from our users table
+          const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', initialSession.user.id)
+            .single();
+
+          if (error) throw error;
+
+          if (data) {
+            setUser({
+              id: data.id,
+              name: data.name,
+              email: data.email,
+              role: data.role as UserRole,
+              avatar: data.avatar,
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching initial user data:', error);
+        }
+      }
+      setLoading(false);
+    };
+
+    initializeAuth();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      // For demo purposes, any password works and we find the user by email
-      const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-      
-      if (!foundUser) {
-        throw new Error('Invalid email or password');
-      }
-      
-      // Save user to state and local storage
-      setUser(foundUser);
-      localStorage.setItem('secureGuardUser', JSON.stringify(foundUser));
+      if (error) throw error;
       
       toast({
         title: 'Login successful',
-        description: `Welcome back, ${foundUser.name}!`,
+        description: `Welcome back, ${data.user?.email}!`,
       });
     } catch (error) {
       toast({
@@ -61,13 +126,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('secureGuardUser');
-    toast({
-      title: 'Logged out',
-      description: 'You have been successfully logged out.',
-    });
+  const signup = async (email: string, password: string, name: string, role: UserRole = 'guard') => {
+    setLoading(true);
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role,
+          },
+        },
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Signup successful',
+        description: 'Your account has been created. You may need to verify your email before logging in.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Signup failed',
+        description: (error as Error).message,
+        variant: 'destructive',
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: 'Logout failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      setUser(null);
+      setSession(null);
+      toast({
+        title: 'Logged out',
+        description: 'You have been successfully logged out.',
+      });
+    }
   };
 
   return (
@@ -75,8 +184,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user, 
       loading, 
       login, 
+      signup,
       logout,
-      isAuthenticated: !!user 
+      isAuthenticated: !!user,
+      session
     }}>
       {children}
     </AuthContext.Provider>

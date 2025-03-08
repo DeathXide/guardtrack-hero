@@ -16,6 +16,9 @@ import Attendance from "./pages/Attendance";
 import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
+// Import the admin creation helper in development
+import './lib/createAdmin';
+
 const queryClient = new QueryClient();
 
 // Protected route component
