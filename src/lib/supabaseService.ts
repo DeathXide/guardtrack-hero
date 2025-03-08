@@ -102,6 +102,7 @@ const convertAttendanceToDB = (record: Partial<AttendanceRecord>): Partial<Atten
 
 const convertPaymentFromDB = (record: PaymentRecordDB): PaymentRecord => ({
   id: record.id,
+  guardId: record.guard_id,
   date: record.date,
   amount: record.amount,
   note: record.note || undefined,

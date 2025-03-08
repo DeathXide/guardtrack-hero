@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -178,13 +177,16 @@ const Attendance = () => {
       const attendanceRecord = dateRecords.find(record => record.shiftId === shift.id);
       const guard = shift.guardId ? await fetchGuard(shift.guardId) : null;
       
-      // Create temporary record if none exists
+      // Create temporary record if none exists, making sure to include all required properties
       const record = attendanceRecord || {
         id: `temp-${shift.id}-${dateString}`,
         date: dateString,
         shiftId: shift.id,
         guardId: shift.guardId || '',
         status: 'present',
+        replacementGuardId: undefined,
+        reassignedSiteId: undefined,
+        notes: undefined
       };
       
       const isPresentElsewhere = guard ? 

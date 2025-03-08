@@ -21,6 +21,7 @@ export interface Site {
 
 export interface PaymentRecord {
   id: string;
+  guardId: string; // Added guardId property
   date: string;
   amount: number;
   note?: string;
