@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -88,7 +87,6 @@ const ShiftAllocation: React.FC = () => {
   const handleOpenAllocationDialog = (shiftType: 'day' | 'night') => {
     setSelectedShiftType(shiftType);
     
-    // Get currently assigned guards for this shift type
     const currentShifts = shifts.filter(shift => shift.type === shiftType);
     const currentGuardIds = currentShifts.map(shift => shift.guardId).filter(id => id) as string[];
     setSelectedGuards(currentGuardIds);
@@ -100,7 +98,6 @@ const ShiftAllocation: React.FC = () => {
     if (selectedGuards.includes(guardId)) {
       setSelectedGuards(selectedGuards.filter(id => id !== guardId));
     } else {
-      // Removed the max slots check to allow allocating more guards than configured slots
       setSelectedGuards([...selectedGuards, guardId]);
     }
   };
@@ -109,7 +106,6 @@ const ShiftAllocation: React.FC = () => {
     const shiftType = selectedShiftType;
     const existingShifts = shifts.filter(shift => shift.type === shiftType);
     
-    // Delete guards that are no longer assigned
     for (const shift of existingShifts) {
       if (shift.guardId && !selectedGuards.includes(shift.guardId)) {
         try {
@@ -120,14 +116,12 @@ const ShiftAllocation: React.FC = () => {
       }
     }
     
-    // Update or create shifts for selected guards
     for (const guardId of selectedGuards) {
       const existingShift = existingShifts.find(shift => shift.guardId === guardId);
       
       if (existingShift) {
-        continue; // Guard already assigned, no need to update
+        continue;
       } else {
-        // Create new shift assignment
         try {
           await createShiftMutation.mutateAsync({
             siteId: selectedSite,
@@ -160,11 +154,13 @@ const ShiftAllocation: React.FC = () => {
       );
     }
     
+    const filledSlots = shiftsData.filter(shift => shift.guardId).length;
+    
     return (
       <div>
         <div className="flex justify-between items-center mb-4">
-          <Badge variant="outline" className={`${shiftsData.length > maxSlots ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-primary/10 text-primary border-primary/20'}`}>
-            {shiftsData.length} / {maxSlots} Slots Filled {shiftsData.length > maxSlots && '(Exceeded)'}
+          <Badge variant="outline" className={`${filledSlots > maxSlots ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-primary/10 text-primary border-primary/20'}`}>
+            {filledSlots} / {maxSlots} Slots Filled {filledSlots > maxSlots && '(Exceeded)'}
           </Badge>
           <Button 
             size="sm"
@@ -272,7 +268,6 @@ const ShiftAllocation: React.FC = () => {
         </div>
       </CardContent>
       
-      {/* Guard Allocation Dialog */}
       <Dialog open={isAllocationDialogOpen} onOpenChange={setIsAllocationDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
