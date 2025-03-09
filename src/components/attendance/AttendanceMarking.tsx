@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -302,7 +303,8 @@ const AttendanceMarking: React.FC = () => {
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>No guards allocated</AlertTitle>
                       <AlertDescription>
-                        No guards have been allocated to day shifts for this site
+                        No guards have been allocated to day shifts for this site. 
+                        Please go to the "Shift Allocation" tab to allocate guards.
                       </AlertDescription>
                     </Alert>
                   ) : (
@@ -353,7 +355,8 @@ const AttendanceMarking: React.FC = () => {
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>No guards allocated</AlertTitle>
                       <AlertDescription>
-                        No guards have been allocated to night shifts for this site
+                        No guards have been allocated to night shifts for this site.
+                        Please go to the "Shift Allocation" tab to allocate guards.
                       </AlertDescription>
                     </Alert>
                   ) : (
