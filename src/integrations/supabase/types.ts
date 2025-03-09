@@ -229,33 +229,6 @@ export type Database = {
         }
         Relationships: []
       }
-      users: {
-        Row: {
-          avatar: string | null
-          created_at: string
-          email: string
-          id: string
-          name: string
-          role: string
-        }
-        Insert: {
-          avatar?: string | null
-          created_at?: string
-          email: string
-          id: string
-          name: string
-          role: string
-        }
-        Update: {
-          avatar?: string | null
-          created_at?: string
-          email?: string
-          id?: string
-          name?: string
-          role?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
