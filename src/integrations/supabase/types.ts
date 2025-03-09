@@ -261,6 +261,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_guard_monthly_earnings: {
+        Args: {
+          guard_uuid: string
+          month_date: string
+        }
+        Returns: {
+          total_shifts: number
+          earnings: number
+        }[]
+      }
       get_user_role: {
         Args: {
           user_id: string

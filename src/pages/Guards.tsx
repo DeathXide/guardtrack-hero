@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,13 +8,18 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Search, Phone, Mail, Shield, Edit, Trash, UserPlus, DollarSign, Plus, Minus, CalendarDays } from 'lucide-react';
-import { users } from '@/lib/data';
 import { Guard, PaymentRecord, MonthlyEarning } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchGuards, createGuard, updateGuard, deleteGuard } from '@/lib/supabaseService';
+import { 
+  fetchGuards, 
+  createGuard, 
+  updateGuard, 
+  deleteGuard, 
+  fetchGuardMonthlyStats 
+} from '@/lib/supabaseService';
 
 const Guards = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -34,12 +38,13 @@ const Guards = () => {
   const [selectedGuard, setSelectedGuard] = useState<Guard | null>(null);
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM'));
   
-  // Query for fetching guards
+  const [guardEarnings, setGuardEarnings] = useState<Record<string, MonthlyEarning>>({});
+
   const { data: guardList = [], isLoading } = useQuery({
     queryKey: ['guards'],
     queryFn: fetchGuards
   });
-  
+
   const initialFormState: Omit<Guard, 'id' | 'badgeNumber'> & { id?: string, badgeNumber?: string } = {
     name: '',
     email: '',
@@ -48,10 +53,9 @@ const Guards = () => {
     type: 'permanent',
     payRate: 15000.00
   };
-  
+
   const [newGuard, setNewGuard] = useState(initialFormState);
 
-  // Create guard mutation
   const createGuardMutation = useMutation({
     mutationFn: createGuard,
     onSuccess: () => {
@@ -71,7 +75,6 @@ const Guards = () => {
     }
   });
 
-  // Update guard mutation
   const updateGuardMutation = useMutation({
     mutationFn: ({ id, guard }: { id: string; guard: Partial<Guard> }) => 
       updateGuard(id, guard),
@@ -92,7 +95,6 @@ const Guards = () => {
     }
   });
 
-  // Delete guard mutation
   const deleteGuardMutation = useMutation({
     mutationFn: deleteGuard,
     onSuccess: () => {
@@ -113,11 +115,10 @@ const Guards = () => {
     }
   });
 
-  // Generate a unique badge number
   const generateBadgeNumber = (): string => {
-    const prefix = 'SG'; // Security Guard prefix
-    const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
-    const randomDigits = Math.floor(Math.random() * 1000).toString().padStart(3, '0'); // 3 random digits
+    const prefix = 'SG';
+    const timestamp = Date.now().toString().slice(-6);
+    const randomDigits = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
     return `${prefix}${timestamp}${randomDigits}`;
   };
 
@@ -180,8 +181,6 @@ const Guards = () => {
       return;
     }
 
-    // Payment functionality is not connected to the database yet
-    // This is a placeholder for future implementation
     setIsPaymentDialogOpen(false);
     toast({
       title: paymentType === 'deduction' ? "Deduction Recorded" : "Bonus Recorded",
@@ -216,7 +215,6 @@ const Guards = () => {
       return;
     }
     
-    // Email validation if provided
     if (newGuard.email && newGuard.email.trim() !== '') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(newGuard.email)) {
@@ -230,7 +228,6 @@ const Guards = () => {
     }
 
     if (isEditMode && newGuard.id) {
-      // Update existing guard
       updateGuardMutation.mutate({ 
         id: newGuard.id, 
         guard: {
@@ -243,7 +240,6 @@ const Guards = () => {
         }
       });
     } else {
-      // Create new guard
       const badgeNumber = generateBadgeNumber();
       
       const guardData: Partial<Guard> = {
@@ -259,7 +255,7 @@ const Guards = () => {
       createGuardMutation.mutate(guardData);
     }
   };
-  
+
   const filteredGuards = guardList.filter(guard => 
     (guard.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
      (guard.email && guard.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -269,16 +265,48 @@ const Guards = () => {
       guard.type === 'temporary')
   );
 
-  const getCurrentMonthEarnings = (guard: Guard): MonthlyEarning => {
-    return {
-      month: currentMonth,
-      totalShifts: 0,
-      baseSalary: 0,
-      bonuses: 0,
-      deductions: 0,
-      netAmount: 0
-    };
+  const getCurrentMonthEarnings = async (guard: Guard): Promise<MonthlyEarning> => {
+    const month = currentMonth;
+    
+    try {
+      const { totalShifts, earnings } = await fetchGuardMonthlyStats(guard.id, month);
+      
+      return {
+        month: currentMonth,
+        totalShifts,
+        baseSalary: earnings,
+        bonuses: 0,
+        deductions: 0,
+        netAmount: earnings
+      };
+    } catch (error) {
+      console.error('Error fetching monthly earnings for guard:', error);
+      return {
+        month: currentMonth,
+        totalShifts: 0,
+        baseSalary: 0,
+        bonuses: 0,
+        deductions: 0,
+        netAmount: 0
+      };
+    }
   };
+
+  useEffect(() => {
+    const fetchAllGuardEarnings = async () => {
+      const earningsMap: Record<string, MonthlyEarning> = {};
+      
+      for (const guard of guardList) {
+        earningsMap[guard.id] = await getCurrentMonthEarnings(guard);
+      }
+      
+      setGuardEarnings(earningsMap);
+    };
+    
+    if (guardList.length > 0) {
+      fetchAllGuardEarnings();
+    }
+  }, [guardList, currentMonth]);
 
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-US', {
@@ -344,7 +372,14 @@ const Guards = () => {
           </p>
         ) : (
           filteredGuards.map(guard => {
-            const monthlyEarnings = getCurrentMonthEarnings(guard);
+            const monthlyEarnings = guardEarnings[guard.id] || {
+              month: currentMonth,
+              totalShifts: 0,
+              baseSalary: 0,
+              bonuses: 0,
+              deductions: 0,
+              netAmount: 0
+            };
             const shiftRate = guard.payRate ? calculateShiftRate(guard.payRate) : 0;
             
             return (
@@ -402,7 +437,7 @@ const Guards = () => {
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-sm font-medium">Current Month Summary</span>
                         <Badge variant="outline" className="text-xs">
-                          {format(new Date(), 'MMMM yyyy')}
+                          {format(new Date(currentMonth + '-01'), 'MMMM yyyy')}
                         </Badge>
                       </div>
                       
@@ -624,7 +659,7 @@ const Guards = () => {
               <div className="font-medium mb-1">Current Month Summary</div>
               <div className="grid grid-cols-2 gap-1">
                 <span className="text-muted-foreground">Month:</span>
-                <span>{format(new Date(), 'MMMM yyyy')}</span>
+                <span>{format(new Date(currentMonth + '-01'), 'MMMM yyyy')}</span>
                 
                 <span className="text-muted-foreground">Shifts Worked:</span>
                 <span>{selectedGuard ? getCurrentMonthEarnings(selectedGuard).totalShifts : 0}</span>
@@ -677,3 +712,4 @@ const Guards = () => {
 };
 
 export default Guards;
+

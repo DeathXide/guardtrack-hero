@@ -595,19 +595,32 @@ export const calculateMonthlyEarnings = async (guard: Guard | undefined, current
   
   const month = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
   
-  const { data: attendanceData, error: attendanceError } = await supabase
-    .from('attendance_records')
-    .select('*')
-    .eq('guard_id', guard.id)
-    .gte('date', `${month}-01`)
-    .lte('date', `${month}-31`)
-    .in('status', ['present', 'reassigned']);
+  const { data, error } = await supabase.rpc('calculate_guard_monthly_earnings', {
+    guard_uuid: guard.id,
+    month_date: month
+  });
 
-  if (attendanceError) {
-    console.error('Error calculating monthly earnings:', attendanceError);
+  if (error) {
+    console.error('Error calculating monthly earnings:', error);
     return 0;
   }
 
-  const dailyRate = calculateDailyRate(guard);
-  return (attendanceData?.length || 0) * dailyRate;
+  return data && data.length > 0 ? Number(data[0].earnings) : 0;
 };
+
+export const fetchGuardMonthlyStats = async (guardId: string, month: string): Promise<{ totalShifts: number, earnings: number }> => {
+  const { data, error } = await supabase.rpc('calculate_guard_monthly_earnings', {
+    guard_uuid: guardId,
+    month_date: month
+  });
+
+  if (error) {
+    console.error('Error fetching guard monthly stats:', error);
+    return { totalShifts: 0, earnings: 0 };
+  }
+
+  return data && data.length > 0 
+    ? { totalShifts: data[0].total_shifts, earnings: Number(data[0].earnings) } 
+    : { totalShifts: 0, earnings: 0 };
+};
+
