@@ -72,14 +72,65 @@ export const createAdminUser = async (
   }
 };
 
+/**
+ * Check if there's an admin user and create a default one if there isn't
+ */
+export const checkAndCreateDefaultAdmin = async () => {
+  console.log('Checking for existing admin users...');
+  
+  try {
+    // Check if any admin user exists
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('role', 'admin')
+      .limit(1);
+    
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      console.log('No admin users found. Creating default admin...');
+      const defaultEmail = 'admin@example.com';
+      const defaultPassword = 'password123';
+      const defaultName = 'Admin User';
+      
+      return await createAdminUser(defaultEmail, defaultPassword, defaultName);
+    } else {
+      console.log('Admin user already exists:', data[0]);
+      return { success: true, exists: true };
+    }
+  } catch (error) {
+    console.error('Error checking for admin users:', error);
+    return { success: false, error };
+  }
+};
+
 // Make it available in the window object for easy access during development
 declare global {
   interface Window {
     createAdminUser: typeof createAdminUser;
+    checkAndCreateDefaultAdmin: typeof checkAndCreateDefaultAdmin;
   }
 }
 
 // Only do this in development
 if (process.env.NODE_ENV !== 'production') {
   window.createAdminUser = createAdminUser;
+  window.checkAndCreateDefaultAdmin = checkAndCreateDefaultAdmin;
+}
+
+// Run the check when the app starts
+if (typeof window !== 'undefined') {
+  // Wait for DOM to be fully loaded to ensure Supabase is initialized
+  window.addEventListener('DOMContentLoaded', () => {
+    checkAndCreateDefaultAdmin().then(result => {
+      if (result.success && !result.exists) {
+        console.log('Default admin user created successfully');
+      } else if (result.success && result.exists) {
+        console.log('Default admin user already exists');
+      } else {
+        console.error('Failed to create default admin user:', result.error);
+      }
+    });
+  });
 }
