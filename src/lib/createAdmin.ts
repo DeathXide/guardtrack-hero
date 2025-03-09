@@ -72,10 +72,16 @@ export const createAdminUser = async (
   }
 };
 
+// Define a type for our admin check results to resolve type issues
+type AdminCheckResult = 
+  | { success: true; exists: true; user?: undefined; error?: undefined }
+  | { success: true; exists: false; user: any; error?: undefined }
+  | { success: false; exists?: undefined; user?: undefined; error: any };
+
 /**
  * Check if there's an admin user and create a default one if there isn't
  */
-export const checkAndCreateDefaultAdmin = async () => {
+export const checkAndCreateDefaultAdmin = async (): Promise<AdminCheckResult> => {
   console.log('Checking for existing admin users...');
   
   try {
@@ -94,7 +100,12 @@ export const checkAndCreateDefaultAdmin = async () => {
       const defaultPassword = 'password123';
       const defaultName = 'Admin User';
       
-      return await createAdminUser(defaultEmail, defaultPassword, defaultName);
+      const result = await createAdminUser(defaultEmail, defaultPassword, defaultName);
+      if (result.success) {
+        return { success: true, exists: false, user: result.user };
+      } else {
+        throw result.error;
+      }
     } else {
       console.log('Admin user already exists:', data[0]);
       return { success: true, exists: true };
@@ -124,10 +135,10 @@ if (typeof window !== 'undefined') {
   // Wait for DOM to be fully loaded to ensure Supabase is initialized
   window.addEventListener('DOMContentLoaded', () => {
     checkAndCreateDefaultAdmin().then(result => {
-      if (result.success && !result.exists) {
-        console.log('Default admin user created successfully');
-      } else if (result.success && result.exists) {
+      if (result.success && result.exists) {
         console.log('Default admin user already exists');
+      } else if (result.success && !result.exists) {
+        console.log('Default admin user created successfully');
       } else {
         console.error('Failed to create default admin user:', result.error);
       }
