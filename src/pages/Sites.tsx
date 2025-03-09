@@ -1,24 +1,33 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Building, Edit, Trash, User, AlertTriangle } from 'lucide-react';
+import { MapPin, Building, Edit, Trash, User } from 'lucide-react';
 import { Site } from '@/types';
-import { sites, users } from '@/lib/data';
+import { users } from '@/lib/data';
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchSites, createSite, updateSite, deleteSite } from '@/lib/supabaseService';
 
 const Sites = () => {
-  const [siteList, setSiteList] = useState<Site[]>(sites);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Query for fetching sites
+  const { data: siteList = [], isLoading } = useQuery({
+    queryKey: ['sites'],
+    queryFn: fetchSites
+  });
   
   // Form state
   const initialFormState = {
@@ -31,6 +40,68 @@ const Sites = () => {
   };
   
   const [newSite, setNewSite] = useState(initialFormState);
+
+  // Create site mutation
+  const createSiteMutation = useMutation({
+    mutationFn: createSite,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+      toast({
+        title: "Site Added",
+        description: `${newSite.name} has been successfully added`,
+      });
+      handleDialogClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to add site: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update site mutation
+  const updateSiteMutation = useMutation({
+    mutationFn: ({ id, site }: { id: string; site: Partial<Site> }) => 
+      updateSite(id, site),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+      toast({
+        title: "Site Updated",
+        description: `${newSite.name} has been successfully updated`,
+      });
+      handleDialogClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to update site: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Delete site mutation
+  const deleteSiteMutation = useMutation({
+    mutationFn: deleteSite,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+      toast({
+        title: "Site Deleted",
+        description: "The site has been successfully removed",
+      });
+      setDeleteDialogOpen(false);
+      setSelectedSiteId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete site: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
 
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -65,13 +136,7 @@ const Sites = () => {
   // Confirm delete
   const confirmDelete = () => {
     if (selectedSiteId) {
-      setSiteList(siteList.filter(site => site.id !== selectedSiteId));
-      toast({
-        title: "Site Deleted",
-        description: "The site has been successfully removed",
-      });
-      setDeleteDialogOpen(false);
-      setSelectedSiteId(null);
+      deleteSiteMutation.mutate(selectedSiteId);
     }
   };
 
@@ -96,39 +161,28 @@ const Sites = () => {
 
     if (isEditMode) {
       // Update existing site
-      setSiteList(siteList.map(site => 
-        site.id === newSite.id ? newSite : site
-      ));
-      
-      toast({
-        title: "Site Updated",
-        description: `${newSite.name} has been successfully updated`,
+      updateSiteMutation.mutate({ 
+        id: newSite.id, 
+        site: {
+          name: newSite.name,
+          location: newSite.location,
+          supervisorId: newSite.supervisorId,
+          daySlots: newSite.daySlots,
+          nightSlots: newSite.nightSlots
+        }
       });
     } else {
       // Create new site
-      const newSiteObject: Site = {
-        id: `s${siteList.length + 1}`,
+      const siteData: Partial<Site> = {
         name: newSite.name,
         location: newSite.location,
-        supervisorId: newSite.supervisorId,
+        supervisorId: newSite.supervisorId || undefined,
         daySlots: newSite.daySlots,
         nightSlots: newSite.nightSlots
       };
-
-      // Add to list
-      setSiteList([...siteList, newSiteObject]);
       
-      // Show success message
-      toast({
-        title: "Site Added",
-        description: `${newSite.name} has been successfully added`,
-      });
+      createSiteMutation.mutate(siteData);
     }
-    
-    // Close dialog and reset form
-    setIsDialogOpen(false);
-    setIsEditMode(false);
-    setNewSite(initialFormState);
   };
   
   // Filter sites based on search term
@@ -142,6 +196,19 @@ const Sites = () => {
     const supervisor = users.find(user => user.id === supervisorId);
     return supervisor ? supervisor.name : 'Unassigned';
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Sites</h2>
+            <p className="text-muted-foreground">Loading sites...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -302,7 +369,9 @@ const Sites = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={handleDialogClose}>Cancel</Button>
-            <Button onClick={handleSubmit}>{isEditMode ? 'Save Changes' : 'Add Site'}</Button>
+            <Button onClick={handleSubmit} disabled={createSiteMutation.isPending || updateSiteMutation.isPending}>
+              {(createSiteMutation.isPending || updateSiteMutation.isPending) ? 'Saving...' : isEditMode ? 'Save Changes' : 'Add Site'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -317,8 +386,8 @@ const Sites = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={deleteSiteMutation.isPending}>
+              {deleteSiteMutation.isPending ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
