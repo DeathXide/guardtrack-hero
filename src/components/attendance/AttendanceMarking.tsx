@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -112,19 +111,12 @@ const AttendanceMarking: React.FC = () => {
     const currentSelected = selectedGuards[shiftType] || [];
     const isSelected = currentSelected.includes(guardId);
     
-    const maxSlots = shiftType === 'day' ? daySlots : nightSlots;
-    
     if (isSelected) {
       setSelectedGuards({
         ...selectedGuards,
         [shiftType]: currentSelected.filter(id => id !== guardId)
       });
     } else {
-      if (currentSelected.length >= maxSlots) {
-        toast.error(`Cannot assign more than ${maxSlots} guards to this shift`);
-        return;
-      }
-      
       try {
         const isMarkedElsewhere = await isGuardMarkedPresentElsewhere(
           guardId, 

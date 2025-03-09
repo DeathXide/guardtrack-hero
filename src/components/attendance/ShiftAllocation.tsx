@@ -100,11 +100,7 @@ const ShiftAllocation: React.FC = () => {
     if (selectedGuards.includes(guardId)) {
       setSelectedGuards(selectedGuards.filter(id => id !== guardId));
     } else {
-      const maxSlots = selectedShiftType === 'day' ? daySlots : nightSlots;
-      if (selectedGuards.length >= maxSlots) {
-        toast.error(`Cannot assign more than ${maxSlots} guards to this shift`);
-        return;
-      }
+      // Removed the max slots check to allow allocating more guards than configured slots
       setSelectedGuards([...selectedGuards, guardId]);
     }
   };
@@ -167,8 +163,8 @@ const ShiftAllocation: React.FC = () => {
     return (
       <div>
         <div className="flex justify-between items-center mb-4">
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-            {shiftsData.length} / {maxSlots} Slots Filled
+          <Badge variant="outline" className={`${shiftsData.length > maxSlots ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-primary/10 text-primary border-primary/20'}`}>
+            {shiftsData.length} / {maxSlots} Slots Filled {shiftsData.length > maxSlots && '(Exceeded)'}
           </Badge>
           <Button 
             size="sm"
@@ -239,7 +235,7 @@ const ShiftAllocation: React.FC = () => {
               <SelectTrigger className="w-full mt-2" id="site-select">
                 <SelectValue placeholder="Select a site" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent searchable>
                 {sites.map(site => (
                   <SelectItem key={site.id} value={site.id}>
                     {site.name}
@@ -282,7 +278,7 @@ const ShiftAllocation: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Allocate Guards to {selectedShiftType.charAt(0).toUpperCase() + selectedShiftType.slice(1)} Shift</DialogTitle>
             <DialogDescription>
-              Select guards to assign to this shift. You can allocate up to {selectedShiftType === 'day' ? daySlots : nightSlots} guards.
+              Select guards to assign to this shift. The site has {selectedShiftType === 'day' ? daySlots : nightSlots} configured {selectedShiftType} shift slots.
             </DialogDescription>
           </DialogHeader>
           
