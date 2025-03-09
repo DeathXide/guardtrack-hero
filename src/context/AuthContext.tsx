@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '@/types';
 import { toast } from '@/hooks/use-toast';
@@ -23,7 +22,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up listener for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log('Auth state changed:', event, currentSession?.user?.email);
@@ -32,7 +30,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (currentSession) {
           try {
-            // Fetch user data from our users table
             const { data, error } = await supabase
               .from('users')
               .select('*')
@@ -61,7 +58,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Initial session check
     const initializeAuth = async () => {
       setLoading(true);
       const { data: { session: initialSession } } = await supabase.auth.getSession();
@@ -70,7 +66,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (initialSession) {
         try {
-          // Fetch user data from our users table
           const { data, error } = await supabase
             .from('users')
             .select('*')
@@ -158,7 +153,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       console.log('Signup successful:', data);
-      return data;
+      toast({
+        title: 'Signup successful',
+        description: 'Please check your email to confirm your account.',
+      });
     } catch (error) {
       console.error('Signup failed:', error);
       toast({
