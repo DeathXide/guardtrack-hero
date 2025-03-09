@@ -26,6 +26,7 @@ const Admin = () => {
     password: '',
     role: 'supervisor' as UserRole
   });
+  const [isCreating, setIsCreating] = useState(false);
 
   // Check if current user is an admin
   if (user?.role !== 'admin') {
@@ -68,9 +69,11 @@ const Admin = () => {
     fetchUsers();
   }, [toast]);
 
-  // Create a new user
+  // Create a new user using the edge function
   const handleCreateUser = async () => {
     try {
+      setIsCreating(true);
+      
       if (!newUser.name || !newUser.email || !newUser.password) {
         toast({
           title: 'Validation Error',
@@ -80,23 +83,19 @@ const Admin = () => {
         return;
       }
 
-      // Let Supabase handle the account creation
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newUser.email,
-        password: newUser.password,
-        options: {
-          data: {
-            name: newUser.name,
-            role: newUser.role,
-          }
+      // Call our edge function instead of direct signup
+      const response = await supabase.functions.invoke('create-user', {
+        body: {
+          name: newUser.name,
+          email: newUser.email,
+          password: newUser.password,
+          role: newUser.role
         }
       });
 
-      if (authError) {
-        throw authError;
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to create user');
       }
-
-      // The trigger will automatically create a user in the users table
 
       toast({
         title: 'User Created',
@@ -129,6 +128,8 @@ const Admin = () => {
         description: error.message || 'There was a problem creating the user.',
         variant: 'destructive',
       });
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -296,8 +297,15 @@ const Admin = () => {
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateUser}>
-              Create User
+            <Button onClick={handleCreateUser} disabled={isCreating}>
+              {isCreating ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  Creating...
+                </>
+              ) : (
+                "Create User"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
