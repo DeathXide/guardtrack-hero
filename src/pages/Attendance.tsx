@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { SearchableSelect } from '@/components/ui/searchable-select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { 
   CalendarDays, 
   Check, 
@@ -27,7 +29,10 @@ import {
   Building,
   UserPlus,
   UserCheck,
-  Loader2
+  Loader2,
+  Trash2,
+  Edit,
+  Plus
 } from 'lucide-react';
 import { AttendanceRecord, Guard, Site, Shift } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -43,7 +48,12 @@ import {
   updateAttendanceRecord,
   isGuardMarkedPresentElsewhere,
   calculateDailyRate,
-  calculateMonthlyEarnings
+  calculateMonthlyEarnings,
+  createShift,
+  updateShift,
+  deleteShift,
+  createGuard,
+  updateGuard
 } from '@/lib/supabaseService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -69,6 +79,11 @@ const getMonthName = (date: Date): string => {
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 };
 
+// Generate a random badge number
+const generateBadgeNumber = () => {
+  return `B${Math.floor(10000 + Math.random() * 90000)}`;
+};
+
 const Attendance = () => {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -78,6 +93,9 @@ const Attendance = () => {
   const [replacementDialogOpen, setReplacementDialogOpen] = useState(false);
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
   const [guardAllocationDialogOpen, setGuardAllocationDialogOpen] = useState(false);
+  const [manageShiftsDialogOpen, setManageShiftsDialogOpen] = useState(false);
+  const [manageGuardsDialogOpen, setManageGuardsDialogOpen] = useState(false);
+  const [createGuardDialogOpen, setCreateGuardDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
   const [selectedGuard, setSelectedGuard] = useState<Guard | null>(null);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
@@ -85,6 +103,12 @@ const Attendance = () => {
   const [replacementGuard, setReplacementGuard] = useState<string | undefined>();
   const [reassignedSite, setReassignedSite] = useState<string | undefined>();
   const [allocatedGuard, setAllocatedGuard] = useState<string | undefined>();
+  const [newGuardName, setNewGuardName] = useState('');
+  const [newGuardEmail, setNewGuardEmail] = useState('');
+  const [newGuardPhone, setNewGuardPhone] = useState('');
+  const [newGuardType, setNewGuardType] = useState<'permanent' | 'temporary'>('permanent');
+  const [newGuardPayRate, setNewGuardPayRate] = useState('');
+  const [editingGuard, setEditingGuard] = useState<Guard | null>(null);
   const [notes, setNotes] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -164,6 +188,67 @@ const Attendance = () => {
       updateAttendanceRecord(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    }
+  });
+
+  const createShiftMutation = useMutation({
+    mutationFn: createShift,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      toast({
+        title: 'Shift created',
+        description: 'New shift has been added successfully',
+      });
+    }
+  });
+
+  const updateShiftMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Shift> }) => 
+      updateShift(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      toast({
+        title: 'Shift updated',
+        description: 'Shift has been updated successfully',
+      });
+    }
+  });
+
+  const deleteShiftMutation = useMutation({
+    mutationFn: deleteShift,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      toast({
+        title: 'Shift deleted',
+        description: 'Shift has been removed successfully',
+      });
+    }
+  });
+
+  const createGuardMutation = useMutation({
+    mutationFn: createGuard,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['guards'] });
+      toast({
+        title: 'Guard created',
+        description: 'New guard has been added successfully',
+      });
+      setCreateGuardDialogOpen(false);
+      resetGuardForm();
+    }
+  });
+
+  const updateGuardMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Guard> }) => 
+      updateGuard(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['guards'] });
+      toast({
+        title: 'Guard updated',
+        description: 'Guard information has been updated successfully',
+      });
+      setCreateGuardDialogOpen(false);
+      resetGuardForm();
     }
   });
   
@@ -284,6 +369,115 @@ const Attendance = () => {
     setSelectedShift(shift);
     setAllocatedGuard(undefined);
     setGuardAllocationDialogOpen(true);
+  };
+
+  const handleManageShifts = () => {
+    setManageShiftsDialogOpen(true);
+  };
+
+  const handleAddShift = async () => {
+    if (!selectedSite) return;
+
+    try {
+      await createShiftMutation.mutateAsync({
+        siteId: selectedSite,
+        type: selectedShiftType,
+      });
+    } catch (error) {
+      console.error('Error creating shift:', error);
+      toast({
+        title: 'Error creating shift',
+        description: 'There was a problem adding a new shift.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleDeleteShift = async (shiftId: string) => {
+    try {
+      await deleteShiftMutation.mutateAsync(shiftId);
+    } catch (error) {
+      console.error('Error deleting shift:', error);
+      toast({
+        title: 'Error deleting shift',
+        description: 'There was a problem removing the shift.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleManageGuards = () => {
+    setManageGuardsDialogOpen(true);
+  };
+
+  const handleCreateGuard = () => {
+    setEditingGuard(null);
+    resetGuardForm();
+    setCreateGuardDialogOpen(true);
+  };
+
+  const handleEditGuard = (guard: Guard) => {
+    setEditingGuard(guard);
+    setNewGuardName(guard.name);
+    setNewGuardEmail(guard.email || '');
+    setNewGuardPhone(guard.phone || '');
+    setNewGuardType(guard.type || 'permanent');
+    setNewGuardPayRate(guard.payRate ? guard.payRate.toString() : '');
+    setCreateGuardDialogOpen(true);
+  };
+
+  const resetGuardForm = () => {
+    setNewGuardName('');
+    setNewGuardEmail('');
+    setNewGuardPhone('');
+    setNewGuardType('permanent');
+    setNewGuardPayRate('');
+    setEditingGuard(null);
+  };
+
+  const handleSubmitGuard = async () => {
+    if (!newGuardName) {
+      toast({
+        title: "Missing information",
+        description: "Guard name is required",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      if (editingGuard) {
+        // Update existing guard
+        await updateGuardMutation.mutateAsync({
+          id: editingGuard.id,
+          data: {
+            name: newGuardName,
+            email: newGuardEmail || undefined,
+            phone: newGuardPhone || undefined,
+            type: newGuardType,
+            payRate: newGuardPayRate ? parseFloat(newGuardPayRate) : undefined
+          }
+        });
+      } else {
+        // Create new guard
+        await createGuardMutation.mutateAsync({
+          name: newGuardName,
+          email: newGuardEmail || undefined,
+          phone: newGuardPhone || undefined,
+          badgeNumber: generateBadgeNumber(),
+          type: newGuardType,
+          payRate: newGuardPayRate ? parseFloat(newGuardPayRate) : undefined,
+          status: 'active'
+        });
+      }
+    } catch (error) {
+      console.error('Error saving guard:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to ${editingGuard ? 'update' : 'create'} guard.`,
+        variant: 'destructive'
+      });
+    }
   };
   
   const saveAttendance = async () => {
@@ -445,13 +639,23 @@ const Attendance = () => {
     }
     
     try {
-      // Create attendance record for the allocated guard
-      await createAttendanceMutation.mutateAsync({
-        date: dateString,
-        shiftId: selectedShift.id,
-        guardId: allocatedGuard,
-        status: 'present'
+      // Update the shift with the allocated guard
+      await updateShiftMutation.mutateAsync({
+        id: selectedShift.id,
+        data: {
+          guardId: allocatedGuard
+        }
       });
+      
+      // Create attendance record for the allocated guard
+      if (guard) {
+        await createAttendanceMutation.mutateAsync({
+          date: dateString,
+          shiftId: selectedShift.id,
+          guardId: allocatedGuard,
+          status: 'present'
+        });
+      }
       
       toast({
         title: 'Guard allocated',
@@ -509,10 +713,20 @@ const Attendance = () => {
             Mark and manage daily attendance for all sites
           </p>
         </div>
-        <Button onClick={() => filteredShifts.length > 0 && handleAllocateGuard(filteredShifts[0])} disabled={!selectedSite || filteredShifts.length === 0}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Allocate Guard
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={handleManageShifts} variant="outline">
+            <Clock className="h-4 w-4 mr-2" />
+            Manage Shifts
+          </Button>
+          <Button onClick={handleManageGuards} variant="outline">
+            <User className="h-4 w-4 mr-2" />
+            Manage Guards
+          </Button>
+          <Button onClick={() => filteredShifts.length > 0 && handleAllocateGuard(filteredShifts[0])} disabled={!selectedSite || filteredShifts.length === 0}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Allocate Guard
+          </Button>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -566,7 +780,7 @@ const Attendance = () => {
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Select a site" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent searchable>
                   {sites.map(site => (
                     <SelectItem key={site.id} value={site.id}>{site.name}</SelectItem>
                   ))}
@@ -608,6 +822,23 @@ const Attendance = () => {
                 <p className="text-sm text-muted-foreground max-w-sm mt-2">
                   There are no {selectedShiftType} shifts assigned for this site. Create shifts first.
                 </p>
+                <Button
+                  className="mt-4"
+                  onClick={handleAddShift}
+                  disabled={createShiftMutation.isPending}
+                >
+                  {createShiftMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Shift
+                    </>
+                  )}
+                </Button>
               </div>
             ) : (
               <div className="rounded-md border overflow-hidden">
@@ -701,12 +932,21 @@ const Attendance = () => {
                             <div className="flex flex-wrap gap-2">
                               <Button 
                                 size="sm" 
-                                onClick={() => handleMarkAttendance(item.shift, item.guard || undefined)}
+                                onClick={() => item.guard ? handleMarkAttendance(item.shift, item.guard) : handleAllocateGuard(item.shift)}
                                 disabled={item.isPresentElsewhere}
                                 title={item.isPresentElsewhere ? "Guard is already marked present at another site" : ""}
                               >
-                                <Pencil className="h-3.5 w-3.5 mr-1" />
-                                Mark
+                                {!item.guard ? (
+                                  <>
+                                    <UserPlus className="h-3.5 w-3.5 mr-1" />
+                                    Assign
+                                  </>
+                                ) : (
+                                  <>
+                                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                                    Mark
+                                  </>
+                                )}
                               </Button>
                               
                               {item.record.status === 'absent' && (
@@ -914,7 +1154,7 @@ const Attendance = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="Select a guard" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent searchable>
                   {getAvailableGuards().map(guard => (
                     <SelectItem key={guard.id} value={guard.id}>
                       {guard.name} ({guard.type || 'Permanent'}) - ${guard.payRate?.toFixed(2)}/month
@@ -994,7 +1234,7 @@ const Attendance = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="Select a site" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent searchable>
                   {getAvailableReassignmentSites().map(site => (
                     <SelectItem key={site.id} value={site.id}>
                       {site.name}
@@ -1070,7 +1310,7 @@ const Attendance = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="Select a guard" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent searchable>
                   {getAvailableGuards().map(guard => (
                     <SelectItem key={guard.id} value={guard.id}>
                       {guard.name} ({guard.type || 'Permanent'}) - ${guard.payRate?.toFixed(2)}/month
@@ -1083,6 +1323,16 @@ const Attendance = () => {
                   No available guards found. All guards may be assigned elsewhere.
                 </p>
               )}
+              
+              <Button 
+                onClick={handleCreateGuard}
+                variant="outline"
+                size="sm"
+                className="mt-2"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Create New Guard
+              </Button>
             </div>
           </div>
           
@@ -1101,6 +1351,329 @@ const Attendance = () => {
                 </>
               ) : (
                 'Allocate Guard'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={manageShiftsDialogOpen} onOpenChange={setManageShiftsDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Manage Shifts</DialogTitle>
+            <DialogDescription>
+              Create, edit, or delete shifts for {selectedSiteDetails?.name || 'this site'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Select value={selectedShiftType} onValueChange={(val) => setSelectedShiftType(val as 'day' | 'night')}>
+                  <SelectTrigger className="w-[130px]">
+                    <SelectValue placeholder="Shift type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">Day Shift</SelectItem>
+                    <SelectItem value="night">Night Shift</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Badge variant="outline">
+                  {selectedSiteDetails 
+                    ? (selectedShiftType === 'day' 
+                      ? `${selectedSiteDetails.daySlots} slots` 
+                      : `${selectedSiteDetails.nightSlots} slots`)
+                    : '0 slots'}
+                </Badge>
+              </div>
+              
+              <Button onClick={handleAddShift} disabled={!selectedSite || createShiftMutation.isPending}>
+                {createShiftMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4 mr-2" />
+                )}
+                Add Shift
+              </Button>
+            </div>
+            
+            <Separator className="my-4" />
+            
+            {filteredShifts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No shifts found for this site and shift type.</p>
+                <p className="text-sm mt-1">Create shifts using the button above.</p>
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>#</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Assigned Guard</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredShifts.map((shift, index) => {
+                      const guardInfo = guards.find(g => g.id === shift.guardId);
+                      return (
+                        <TableRow key={shift.id}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell className="capitalize">{shift.type}</TableCell>
+                          <TableCell>
+                            {guardInfo ? (
+                              <div className="flex items-center space-x-2">
+                                <Avatar className="h-6 w-6">
+                                  <AvatarFallback>{getInitials(guardInfo.name)}</AvatarFallback>
+                                </Avatar>
+                                <span>{guardInfo.name}</span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">Unassigned</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedShift(shift);
+                                  setGuardAllocationDialogOpen(true);
+                                  setManageShiftsDialogOpen(false);
+                                }}
+                              >
+                                <UserPlus className="h-3.5 w-3.5 mr-1" />
+                                Assign
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteShift(shift.id)}
+                                disabled={deleteShiftMutation.isPending}
+                              >
+                                {deleteShiftMutation.isPending ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManageShiftsDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={manageGuardsDialogOpen} onOpenChange={setManageGuardsDialogOpen}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>Manage Guards</DialogTitle>
+            <DialogDescription>
+              View, create and edit guards in the system
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="flex justify-between items-center mb-4">
+              <div className="relative w-72">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search guards..."
+                  className="pl-8"
+                />
+              </div>
+              
+              <Button onClick={handleCreateGuard}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Create Guard
+              </Button>
+            </div>
+            
+            <div className="rounded-md border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Badge</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Pay Rate</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {guards.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No guards found. Create one using the button above.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    guards.map((guard) => (
+                      <TableRow key={guard.id}>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Avatar className="h-7 w-7">
+                              <AvatarImage src={guard.avatar} alt={guard.name} />
+                              <AvatarFallback>{getInitials(guard.name)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium">{guard.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {guard.email || 'No email'}
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{guard.badgeNumber}</TableCell>
+                        <TableCell className="capitalize">{guard.type || 'permanent'}</TableCell>
+                        <TableCell>${guard.payRate?.toFixed(2) || '0.00'}/month</TableCell>
+                        <TableCell>
+                          <Badge variant={guard.status === 'active' ? 'default' : 'secondary'} className="capitalize">
+                            {guard.status || 'active'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => handleEditGuard(guard)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManageGuardsDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createGuardDialogOpen} onOpenChange={setCreateGuardDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingGuard ? 'Edit Guard' : 'Create New Guard'}</DialogTitle>
+            <DialogDescription>
+              {editingGuard 
+                ? 'Update the information for this guard' 
+                : 'Add a new guard to the system'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="guard-name">Name*</Label>
+              <Input
+                id="guard-name"
+                placeholder="Full name"
+                value={newGuardName}
+                onChange={(e) => setNewGuardName(e.target.value)}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="guard-email">Email (Optional)</Label>
+                <Input
+                  id="guard-email"
+                  type="email"
+                  placeholder="Email address"
+                  value={newGuardEmail}
+                  onChange={(e) => setNewGuardEmail(e.target.value)}
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="guard-phone">Phone (Optional)</Label>
+                <Input
+                  id="guard-phone"
+                  placeholder="Phone number"
+                  value={newGuardPhone}
+                  onChange={(e) => setNewGuardPhone(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="guard-type">Guard Type</Label>
+                <Select 
+                  value={newGuardType} 
+                  onValueChange={(value) => setNewGuardType(value as 'permanent' | 'temporary')}
+                >
+                  <SelectTrigger id="guard-type">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="permanent">Permanent</SelectItem>
+                    <SelectItem value="temporary">Temporary</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="guard-pay">Monthly Pay Rate</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5">$</span>
+                  <Input
+                    id="guard-pay"
+                    type="number"
+                    className="pl-7"
+                    placeholder="0.00"
+                    value={newGuardPayRate}
+                    onChange={(e) => setNewGuardPayRate(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {editingGuard && (
+              <div className="mt-2">
+                <div className="flex items-center space-x-2">
+                  <p className="text-sm">Badge Number:</p>
+                  <Badge variant="outline">{editingGuard.badgeNumber}</Badge>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateGuardDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmitGuard} 
+              disabled={!newGuardName || createGuardMutation.isPending || updateGuardMutation.isPending}
+            >
+              {createGuardMutation.isPending || updateGuardMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {editingGuard ? 'Updating...' : 'Creating...'}
+                </>
+              ) : (
+                editingGuard ? 'Update Guard' : 'Create Guard'
               )}
             </Button>
           </DialogFooter>
