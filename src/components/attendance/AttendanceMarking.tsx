@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -31,45 +30,37 @@ const AttendanceMarking: React.FC = () => {
   const [selectedGuards, setSelectedGuards] = useState<Record<string, string[]>>({});
   const queryClient = useQueryClient();
   
-  // Format date for API calls
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
 
-  // Fetch sites
   const { data: sites = [], isLoading: sitesLoading } = useQuery({
     queryKey: ['sites'],
     queryFn: fetchSites
   });
 
-  // Fetch guards
   const { data: guards = [], isLoading: guardsLoading } = useQuery({
     queryKey: ['guards'],
     queryFn: fetchGuards
   });
 
-  // Fetch shifts for selected site
   const { data: shifts = [], isLoading: shiftsLoading } = useQuery({
     queryKey: ['shifts', selectedSite],
     queryFn: () => selectedSite ? fetchShiftsBySite(selectedSite) : Promise.resolve([]),
     enabled: !!selectedSite
   });
 
-  // Fetch attendance records for selected date
   const { data: attendanceRecords = [], isLoading: attendanceLoading, refetch: refetchAttendance } = useQuery({
     queryKey: ['attendance', formattedDate],
     queryFn: () => fetchAttendanceByDate(formattedDate),
     enabled: !!formattedDate
   });
 
-  // Group shifts by type for easier rendering
   const dayShifts = shifts.filter(shift => shift.type === 'day');
   const nightShifts = shifts.filter(shift => shift.type === 'night');
 
-  // Calculate available slots for each shift type
   const selectedSiteData = sites.find(site => site.id === selectedSite);
   const daySlots = selectedSiteData?.daySlots || 0;
   const nightSlots = selectedSiteData?.nightSlots || 0;
 
-  // Create attendance record mutation
   const markAttendanceMutation = useMutation({
     mutationFn: (record: Partial<AttendanceRecord>) => createAttendanceRecord(record),
     onSuccess: () => {
@@ -81,7 +72,6 @@ const AttendanceMarking: React.FC = () => {
     }
   });
 
-  // Find guards assigned to shifts
   const getAssignedGuards = (shiftType: 'day' | 'night') => {
     return shifts
       .filter(shift => shift.type === shiftType && shift.guardId)
@@ -98,11 +88,9 @@ const AttendanceMarking: React.FC = () => {
   const dayShiftGuards = getAssignedGuards('day');
   const nightShiftGuards = getAssignedGuards('night');
 
-  // Initialize selected guards object when shifts change
   useEffect(() => {
     const initialSelectedGuards: Record<string, string[]> = {};
     
-    // Check if there are already attendance records for these shifts on this date
     shifts.forEach(shift => {
       const existingAttendance = attendanceRecords.filter(record => 
         record.shiftId === shift.id && 
@@ -119,29 +107,23 @@ const AttendanceMarking: React.FC = () => {
     setSelectedGuards(initialSelectedGuards);
   }, [shifts, attendanceRecords, formattedDate]);
 
-  // Handle guard selection with slot limitation
   const handleGuardSelection = async (guardId: string, shiftType: 'day' | 'night') => {
-    // Check if guard is already selected
     const currentSelected = selectedGuards[shiftType] || [];
     const isSelected = currentSelected.includes(guardId);
     
-    // Get max slots for the shift type
     const maxSlots = shiftType === 'day' ? daySlots : nightSlots;
     
     if (isSelected) {
-      // If already selected, remove it
       setSelectedGuards({
         ...selectedGuards,
         [shiftType]: currentSelected.filter(id => id !== guardId)
       });
     } else {
-      // If not selected, check if max slots reached
       if (currentSelected.length >= maxSlots) {
         toast.error(`Cannot assign more than ${maxSlots} guards to this shift`);
         return;
       }
       
-      // Check if guard is already marked present elsewhere
       try {
         const isMarkedElsewhere = await isGuardMarkedPresentElsewhere(
           guardId, 
@@ -155,7 +137,6 @@ const AttendanceMarking: React.FC = () => {
           return;
         }
         
-        // Add guard to selected
         setSelectedGuards({
           ...selectedGuards,
           [shiftType]: [...currentSelected, guardId]
@@ -167,9 +148,7 @@ const AttendanceMarking: React.FC = () => {
     }
   };
 
-  // Handle attendance submission
   const handleSubmitAttendance = async () => {
-    // Prepare records for day shift
     const dayGuardIds = selectedGuards['day'] || [];
     const dayRecords = dayGuardIds.map(guardId => {
       const shift = dayShifts.find(s => s.guardId === guardId) || dayShifts[0];
@@ -177,11 +156,10 @@ const AttendanceMarking: React.FC = () => {
         date: formattedDate,
         shiftId: shift.id,
         guardId,
-        status: 'present'
+        status: 'present' as const
       };
     });
 
-    // Prepare records for night shift
     const nightGuardIds = selectedGuards['night'] || [];
     const nightRecords = nightGuardIds.map(guardId => {
       const shift = nightShifts.find(s => s.guardId === guardId) || nightShifts[0];
@@ -189,11 +167,10 @@ const AttendanceMarking: React.FC = () => {
         date: formattedDate,
         shiftId: shift.id,
         guardId,
-        status: 'present'
+        status: 'present' as const
       };
     });
 
-    // Combine and submit all records
     const allRecords = [...dayRecords, ...nightRecords];
     
     if (allRecords.length === 0) {
@@ -201,7 +178,6 @@ const AttendanceMarking: React.FC = () => {
       return;
     }
 
-    // Create attendance records one by one
     for (const record of allRecords) {
       try {
         await markAttendanceMutation.mutateAsync(record);
@@ -210,11 +186,9 @@ const AttendanceMarking: React.FC = () => {
       }
     }
 
-    // Refresh attendance data
     refetchAttendance();
   };
 
-  // Check if a guard is already marked present
   const isGuardMarked = (guardId: string, shiftType: 'day' | 'night') => {
     return attendanceRecords.some(record => {
       const shift = shifts.find(s => s.id === record.shiftId);
