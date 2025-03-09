@@ -1,3 +1,4 @@
+
 export type UserRole = 'admin' | 'supervisor' | 'guard';
 
 export interface User {

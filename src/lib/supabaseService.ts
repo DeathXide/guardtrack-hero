@@ -9,7 +9,8 @@ import {
   Guard,
   Shift,
   AttendanceRecord,
-  PaymentRecord
+  PaymentRecord,
+  SiteEarnings
 } from '@/types';
 
 const supabaseUrl = 'https://amntnscgdmxemsjotqdn.supabase.co';
