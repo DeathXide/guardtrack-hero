@@ -15,21 +15,21 @@ export interface Site {
   supervisorId: string;
   daySlots: number;
   nightSlots: number;
+  payRate: number;
   created_at?: string;
 }
 
 export interface PaymentRecord {
   id: string;
-  guardId: string; // Added guardId property
+  guardId: string;
   date: string;
   amount: number;
   note?: string;
   type: 'bonus' | 'deduction';
-  month?: string; // Added month field for tracking monthly payments
+  month?: string;
   created_at?: string;
 }
 
-// New interface for monthly earnings tracking
 export interface MonthlyEarning {
   month: string;
   totalShifts: number;
@@ -42,16 +42,16 @@ export interface MonthlyEarning {
 export interface Guard {
   id: string;
   name: string;
-  email?: string; // Made email optional
+  email?: string;
   phone: string;
   badgeNumber: string;
   avatar?: string;
   status: 'active' | 'inactive';
   type?: 'permanent' | 'temporary';
-  payRate?: number; // Monthly pay rate
-  shiftRate?: number; // Per shift rate calculated from monthly rate
+  payRate?: number;
+  shiftRate?: number;
   paymentHistory?: PaymentRecord[];
-  monthlyEarnings?: { [key: string]: MonthlyEarning }; // Track earnings by month
+  monthlyEarnings?: { [key: string]: MonthlyEarning };
   created_at?: string;
 }
 
@@ -60,9 +60,9 @@ export interface Shift {
   siteId: string;
   type: 'day' | 'night';
   guardId: string;
-  assignedGuardId?: string; // For replacement guards
-  locked?: boolean; // To lock assignments
-  date?: string; // Date for the shift
+  assignedGuardId?: string;
+  locked?: boolean;
+  date?: string;
   created_at?: string;
 }
 
@@ -73,7 +73,7 @@ export interface AttendanceRecord {
   guardId: string;
   status: 'present' | 'absent' | 'replaced' | 'reassigned';
   replacementGuardId?: string;
-  reassignedSiteId?: string; // For tracking site reassignments
+  reassignedSiteId?: string;
   approvedBy?: string;
   approvedAt?: string;
   notes?: string;
@@ -103,6 +103,13 @@ export interface SiteReport {
   overallPercentage: number;
 }
 
+export interface SiteEarnings {
+  totalShifts: number;
+  allocatedAmount: number;
+  guardCosts: number;
+  netEarnings: number;
+}
+
 export interface ScheduleAssignment {
   id: string;
   date: string;
@@ -112,7 +119,6 @@ export interface ScheduleAssignment {
   locked: boolean;
 }
 
-// Database types
 export type SiteDB = {
   id: string;
   name: string;
@@ -120,6 +126,7 @@ export type SiteDB = {
   supervisor_id: string | null;
   day_slots: number;
   night_slots: number;
+  pay_rate: number;
   created_at: string;
 }
 

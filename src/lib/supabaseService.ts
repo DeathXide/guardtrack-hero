@@ -23,6 +23,7 @@ const convertSiteFromDB = (site: SiteDB): Site => ({
   supervisorId: site.supervisor_id || '',
   daySlots: site.day_slots,
   nightSlots: site.night_slots,
+  payRate: site.pay_rate || 0,
   created_at: site.created_at
 });
 
@@ -31,7 +32,8 @@ const convertSiteToDB = (site: Partial<Site>): Partial<SiteDB> => ({
   location: site.location,
   supervisor_id: site.supervisorId || null,
   day_slots: site.daySlots,
-  night_slots: site.nightSlots
+  night_slots: site.nightSlots,
+  pay_rate: site.payRate || 0
 });
 
 const convertGuardFromDB = (guard: GuardDB): Guard => ({
@@ -622,4 +624,39 @@ export const fetchGuardMonthlyStats = async (guardId: string, month: string): Pr
   return data && data.length > 0 
     ? { totalShifts: data[0].total_shifts, earnings: Number(data[0].earnings) } 
     : { totalShifts: 0, earnings: 0 };
+};
+
+export const fetchSiteMonthlyEarnings = async (siteId: string, month: string): Promise<SiteEarnings> => {
+  const { data, error } = await supabase.rpc('calculate_site_monthly_earnings', {
+    site_uuid: siteId,
+    month_date: month
+  });
+
+  if (error) {
+    console.error('Error fetching site monthly earnings:', error);
+    throw error;
+  }
+
+  return data && data.length > 0 
+    ? {
+        totalShifts: data[0].total_shifts,
+        allocatedAmount: Number(data[0].allocated_amount),
+        guardCosts: Number(data[0].guard_costs),
+        netEarnings: Number(data[0].net_earnings)
+      }
+    : {
+        totalShifts: 0,
+        allocatedAmount: 0,
+        guardCosts: 0,
+        netEarnings: 0
+      };
+};
+
+export const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount);
 };

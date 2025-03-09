@@ -15,14 +15,16 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Calendar as CalendarIcon, CheckCircle2, Clock } from "lucide-react";
+import { AlertCircle, Calendar as CalendarIcon, CheckCircle2, Clock, IndianRupee } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   fetchSites, 
   fetchAttendanceByDate, 
-  fetchShiftsBySite
+  fetchShiftsBySite,
+  fetchSiteMonthlyEarnings,
+  formatCurrency
 } from "@/lib/supabaseService";
-import { Site, AttendanceRecord, Shift } from "@/types";
+import { Site, AttendanceRecord, Shift, SiteEarnings } from "@/types";
 import { useNavigate } from "react-router-dom";
 
 interface AttendanceOverviewProps {
@@ -33,6 +35,7 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const navigate = useNavigate();
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
+  const currentMonth = format(selectedDate, "yyyy-MM");
 
   const { data: sites = [], isLoading: sitesLoading } = useQuery({
     queryKey: ["sites"],
@@ -161,7 +164,31 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
     }
   };
 
-  if (sitesLoading || attendanceLoading || shiftsLoading) {
+  // Fetch site earnings data
+  const { data: siteEarningsMap = {}, isLoading: earningsLoading } = useQuery({
+    queryKey: ["site-earnings", currentMonth],
+    queryFn: async () => {
+      const earningsMap: Record<string, SiteEarnings> = {};
+      for (const site of sites) {
+        try {
+          const earnings = await fetchSiteMonthlyEarnings(site.id, currentMonth);
+          earningsMap[site.id] = earnings;
+        } catch (error) {
+          console.error(`Error fetching earnings for site ${site.id}:`, error);
+          earningsMap[site.id] = {
+            totalShifts: 0,
+            allocatedAmount: 0,
+            guardCosts: 0,
+            netEarnings: 0
+          };
+        }
+      }
+      return earningsMap;
+    },
+    enabled: sites.length > 0
+  });
+
+  if (sitesLoading || attendanceLoading || shiftsLoading || earningsLoading) {
     return <div className="flex items-center justify-center h-64">Loading attendance data...</div>;
   }
 
@@ -170,7 +197,7 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
       <CardHeader>
         <CardTitle>Attendance Overview</CardTitle>
         <CardDescription>
-          View and manage attendance status for all sites
+          View and manage attendance status and earnings for all sites
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -231,12 +258,20 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
                     <TableHead>Day Shift</TableHead>
                     <TableHead>Night Shift</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Monthly Earnings</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sites.map((site) => {
                     const { status, dayStatus, nightStatus } = getSiteAttendanceStatus(site);
+                    const earnings = siteEarningsMap[site.id] || {
+                      totalShifts: 0,
+                      allocatedAmount: 0,
+                      guardCosts: 0,
+                      netEarnings: 0
+                    };
+                    
                     return (
                       <TableRow key={site.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleSiteClick(site.id)}>
                         <TableCell className="font-medium">{site.name}</TableCell>
@@ -244,6 +279,15 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
                         <TableCell>{getShiftStatusBadge(dayStatus)}</TableCell>
                         <TableCell>{getShiftStatusBadge(nightStatus)}</TableCell>
                         <TableCell>{getStatusBadge(status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <IndianRupee className="h-3 w-3 mr-1" />
+                            <span className={earnings.netEarnings > 0 ? "text-green-600" : 
+                                          earnings.netEarnings < 0 ? "text-red-600" : ""}>
+                              {formatCurrency(earnings.netEarnings)}
+                            </span>
+                          </div>
+                        </TableCell>
                         <TableCell className="text-right">
                           <Button size="sm" variant="outline" onClick={(e) => {
                             e.stopPropagation();

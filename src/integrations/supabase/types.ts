@@ -207,6 +207,7 @@ export type Database = {
           location: string
           name: string
           night_slots: number
+          pay_rate: number | null
           supervisor_id: string | null
         }
         Insert: {
@@ -216,6 +217,7 @@ export type Database = {
           location: string
           name: string
           night_slots?: number
+          pay_rate?: number | null
           supervisor_id?: string | null
         }
         Update: {
@@ -225,6 +227,7 @@ export type Database = {
           location?: string
           name?: string
           night_slots?: number
+          pay_rate?: number | null
           supervisor_id?: string | null
         }
         Relationships: []
@@ -269,6 +272,18 @@ export type Database = {
         Returns: {
           total_shifts: number
           earnings: number
+        }[]
+      }
+      calculate_site_monthly_earnings: {
+        Args: {
+          site_uuid: string
+          month_date: string
+        }
+        Returns: {
+          total_shifts: number
+          allocated_amount: number
+          guard_costs: number
+          net_earnings: number
         }[]
       }
       get_user_role: {

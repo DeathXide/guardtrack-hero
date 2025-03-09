@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -5,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from 'sonner';
-import { AlertCircle, Calendar as CalendarIcon, Check, CheckCircle2, Info, Trash2 } from 'lucide-react';
+import { AlertCircle, Calendar as CalendarIcon, Check, CheckCircle2, IndianRupee, Info, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,9 +21,11 @@ import {
   createAttendanceRecord,
   fetchAttendanceByDate,
   isGuardMarkedPresentElsewhere,
-  deleteAttendanceRecord
+  deleteAttendanceRecord,
+  fetchSiteMonthlyEarnings,
+  formatCurrency
 } from '@/lib/supabaseService';
-import { Site, Guard, Shift, AttendanceRecord } from '@/types';
+import { Site, Guard, Shift, AttendanceRecord, SiteEarnings } from '@/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface AttendanceMarkingProps {
@@ -36,6 +39,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
   const queryClient = useQueryClient();
   
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+  const currentMonth = format(selectedDate, 'yyyy-MM');
 
   useEffect(() => {
     if (preselectedSiteId) {
@@ -65,10 +69,17 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     enabled: !!formattedDate
   });
 
+  const { data: siteEarnings, isLoading: earningsLoading } = useQuery({
+    queryKey: ['site-earnings', selectedSite, currentMonth],
+    queryFn: () => fetchSiteMonthlyEarnings(selectedSite, currentMonth),
+    enabled: !!selectedSite && !!currentMonth
+  });
+
   const markAttendanceMutation = useMutation({
     mutationFn: createAttendanceRecord,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance', formattedDate] });
+      queryClient.invalidateQueries({ queryKey: ['site-earnings', selectedSite, currentMonth] });
       toast.success('Attendance marked successfully');
     },
     onError: (error) => {
@@ -81,6 +92,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     mutationFn: deleteAttendanceRecord,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance', formattedDate] });
+      queryClient.invalidateQueries({ queryKey: ['site-earnings', selectedSite, currentMonth] });
       toast.success('Attendance record removed successfully');
     },
     onError: (error) => {
@@ -95,6 +107,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
   const selectedSiteData = sites.find(site => site.id === selectedSite);
   const daySlots = selectedSiteData?.daySlots || 0;
   const nightSlots = selectedSiteData?.nightSlots || 0;
+  const sitePayRate = selectedSiteData?.payRate || 0;
 
   const dayShiftGuards = shifts
     .filter(shift => shift.type === 'day' && shift.guardId)
@@ -238,6 +251,19 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     }
   };
 
+  // Calculate site earnings data
+  const totalSlots = daySlots + nightSlots;
+  const payRatePerShift = totalSlots > 0 ? sitePayRate / totalSlots : 0;
+
+  // Calculate guard costs
+  const calculateGuardCostPerShift = (guardId: string) => {
+    const guard = guards.find(g => g.id === guardId);
+    if (!guard || !guard.payRate) return 0;
+    
+    const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
+    return guard.payRate / daysInMonth;
+  };
+
   if (sitesLoading || guardsLoading) {
     return <div className="flex items-center justify-center h-64">Loading sites and guards...</div>;
   }
@@ -296,15 +322,71 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             </div>
 
             {selectedSite && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span>Day shift slots:</span>
-                  <Badge variant="outline">{daySlots}</Badge>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span>Day shift slots:</span>
+                    <Badge variant="outline">{daySlots}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Night shift slots:</span>
+                    <Badge variant="outline">{nightSlots}</Badge>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span>Night shift slots:</span>
-                  <Badge variant="outline">{nightSlots}</Badge>
+                
+                <div className="space-y-2 pt-2 border-t">
+                  <div className="flex items-center justify-between">
+                    <span>Site Pay Rate:</span>
+                    <div className="flex items-center">
+                      <IndianRupee className="h-3 w-3 mr-1" />
+                      <Badge variant="outline">{formatCurrency(sitePayRate)}</Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Per Shift Rate:</span>
+                    <div className="flex items-center">
+                      <IndianRupee className="h-3 w-3 mr-1" />
+                      <Badge variant="outline">{formatCurrency(payRatePerShift)}</Badge>
+                    </div>
+                  </div>
                 </div>
+                
+                {siteEarnings && !earningsLoading && (
+                  <div className="space-y-2 pt-2 border-t">
+                    <h4 className="text-sm font-medium">Monthly Earnings</h4>
+                    <div className="flex items-center justify-between">
+                      <span>Total Shifts:</span>
+                      <Badge variant="outline">{siteEarnings.totalShifts}</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Allocated Budget:</span>
+                      <div className="flex items-center">
+                        <IndianRupee className="h-3 w-3 mr-1" />
+                        <Badge variant="outline">{formatCurrency(siteEarnings.allocatedAmount)}</Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Guard Costs:</span>
+                      <div className="flex items-center">
+                        <IndianRupee className="h-3 w-3 mr-1" />
+                        <Badge variant="outline">{formatCurrency(siteEarnings.guardCosts)}</Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Net Earnings:</span>
+                      <div className="flex items-center">
+                        <IndianRupee className="h-3 w-3 mr-1" />
+                        <Badge 
+                          variant="outline" 
+                          className={siteEarnings.netEarnings > 0 ? "bg-green-50 text-green-700 border-green-200" : 
+                                    siteEarnings.netEarnings < 0 ? "bg-red-50 text-red-700 border-red-200" : ""}
+                        >
+                          {formatCurrency(siteEarnings.netEarnings)}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -362,6 +444,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                             <TableHead>Present</TableHead>
                             <TableHead>Guard Name</TableHead>
                             <TableHead>Badge Number</TableHead>
+                            <TableHead>Pay Rate</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Actions</TableHead>
                           </TableRow>
@@ -371,6 +454,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                             const guardDetails = guards.find(g => g.id === guard.guardId);
                             const isMarked = isGuardMarked(guard.guardId, 'day');
                             const isSelected = (selectedGuards['day'] || []).includes(guard.guardId);
+                            const guardCost = calculateGuardCostPerShift(guard.guardId);
                             
                             return (
                               <TableRow key={guard.id}>
@@ -382,6 +466,12 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                                 </TableCell>
                                 <TableCell>{guardDetails?.name}</TableCell>
                                 <TableCell>{guardDetails?.badgeNumber}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center">
+                                    <IndianRupee className="h-3 w-3 mr-1" />
+                                    {formatCurrency(guardCost)}
+                                  </div>
+                                </TableCell>
                                 <TableCell>
                                   {isMarked ? (
                                     <Badge className="bg-green-500">Marked Present</Badge>
@@ -439,6 +529,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                             <TableHead>Present</TableHead>
                             <TableHead>Guard Name</TableHead>
                             <TableHead>Badge Number</TableHead>
+                            <TableHead>Pay Rate</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Actions</TableHead>
                           </TableRow>
@@ -448,6 +539,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                             const guardDetails = guards.find(g => g.id === guard.guardId);
                             const isMarked = isGuardMarked(guard.guardId, 'night');
                             const isSelected = (selectedGuards['night'] || []).includes(guard.guardId);
+                            const guardCost = calculateGuardCostPerShift(guard.guardId);
                             
                             return (
                               <TableRow key={guard.id}>
@@ -459,6 +551,12 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                                 </TableCell>
                                 <TableCell>{guardDetails?.name}</TableCell>
                                 <TableCell>{guardDetails?.badgeNumber}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center">
+                                    <IndianRupee className="h-3 w-3 mr-1" />
+                                    {formatCurrency(guardCost)}
+                                  </div>
+                                </TableCell>
                                 <TableCell>
                                   {isMarked ? (
                                     <Badge className="bg-green-500">Marked Present</Badge>

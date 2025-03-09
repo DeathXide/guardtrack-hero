@@ -6,13 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Building, Edit, Trash, User } from 'lucide-react';
+import { MapPin, Building, Edit, Trash, User, IndianRupee } from 'lucide-react';
 import { Site } from '@/types';
 import { users } from '@/lib/data';
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchSites, createSite, updateSite, deleteSite } from '@/lib/supabaseService';
+import { fetchSites, createSite, updateSite, deleteSite, formatCurrency } from '@/lib/supabaseService';
 
 const Sites = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -36,6 +36,7 @@ const Sites = () => {
     location: '',
     daySlots: 0,
     nightSlots: 0,
+    payRate: 0,
     supervisorId: ''
   };
   
@@ -108,8 +109,11 @@ const Sites = () => {
     const { id, value } = e.target;
     setNewSite({
       ...newSite,
-      [id === 'site-name' ? 'name' : id === 'day-slots' ? 'daySlots' : id === 'night-slots' ? 'nightSlots' : id]: 
-        (id === 'day-slots' || id === 'night-slots') ? parseInt(value) || 0 : value
+      [id === 'site-name' ? 'name' : 
+       id === 'day-slots' ? 'daySlots' : 
+       id === 'night-slots' ? 'nightSlots' : 
+       id === 'pay-rate' ? 'payRate' : id]: 
+        (id === 'day-slots' || id === 'night-slots' || id === 'pay-rate') ? parseInt(value) || 0 : value
     });
   };
 
@@ -121,6 +125,7 @@ const Sites = () => {
       location: site.location,
       daySlots: site.daySlots,
       nightSlots: site.nightSlots,
+      payRate: site.payRate || 0,
       supervisorId: site.supervisorId
     });
     setIsEditMode(true);
@@ -168,7 +173,8 @@ const Sites = () => {
           location: newSite.location,
           supervisorId: newSite.supervisorId,
           daySlots: newSite.daySlots,
-          nightSlots: newSite.nightSlots
+          nightSlots: newSite.nightSlots,
+          payRate: newSite.payRate
         }
       });
     } else {
@@ -178,7 +184,8 @@ const Sites = () => {
         location: newSite.location,
         supervisorId: newSite.supervisorId || undefined,
         daySlots: newSite.daySlots,
-        nightSlots: newSite.nightSlots
+        nightSlots: newSite.nightSlots,
+        payRate: newSite.payRate
       };
       
       createSiteMutation.mutate(siteData);
@@ -195,6 +202,12 @@ const Sites = () => {
     if (!supervisorId) return 'Unassigned';
     const supervisor = users.find(user => user.id === supervisorId);
     return supervisor ? supervisor.name : 'Unassigned';
+  };
+
+  // Calculate pay rate per shift
+  const getPayRatePerShift = (site: Site) => {
+    const totalSlots = site.daySlots + site.nightSlots;
+    return totalSlots > 0 ? site.payRate / totalSlots : 0;
   };
 
   if (isLoading) {
@@ -279,13 +292,27 @@ const Sites = () => {
                     <span className="font-medium ml-2">{getSupervisorName(site.supervisorId)}</span>
                   </div>
                   
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                      {site.daySlots} Day Slots
-                    </Badge>
-                    <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                      {site.nightSlots} Night Slots
-                    </Badge>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                        {site.daySlots} Day Slots
+                      </Badge>
+                      <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                        {site.nightSlots} Night Slots
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex items-center text-sm mt-2">
+                      <IndianRupee className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span className="text-muted-foreground">Budget:</span>
+                      <span className="font-medium ml-2">{formatCurrency(site.payRate)}</span>
+                    </div>
+                    
+                    <div className="flex items-center text-sm">
+                      <IndianRupee className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span className="text-muted-foreground">Per Shift:</span>
+                      <span className="font-medium ml-2">{formatCurrency(getPayRatePerShift(site))}</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -323,7 +350,7 @@ const Sites = () => {
                 onChange={handleInputChange}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="day-slots">Day Slots</Label>
                 <Input 
@@ -343,6 +370,17 @@ const Sites = () => {
                   min="0" 
                   placeholder="0" 
                   value={newSite.nightSlots}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pay-rate">Budget (₹)</Label>
+                <Input 
+                  id="pay-rate" 
+                  type="number" 
+                  min="0" 
+                  placeholder="0" 
+                  value={newSite.payRate}
                   onChange={handleInputChange}
                 />
               </div>
