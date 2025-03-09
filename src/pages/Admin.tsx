@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types';
@@ -10,7 +9,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Shield, UserPlus, UserMinus, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabaseService';
+import { supabase } from '@/integrations/supabase/client';
 
 const Admin = () => {
   const { user } = useAuth();
@@ -28,23 +27,18 @@ const Admin = () => {
   });
   const [isCreating, setIsCreating] = useState(false);
 
-  // Check if current user is an admin
-  if (user?.role !== 'admin') {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 space-y-4 text-center">
-        <AlertTriangle className="w-16 h-16 text-destructive" />
-        <h1 className="text-2xl font-bold">Access Denied</h1>
-        <p className="text-muted-foreground">You need administrator privileges to access this page.</p>
-      </div>
-    );
-  }
-
-  // Fetch all users
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        // Fetch users from the users table
+        
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData.session) {
+          console.error('No active session');
+          setLoading(false);
+          return;
+        }
+        
         const { data, error } = await supabase
           .from('users')
           .select('id, name, email, role');
@@ -53,6 +47,7 @@ const Admin = () => {
           throw error;
         }
 
+        console.log('Fetched users:', data);
         setUsers(data || []);
       } catch (error) {
         console.error('Error fetching users:', error);
@@ -66,10 +61,21 @@ const Admin = () => {
       }
     };
 
-    fetchUsers();
-  }, [toast]);
+    if (user) {
+      fetchUsers();
+    }
+  }, [toast, user]);
 
-  // Create a new user using the edge function
+  if (!user || user?.role !== 'admin') {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 space-y-4 text-center">
+        <AlertTriangle className="w-16 h-16 text-destructive" />
+        <h1 className="text-2xl font-bold">Access Denied</h1>
+        <p className="text-muted-foreground">You need administrator privileges to access this page.</p>
+      </div>
+    );
+  }
+
   const handleCreateUser = async () => {
     try {
       setIsCreating(true);
@@ -83,7 +89,8 @@ const Admin = () => {
         return;
       }
 
-      // Call our edge function instead of direct signup
+      console.log('Creating user with:', { ...newUser, password: '***' });
+
       const response = await supabase.functions.invoke('create-user', {
         body: {
           name: newUser.name,
@@ -97,12 +104,13 @@ const Admin = () => {
         throw new Error(response.error.message || 'Failed to create user');
       }
 
+      console.log('User created successfully:', response.data);
+
       toast({
         title: 'User Created',
         description: `${newUser.name} has been added as a ${newUser.role}.`,
       });
 
-      // Reset form and close dialog
       setNewUser({
         name: '',
         email: '',
@@ -111,7 +119,6 @@ const Admin = () => {
       });
       setIsCreateDialogOpen(false);
 
-      // Refresh the user list
       const { data, error } = await supabase
         .from('users')
         .select('id, name, email, role');
@@ -121,7 +128,7 @@ const Admin = () => {
       }
 
       setUsers(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating user:', error);
       toast({
         title: 'Error creating user',
@@ -133,13 +140,10 @@ const Admin = () => {
     }
   };
 
-  // Delete a user
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
 
     try {
-      // Use Admin API via an edge function to delete user
-      // For now, we'll just remove from the users table
       const { error } = await supabase
         .from('users')
         .delete()
@@ -154,11 +158,10 @@ const Admin = () => {
         description: `${selectedUser.name} has been removed.`,
       });
 
-      // Remove user from local state
       setUsers(users.filter(u => u.id !== selectedUser.id));
       setIsDeleteDialogOpen(false);
       setSelectedUser(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting user:', error);
       toast({
         title: 'Error deleting user',
@@ -241,7 +244,6 @@ const Admin = () => {
         </div>
       )}
 
-      {/* Create User Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -311,7 +313,6 @@ const Admin = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete User Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>

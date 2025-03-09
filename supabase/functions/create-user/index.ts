@@ -16,6 +16,8 @@ serve(async (req) => {
   try {
     const { name, email, password, role } = await req.json();
     
+    console.log(`Creating user: ${email} with role: ${role}`);
+    
     // Create supabase admin client with service role
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -27,8 +29,6 @@ serve(async (req) => {
         },
       }
     );
-
-    console.log(`Creating user: ${email} with role: ${role}`);
 
     // Create user without confirmation email
     const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -54,6 +54,32 @@ serve(async (req) => {
         }
       );
     }
+
+    // Manually insert into users table to ensure consistent data
+    const { error: insertError } = await supabaseAdmin
+      .from('users')
+      .insert({
+        id: userData.user.id,
+        email,
+        name,
+        role
+      });
+
+    if (insertError) {
+      console.error("Error inserting user data:", insertError);
+      return new Response(
+        JSON.stringify({ error: insertError.message }),
+        { 
+          status: 400, 
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    console.log("User created successfully:", userData.user.id);
 
     return new Response(
       JSON.stringify({ 
