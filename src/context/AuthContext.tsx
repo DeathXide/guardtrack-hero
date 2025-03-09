@@ -1,8 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '@/types';
+import { users } from '@/lib/data';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   user: User | null;
@@ -19,91 +19,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setLoading(true);
-        
-        if (event === 'SIGNED_IN' && session) {
-          await fetchUserProfile(session.user.id);
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
-        
-        setLoading(false);
-      }
-    );
-
-    // Check current session on mount
-    checkCurrentSession();
-
-    // Cleanup the subscription
-    return () => {
-      subscription?.unsubscribe();
-    };
+    // Check for saved user in local storage
+    const savedUser = localStorage.getItem('secureGuardUser');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    setLoading(false);
   }, []);
-
-  const checkCurrentSession = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        await fetchUserProfile(session.user.id);
-      }
-    } catch (error) {
-      console.error('Error checking session:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      // Get user data from our users table
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        setUser(data as User);
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      setUser(null);
-    }
-  };
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // For demo purposes, any password works and we find the user by email
+      const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      
+      if (!foundUser) {
+        throw new Error('Invalid email or password');
+      }
+      
+      // Save user to state and local storage
+      setUser(foundUser);
+      localStorage.setItem('secureGuardUser', JSON.stringify(foundUser));
+      
+      toast({
+        title: 'Login successful',
+        description: `Welcome back, ${foundUser.name}!`,
       });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data.user) {
-        await fetchUserProfile(data.user.id);
-        
-        toast({
-          title: 'Login successful',
-          description: `Welcome back!`,
-        });
-      }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Login failed',
-        description: error.message || 'An unexpected error occurred',
+        description: (error as Error).message,
         variant: 'destructive',
       });
       throw error;
@@ -112,21 +61,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-      toast({
-        title: 'Logged out',
-        description: 'You have been successfully logged out.',
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Logout failed',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    }
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('secureGuardUser');
+    toast({
+      title: 'Logged out',
+      description: 'You have been successfully logged out.',
+    });
   };
 
   return (

@@ -14,7 +14,6 @@ import Sites from "./pages/Sites";
 import Guards from "./pages/Guards";
 import Attendance from "./pages/Attendance";
 import Reports from "./pages/Reports";
-import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -118,16 +117,6 @@ const App = () => (
                 <ProtectedRoute>
                   <AppLayout>
                     <Reports />
-                  </AppLayout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin" 
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <Admin />
                   </AppLayout>
                 </ProtectedRoute>
               } 
