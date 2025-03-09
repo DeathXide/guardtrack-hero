@@ -85,8 +85,8 @@ const Index = () => {
         </div>
         
         <Card className="glass-card shadow-lg">
-          <CardHeader>
-            <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
+          <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
+            <CardHeader>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -105,141 +105,141 @@ const Index = () => {
                   Create a new account to access the system
                 </CardDescription>
               </TabsContent>
-            </Tabs>
-          </CardHeader>
-          
-          <CardContent>
-            <TabsContent value="login" className="mt-0">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="login-password">Password</Label>
-                    <a href="#" className="text-sm text-primary hover:underline">
-                      Forgot password?
-                    </a>
-                  </div>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                
-                {loginError && (
-                  <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
-                    {loginError}
-                  </div>
-                )}
-                
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={loginLoading}
-                >
-                  {loginLoading ? 'Signing in...' : 'Sign in'}
-                </Button>
-              </form>
-            </TabsContent>
+            </CardHeader>
             
-            <TabsContent value="signup" className="mt-0">
-              <form onSubmit={handleSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={signupName}
-                    onChange={(e) => setSignupName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={signupEmail}
-                    onChange={(e) => setSignupEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="Create a password"
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Password must be at least 6 characters long
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-role">Role</Label>
-                  <Select
-                    value={signupRole}
-                    onValueChange={(value) => setSignupRole(value as UserRole)}
-                    required
-                  >
-                    <SelectTrigger id="signup-role">
-                      <SelectValue placeholder="Select your role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="guard">Guard</SelectItem>
-                      <SelectItem value="supervisor">Supervisor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Admin accounts can only be created by existing administrators
-                  </p>
-                </div>
-                
-                {signupError && (
-                  <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
-                    {signupError}
+            <CardContent>
+              <TabsContent value="login" className="mt-0">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input
+                      id="login-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      required
+                    />
                   </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="login-password">Password</Label>
+                      <a href="#" className="text-sm text-primary hover:underline">
+                        Forgot password?
+                      </a>
+                    </div>
+                    <Input
+                      id="login-password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  
+                  {loginError && (
+                    <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
+                      {loginError}
+                    </div>
+                  )}
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={loginLoading}
+                  >
+                    {loginLoading ? 'Signing in...' : 'Sign in'}
+                  </Button>
+                </form>
+              </TabsContent>
+              
+              <TabsContent value="signup" className="mt-0">
+                <form onSubmit={handleSignup} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      placeholder="Enter your full name"
+                      value={signupName}
+                      onChange={(e) => setSignupName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      placeholder="Create a password"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      required
+                      minLength={6}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Password must be at least 6 characters long
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-role">Role</Label>
+                    <Select
+                      value={signupRole}
+                      onValueChange={(value) => setSignupRole(value as UserRole)}
+                      required
+                    >
+                      <SelectTrigger id="signup-role">
+                        <SelectValue placeholder="Select your role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="guard">Guard</SelectItem>
+                        <SelectItem value="supervisor">Supervisor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Admin accounts can only be created by existing administrators
+                    </p>
+                  </div>
+                  
+                  {signupError && (
+                    <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
+                      {signupError}
+                    </div>
+                  )}
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={signupLoading}
+                  >
+                    {signupLoading ? 'Creating account...' : 'Create account'}
+                  </Button>
+                </form>
+              </TabsContent>
+            </CardContent>
+            
+            <CardFooter className="flex flex-col space-y-4">
+              <div className="text-sm text-muted-foreground text-center">
+                {activeTab === 'login' ? (
+                  <span>Don't have an account? <Button variant="link" className="p-0" onClick={() => setActiveTab('signup')}>Sign up</Button></span>
+                ) : (
+                  <span>Already have an account? <Button variant="link" className="p-0" onClick={() => setActiveTab('login')}>Sign in</Button></span>
                 )}
-                
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={signupLoading}
-                >
-                  {signupLoading ? 'Creating account...' : 'Create account'}
-                </Button>
-              </form>
-            </TabsContent>
-          </CardContent>
-          
-          <CardFooter className="flex flex-col space-y-4">
-            <div className="text-sm text-muted-foreground text-center">
-              {activeTab === 'login' ? (
-                <span>Don't have an account? <Button variant="link" className="p-0" onClick={() => setActiveTab('signup')}>Sign up</Button></span>
-              ) : (
-                <span>Already have an account? <Button variant="link" className="p-0" onClick={() => setActiveTab('login')}>Sign in</Button></span>
-              )}
-            </div>
-          </CardFooter>
+              </div>
+            </CardFooter>
+          </Tabs>
         </Card>
       </div>
     </div>
