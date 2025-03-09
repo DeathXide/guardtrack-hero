@@ -265,31 +265,15 @@ const Guards = () => {
       guard.type === 'temporary')
   );
 
-  const getCurrentMonthEarnings = async (guard: Guard): Promise<MonthlyEarning> => {
-    const month = currentMonth;
-    
-    try {
-      const { totalShifts, earnings } = await fetchGuardMonthlyStats(guard.id, month);
-      
-      return {
-        month: currentMonth,
-        totalShifts,
-        baseSalary: earnings,
-        bonuses: 0,
-        deductions: 0,
-        netAmount: earnings
-      };
-    } catch (error) {
-      console.error('Error fetching monthly earnings for guard:', error);
-      return {
-        month: currentMonth,
-        totalShifts: 0,
-        baseSalary: 0,
-        bonuses: 0,
-        deductions: 0,
-        netAmount: 0
-      };
-    }
+  const getCurrentMonthEarnings = (guard: Guard): MonthlyEarning => {
+    return guardEarnings[guard.id] || {
+      month: currentMonth,
+      totalShifts: 0,
+      baseSalary: 0,
+      bonuses: 0,
+      deductions: 0,
+      netAmount: 0
+    };
   };
 
   useEffect(() => {
@@ -297,7 +281,27 @@ const Guards = () => {
       const earningsMap: Record<string, MonthlyEarning> = {};
       
       for (const guard of guardList) {
-        earningsMap[guard.id] = await getCurrentMonthEarnings(guard);
+        try {
+          const result = await fetchGuardMonthlyStats(guard.id, currentMonth);
+          earningsMap[guard.id] = {
+            month: currentMonth,
+            totalShifts: result.totalShifts,
+            baseSalary: result.earnings,
+            bonuses: 0,
+            deductions: 0,
+            netAmount: result.earnings
+          };
+        } catch (error) {
+          console.error('Error fetching monthly earnings for guard:', error);
+          earningsMap[guard.id] = {
+            month: currentMonth,
+            totalShifts: 0,
+            baseSalary: 0,
+            bonuses: 0,
+            deductions: 0,
+            netAmount: 0
+          };
+        }
       }
       
       setGuardEarnings(earningsMap);
@@ -372,14 +376,7 @@ const Guards = () => {
           </p>
         ) : (
           filteredGuards.map(guard => {
-            const monthlyEarnings = guardEarnings[guard.id] || {
-              month: currentMonth,
-              totalShifts: 0,
-              baseSalary: 0,
-              bonuses: 0,
-              deductions: 0,
-              netAmount: 0
-            };
+            const monthlyEarnings = getCurrentMonthEarnings(guard);
             const shiftRate = guard.payRate ? calculateShiftRate(guard.payRate) : 0;
             
             return (
@@ -712,4 +709,3 @@ const Guards = () => {
 };
 
 export default Guards;
-

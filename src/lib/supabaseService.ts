@@ -623,4 +623,3 @@ export const fetchGuardMonthlyStats = async (guardId: string, month: string): Pr
     ? { totalShifts: data[0].total_shifts, earnings: Number(data[0].earnings) } 
     : { totalShifts: 0, earnings: 0 };
 };
-
