@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -9,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserRole } from '@/types';
+import { toast } from '@/hooks/use-toast';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -42,10 +42,22 @@ const Index = () => {
     setLoginError('');
     
     try {
+      console.log(`Attempting to log in with: ${loginEmail}`);
+      
+      if (loginEmail === 'admin@example.org' && loginPassword === 'password123') {
+        console.log('Using default admin login credentials');
+      }
+      
       await login(loginEmail, loginPassword);
       navigate('/dashboard');
     } catch (error) {
-      setLoginError((error as Error).message);
+      console.error('Login error:', error);
+      setLoginError((error as Error).message || 'Failed to login. Please check your credentials.');
+      toast({
+        title: 'Login Failed',
+        description: (error as Error).message || 'Please check your credentials and try again.',
+        variant: 'destructive',
+      });
     } finally {
       setLoginLoading(false);
     }
@@ -58,6 +70,11 @@ const Index = () => {
     
     try {
       await signup(signupEmail, signupPassword, signupName, signupRole);
+      toast({
+        title: 'Account Created',
+        description: 'Please check your email to verify your account, then log in.',
+        variant: 'default',
+      });
       setActiveTab('login');
       setLoginEmail(signupEmail);
       setSignupName('');
@@ -65,7 +82,13 @@ const Index = () => {
       setSignupPassword('');
       setSignupRole('guard');
     } catch (error) {
-      setSignupError((error as Error).message);
+      console.error('Signup error:', error);
+      setSignupError((error as Error).message || 'Failed to create account.');
+      toast({
+        title: 'Signup Failed',
+        description: (error as Error).message || 'Please try again with a different email.',
+        variant: 'destructive',
+      });
     } finally {
       setSignupLoading(false);
     }
@@ -241,6 +264,12 @@ const Index = () => {
             </CardFooter>
           </Tabs>
         </Card>
+        
+        {process.env.NODE_ENV !== 'production' && (
+          <div className="mt-4 p-3 bg-muted rounded-md text-xs">
+            <p>Default admin: admin@example.org / password123</p>
+          </div>
+        )}
       </div>
     </div>
   );
