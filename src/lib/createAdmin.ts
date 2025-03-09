@@ -96,8 +96,8 @@ export const checkAndCreateDefaultAdmin = async (): Promise<AdminCheckResult> =>
     
     if (!data || data.length === 0) {
       console.log('No admin users found. Creating default admin...');
-      // Using a more reliable email format for testing
-      const defaultEmail = 'admin@example.org';
+      // Using a valid email domain for testing
+      const defaultEmail = 'admin@gmail.com';
       const defaultPassword = 'password123';
       const defaultName = 'Admin User';
       

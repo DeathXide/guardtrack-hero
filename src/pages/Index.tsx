@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -29,8 +30,16 @@ const Index = () => {
   const [signupLoading, setSignupLoading] = useState(false);
   const [signupError, setSignupError] = useState('');
   
+  // Set default admin credentials for development
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      setLoginEmail('admin@gmail.com');
+      setLoginPassword('password123');
+    }
+  }, []);
+  
   // Redirect if already logged in
-  React.useEffect(() => {
+  useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard');
     }
@@ -44,11 +53,15 @@ const Index = () => {
     try {
       console.log(`Attempting to log in with: ${loginEmail}`);
       
-      if (loginEmail === 'admin@example.org' && loginPassword === 'password123') {
+      if (loginEmail === 'admin@gmail.com' && loginPassword === 'password123') {
         console.log('Using default admin login credentials');
       }
       
       await login(loginEmail, loginPassword);
+      toast({
+        title: 'Login successful',
+        description: 'Welcome to SecureGuard!',
+      });
       navigate('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
@@ -69,10 +82,10 @@ const Index = () => {
     setSignupError('');
     
     try {
-      await signup(signupEmail, signupPassword, signupName, signupRole);
+      const result = await signup(signupEmail, signupPassword, signupName, signupRole);
       toast({
         title: 'Account Created',
-        description: 'Please check your email to verify your account, then log in.',
+        description: 'Your account has been created. You can now log in.',
         variant: 'default',
       });
       setActiveTab('login');

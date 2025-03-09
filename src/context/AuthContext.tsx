@@ -26,6 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up listener for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        console.log('Auth state changed:', event, currentSession?.user?.email);
         setLoading(true);
         setSession(currentSession);
 
@@ -48,6 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 role: data.role as UserRole,
                 avatar: data.avatar,
               });
+              console.log('User data loaded:', data);
             }
           } catch (error) {
             console.error('Error fetching user data:', error);
@@ -64,6 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       const { data: { session: initialSession } } = await supabase.auth.getSession();
       setSession(initialSession);
+      console.log('Initial session check:', initialSession?.user?.email);
 
       if (initialSession) {
         try {
@@ -84,6 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               role: data.role as UserRole,
               avatar: data.avatar,
             });
+            console.log('Initial user data loaded:', data);
           }
         } catch (error) {
           console.error('Error fetching initial user data:', error);
@@ -103,18 +107,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     
     try {
+      console.log('Login attempt with:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Login error:', error);
+        throw error;
+      }
       
+      console.log('Login successful:', data.user?.email);
       toast({
         title: 'Login successful',
         description: `Welcome back, ${data.user?.email}!`,
       });
     } catch (error) {
+      console.error('Login failed:', error);
       toast({
         title: 'Login failed',
         description: (error as Error).message,
@@ -130,6 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     
     try {
+      console.log('Signup attempt with:', email, role);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -141,13 +152,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Signup error:', error);
+        throw error;
+      }
       
-      toast({
-        title: 'Signup successful',
-        description: 'Your account has been created. You may need to verify your email before logging in.',
-      });
+      console.log('Signup successful:', data);
+      return data;
     } catch (error) {
+      console.error('Signup failed:', error);
       toast({
         title: 'Signup failed',
         description: (error as Error).message,
