@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -10,6 +11,7 @@ import {
   MapPin,
   Shield,
   Users,
+  UserCog
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -54,6 +56,12 @@ const navItems: NavItem[] = [
     href: '/reports',
     icon: Shield,
     roles: ['admin', 'supervisor'],
+  },
+  {
+    title: 'User Management',
+    href: '/admin',
+    icon: UserCog,
+    roles: ['admin'],
   },
 ];
 

@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       toast({
         title: 'Login failed',
-        description: (error as Error).message,
+        description: (error instanceof Error) ? error.message : 'An unexpected error occurred',
         variant: 'destructive',
       });
       throw error;
