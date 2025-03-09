@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -5,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from 'sonner';
-import { AlertCircle, Calendar as CalendarIcon, Check, CheckCircle2, Info } from 'lucide-react';
+import { AlertCircle, Calendar as CalendarIcon, Check, CheckCircle2, Info, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,7 +20,8 @@ import {
   fetchShiftsBySite,
   createAttendanceRecord,
   fetchAttendanceByDate,
-  isGuardMarkedPresentElsewhere
+  isGuardMarkedPresentElsewhere,
+  deleteAttendanceRecord
 } from '@/lib/supabaseService';
 import { Site, Guard, Shift, AttendanceRecord } from '@/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -69,6 +71,17 @@ const AttendanceMarking: React.FC = () => {
     },
     onError: (error) => {
       toast.error('Failed to mark attendance: ' + error.message);
+    }
+  });
+
+  const deleteAttendanceMutation = useMutation({
+    mutationFn: (id: string) => deleteAttendanceRecord(id),
+    onSuccess: () => {
+      toast.success('Attendance record removed successfully');
+      queryClient.invalidateQueries({ queryKey: ['attendance', formattedDate] });
+    },
+    onError: (error) => {
+      toast.error('Failed to remove attendance: ' + error.message);
     }
   });
 
@@ -182,14 +195,30 @@ const AttendanceMarking: React.FC = () => {
     refetchAttendance();
   };
 
-  const isGuardMarked = (guardId: string, shiftType: 'day' | 'night') => {
-    return attendanceRecords.some(record => {
+  const findAttendanceRecord = (guardId: string, shiftType: 'day' | 'night') => {
+    return attendanceRecords.find(record => {
       const shift = shifts.find(s => s.id === record.shiftId);
       return record.guardId === guardId && 
              record.status === 'present' && 
              shift?.type === shiftType &&
              shift?.siteId === selectedSite;
     });
+  };
+
+  const isGuardMarked = (guardId: string, shiftType: 'day' | 'night') => {
+    return !!findAttendanceRecord(guardId, shiftType);
+  };
+
+  const handleRemoveAttendance = async (guardId: string, shiftType: 'day' | 'night') => {
+    const record = findAttendanceRecord(guardId, shiftType);
+    if (record && record.id) {
+      await deleteAttendanceMutation.mutateAsync(record.id);
+      
+      setSelectedGuards({
+        ...selectedGuards,
+        [shiftType]: (selectedGuards[shiftType] || []).filter(id => id !== guardId)
+      });
+    }
   };
 
   if (sitesLoading || guardsLoading) {
@@ -239,7 +268,7 @@ const AttendanceMarking: React.FC = () => {
                 <SelectTrigger className="w-full mt-2">
                   <SelectValue placeholder="Select a site" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent searchable>
                   {sites.map(site => (
                     <SelectItem key={site.id} value={site.id}>
                       {site.name}
@@ -300,44 +329,69 @@ const AttendanceMarking: React.FC = () => {
                       </AlertDescription>
                     </Alert>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Present</TableHead>
-                          <TableHead>Guard Name</TableHead>
-                          <TableHead>Badge Number</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {dayShiftGuards.map((guard) => {
-                          const guardDetails = guards.find(g => g.id === guard.guardId);
-                          const isMarked = isGuardMarked(guard.guardId, 'day');
-                          const isSelected = (selectedGuards['day'] || []).includes(guard.guardId);
-                          
-                          return (
-                            <TableRow key={guard.id}>
-                              <TableCell>
-                                <Checkbox
-                                  checked={isMarked || isSelected}
-                                  onCheckedChange={() => handleGuardSelection(guard.guardId, 'day')}
-                                  disabled={isMarked}
-                                />
-                              </TableCell>
-                              <TableCell>{guardDetails?.name}</TableCell>
-                              <TableCell>{guardDetails?.badgeNumber}</TableCell>
-                              <TableCell>
-                                {isMarked ? (
-                                  <Badge className="bg-green-500">Marked Present</Badge>
-                                ) : (
-                                  <Badge variant="outline">Not Marked</Badge>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                    <>
+                      {(selectedGuards['day'] || []).length > daySlots && (
+                        <Alert className="mb-4 bg-amber-50 border-amber-200">
+                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                          <AlertTitle className="text-amber-800">Slot Limit Exceeded</AlertTitle>
+                          <AlertDescription className="text-amber-700">
+                            You have selected {(selectedGuards['day'] || []).length} guards, which exceeds the configured {daySlots} day shift slots.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Present</TableHead>
+                            <TableHead>Guard Name</TableHead>
+                            <TableHead>Badge Number</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {dayShiftGuards.map((guard) => {
+                            const guardDetails = guards.find(g => g.id === guard.guardId);
+                            const isMarked = isGuardMarked(guard.guardId, 'day');
+                            const isSelected = (selectedGuards['day'] || []).includes(guard.guardId);
+                            
+                            return (
+                              <TableRow key={guard.id}>
+                                <TableCell>
+                                  <Checkbox
+                                    checked={isMarked || isSelected}
+                                    onCheckedChange={() => handleGuardSelection(guard.guardId, 'day')}
+                                  />
+                                </TableCell>
+                                <TableCell>{guardDetails?.name}</TableCell>
+                                <TableCell>{guardDetails?.badgeNumber}</TableCell>
+                                <TableCell>
+                                  {isMarked ? (
+                                    <Badge className="bg-green-500">Marked Present</Badge>
+                                  ) : isSelected ? (
+                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Pending Save</Badge>
+                                  ) : (
+                                    <Badge variant="outline">Not Marked</Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {isMarked && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      onClick={() => handleRemoveAttendance(guard.guardId, 'day')}
+                                      title="Remove attendance record"
+                                    >
+                                      <Trash2 className="h-4 w-4 text-red-500" />
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </>
                   )}
                 </TabsContent>
 
@@ -352,44 +406,69 @@ const AttendanceMarking: React.FC = () => {
                       </AlertDescription>
                     </Alert>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Present</TableHead>
-                          <TableHead>Guard Name</TableHead>
-                          <TableHead>Badge Number</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {nightShiftGuards.map((guard) => {
-                          const guardDetails = guards.find(g => g.id === guard.guardId);
-                          const isMarked = isGuardMarked(guard.guardId, 'night');
-                          const isSelected = (selectedGuards['night'] || []).includes(guard.guardId);
-                          
-                          return (
-                            <TableRow key={guard.id}>
-                              <TableCell>
-                                <Checkbox
-                                  checked={isMarked || isSelected}
-                                  onCheckedChange={() => handleGuardSelection(guard.guardId, 'night')}
-                                  disabled={isMarked}
-                                />
-                              </TableCell>
-                              <TableCell>{guardDetails?.name}</TableCell>
-                              <TableCell>{guardDetails?.badgeNumber}</TableCell>
-                              <TableCell>
-                                {isMarked ? (
-                                  <Badge className="bg-green-500">Marked Present</Badge>
-                                ) : (
-                                  <Badge variant="outline">Not Marked</Badge>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                    <>
+                      {(selectedGuards['night'] || []).length > nightSlots && (
+                        <Alert className="mb-4 bg-amber-50 border-amber-200">
+                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                          <AlertTitle className="text-amber-800">Slot Limit Exceeded</AlertTitle>
+                          <AlertDescription className="text-amber-700">
+                            You have selected {(selectedGuards['night'] || []).length} guards, which exceeds the configured {nightSlots} night shift slots.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Present</TableHead>
+                            <TableHead>Guard Name</TableHead>
+                            <TableHead>Badge Number</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {nightShiftGuards.map((guard) => {
+                            const guardDetails = guards.find(g => g.id === guard.guardId);
+                            const isMarked = isGuardMarked(guard.guardId, 'night');
+                            const isSelected = (selectedGuards['night'] || []).includes(guard.guardId);
+                            
+                            return (
+                              <TableRow key={guard.id}>
+                                <TableCell>
+                                  <Checkbox
+                                    checked={isMarked || isSelected}
+                                    onCheckedChange={() => handleGuardSelection(guard.guardId, 'night')}
+                                  />
+                                </TableCell>
+                                <TableCell>{guardDetails?.name}</TableCell>
+                                <TableCell>{guardDetails?.badgeNumber}</TableCell>
+                                <TableCell>
+                                  {isMarked ? (
+                                    <Badge className="bg-green-500">Marked Present</Badge>
+                                  ) : isSelected ? (
+                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Pending Save</Badge>
+                                  ) : (
+                                    <Badge variant="outline">Not Marked</Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {isMarked && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      onClick={() => handleRemoveAttendance(guard.guardId, 'night')}
+                                      title="Remove attendance record"
+                                    >
+                                      <Trash2 className="h-4 w-4 text-red-500" />
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </>
                   )}
                 </TabsContent>
               </Tabs>
