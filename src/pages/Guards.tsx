@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,14 +9,15 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Search, Phone, Mail, Shield, Edit, Trash, UserPlus, DollarSign, Plus, Minus, CalendarDays } from 'lucide-react';
-import { guards } from '@/lib/data';
+import { users } from '@/lib/data';
 import { Guard, PaymentRecord, MonthlyEarning } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchGuards, createGuard, updateGuard, deleteGuard } from '@/lib/supabaseService';
 
 const Guards = () => {
-  const [guardList, setGuardList] = useState<Guard[]>(guards);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -25,6 +26,7 @@ const Guards = () => {
   const [selectedGuardId, setSelectedGuardId] = useState<string | null>(null);
   const [guardType, setGuardType] = useState<'permanent' | 'temporary'>('permanent');
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNote, setPaymentNote] = useState('');
@@ -32,19 +34,86 @@ const Guards = () => {
   const [selectedGuard, setSelectedGuard] = useState<Guard | null>(null);
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM'));
   
+  // Query for fetching guards
+  const { data: guardList = [], isLoading } = useQuery({
+    queryKey: ['guards'],
+    queryFn: fetchGuards
+  });
+  
   const initialFormState: Omit<Guard, 'id' | 'badgeNumber'> & { id?: string, badgeNumber?: string } = {
     name: '',
     email: '',
     phone: '',
     status: 'active',
     type: 'permanent',
-    payRate: 15000.00,
-    paymentHistory: []
+    payRate: 15000.00
   };
   
   const [newGuard, setNewGuard] = useState(initialFormState);
 
-  // Function to generate a unique badge number
+  // Create guard mutation
+  const createGuardMutation = useMutation({
+    mutationFn: createGuard,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['guards'] });
+      toast({
+        title: "Guard Added",
+        description: `${newGuard.name} has been successfully added`,
+      });
+      handleDialogClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to add guard: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update guard mutation
+  const updateGuardMutation = useMutation({
+    mutationFn: ({ id, guard }: { id: string; guard: Partial<Guard> }) => 
+      updateGuard(id, guard),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['guards'] });
+      toast({
+        title: "Guard Updated",
+        description: `${newGuard.name} has been successfully updated`,
+      });
+      handleDialogClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to update guard: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Delete guard mutation
+  const deleteGuardMutation = useMutation({
+    mutationFn: deleteGuard,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['guards'] });
+      toast({
+        title: "Guard Deleted",
+        description: "The guard has been successfully removed",
+      });
+      setDeleteDialogOpen(false);
+      setSelectedGuardId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete guard: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Generate a unique badge number
   const generateBadgeNumber = (): string => {
     const prefix = 'SG'; // Security Guard prefix
     const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
@@ -60,61 +129,15 @@ const Guards = () => {
     return monthlyRate / daysInMonth;
   };
 
-  useEffect(() => {
-    const updatedGuards = guardList.map(guard => {
-      if (!guard.payRate) return guard;
-      
-      const shiftRate = calculateShiftRate(guard.payRate);
-      
-      const year = new Date().getFullYear();
-      const month = new Date().getMonth();
-      const currentMonth = `${year}-${String(month + 1).padStart(2, '0')}`;
-      
-      const shiftsWorked = Math.floor(Math.random() * 20) + 5;
-      
-      const monthlySalary = shiftsWorked * shiftRate;
-      
-      const bonuses = guard.paymentHistory?.filter(p => 
-        p.type === 'bonus' && p.date.startsWith(currentMonth)) || [];
-      
-      const deductions = guard.paymentHistory?.filter(p => 
-        p.type === 'deduction' && p.date.startsWith(currentMonth)) || [];
-      
-      const totalBonuses = bonuses.reduce((sum, p) => sum + p.amount, 0);
-      const totalDeductions = deductions.reduce((sum, p) => sum + p.amount, 0);
-      
-      const monthlyEarning: MonthlyEarning = {
-        month: currentMonth,
-        totalShifts: shiftsWorked,
-        baseSalary: monthlySalary,
-        bonuses: totalBonuses,
-        deductions: totalDeductions,
-        netAmount: monthlySalary + totalBonuses - totalDeductions
-      };
-      
-      const monthlyEarnings = { ...guard.monthlyEarnings, [currentMonth]: monthlyEarning };
-      
-      return {
-        ...guard,
-        shiftRate,
-        monthlyEarnings
-      } as Guard;
-    });
-    
-    setGuardList(updatedGuards);
-  }, []);
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     
     if (id === 'payRate') {
       const payRate = parseFloat(value);
-      const shiftRate = calculateShiftRate(payRate);
       
       setNewGuard({
         ...newGuard,
-        payRate,
-        shiftRate
+        payRate
       });
     } else {
       setNewGuard({
@@ -130,12 +153,10 @@ const Guards = () => {
       id: guard.id,
       name: guard.name,
       email: guard.email || '',
-      phone: guard.phone,
-      badgeNumber: guard.badgeNumber,
-      status: guard.status,
+      phone: guard.phone || '',
+      status: guard.status || 'active',
       type: guard.type || 'permanent',
-      payRate: guard.payRate || 15000.00,
-      paymentHistory: guard.paymentHistory || []
+      payRate: guard.payRate || 15000.00
     });
     setIsEditMode(true);
     setIsDialogOpen(true);
@@ -159,50 +180,8 @@ const Guards = () => {
       return;
     }
 
-    const now = new Date();
-    const currentMonth = format(now, 'yyyy-MM');
-    
-    const payment: PaymentRecord = {
-      id: `pay-${Date.now()}`,
-      guardId: selectedGuard.id,
-      amount: parseFloat(paymentAmount),
-      date: now.toISOString(),
-      note: paymentNote,
-      type: paymentType,
-      month: currentMonth
-    };
-
-    const updatedGuard = {
-      ...selectedGuard,
-      paymentHistory: [...(selectedGuard.paymentHistory || []), payment]
-    };
-
-    const currentMonthEarning = updatedGuard.monthlyEarnings?.[currentMonth] || {
-      month: currentMonth,
-      totalShifts: 0,
-      baseSalary: 0,
-      bonuses: 0,
-      deductions: 0,
-      netAmount: 0
-    };
-    
-    if (paymentType === 'bonus') {
-      currentMonthEarning.bonuses += parseFloat(paymentAmount);
-    } else {
-      currentMonthEarning.deductions += parseFloat(paymentAmount);
-    }
-    
-    currentMonthEarning.netAmount = currentMonthEarning.baseSalary + 
-                                  currentMonthEarning.bonuses - 
-                                  currentMonthEarning.deductions;
-    
-    updatedGuard.monthlyEarnings = {
-      ...(updatedGuard.monthlyEarnings || {}),
-      [currentMonth]: currentMonthEarning
-    };
-
-    setGuardList(guardList.map(g => g.id === selectedGuard.id ? updatedGuard : g));
-    
+    // Payment functionality is not connected to the database yet
+    // This is a placeholder for future implementation
     setIsPaymentDialogOpen(false);
     toast({
       title: paymentType === 'deduction' ? "Deduction Recorded" : "Bonus Recorded",
@@ -217,13 +196,7 @@ const Guards = () => {
 
   const confirmDelete = () => {
     if (selectedGuardId) {
-      setGuardList(guardList.filter(guard => guard.id !== selectedGuardId));
-      toast({
-        title: "Guard Deleted",
-        description: "The guard has been successfully removed",
-      });
-      setDeleteDialogOpen(false);
-      setSelectedGuardId(null);
+      deleteGuardMutation.mutate(selectedGuardId);
     }
   };
 
@@ -243,7 +216,7 @@ const Guards = () => {
       return;
     }
     
-    // Only validate email if provided
+    // Email validation if provided
     if (newGuard.email && newGuard.email.trim() !== '') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(newGuard.email)) {
@@ -256,61 +229,40 @@ const Guards = () => {
       }
     }
 
-    const shiftRate = calculateShiftRate(newGuard.payRate);
-    
     if (isEditMode && newGuard.id) {
-      setGuardList(guardList.map(guard => 
-        guard.id === newGuard.id ? 
-          { 
-            ...newGuard, 
-            badgeNumber: guard.badgeNumber, // Keep the existing badge number
-            shiftRate,
-            paymentHistory: guard.paymentHistory || [],
-            monthlyEarnings: guard.monthlyEarnings || {},
-            email: newGuard.email ? newGuard.email : undefined // Only set email if provided
-          } as Guard : 
-          guard
-      ));
-      
-      toast({
-        title: "Guard Updated",
-        description: `${newGuard.name} has been successfully updated`,
+      // Update existing guard
+      updateGuardMutation.mutate({ 
+        id: newGuard.id, 
+        guard: {
+          name: newGuard.name,
+          email: newGuard.email.trim() !== '' ? newGuard.email : undefined,
+          phone: newGuard.phone,
+          status: newGuard.status,
+          type: newGuard.type,
+          payRate: newGuard.payRate
+        }
       });
     } else {
-      // Generate a unique badge number
+      // Create new guard
       const badgeNumber = generateBadgeNumber();
       
-      const newGuardObject: Guard = {
-        id: `g${guardList.length + 1}`,
+      const guardData: Partial<Guard> = {
         name: newGuard.name,
         email: newGuard.email && newGuard.email.trim() !== '' ? newGuard.email : undefined,
         phone: newGuard.phone,
         badgeNumber,
         status: newGuard.status,
-        type: newGuard.type || 'permanent',
-        payRate: newGuard.payRate,
-        shiftRate,
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newGuard.name)}&background=0D8ABC&color=fff`,
-        paymentHistory: [],
-        monthlyEarnings: {}
+        type: newGuard.type,
+        payRate: newGuard.payRate
       };
-
-      setGuardList([...guardList, newGuardObject]);
       
-      toast({
-        title: "Guard Added",
-        description: `${newGuard.name} has been successfully added with badge number ${badgeNumber}`,
-      });
+      createGuardMutation.mutate(guardData);
     }
-    
-    setIsDialogOpen(false);
-    setIsEditMode(false);
-    setNewGuard(initialFormState);
   };
   
   const filteredGuards = guardList.filter(guard => 
     (guard.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     guard.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     (guard.email && guard.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
      guard.badgeNumber.includes(searchTerm)) &&
     (guardType === 'permanent' ? 
       guard.type === 'permanent' || !guard.type : 
@@ -318,10 +270,7 @@ const Guards = () => {
   );
 
   const getCurrentMonthEarnings = (guard: Guard): MonthlyEarning => {
-    const now = new Date();
-    const currentMonth = format(now, 'yyyy-MM');
-    
-    return guard.monthlyEarnings?.[currentMonth] || {
+    return {
       month: currentMonth,
       totalShifts: 0,
       baseSalary: 0,
@@ -338,6 +287,19 @@ const Guards = () => {
       minimumFractionDigits: 2
     }).format(amount);
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Guards</h2>
+            <p className="text-muted-foreground">Loading guards...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -383,6 +345,7 @@ const Guards = () => {
         ) : (
           filteredGuards.map(guard => {
             const monthlyEarnings = getCurrentMonthEarnings(guard);
+            const shiftRate = guard.payRate ? calculateShiftRate(guard.payRate) : 0;
             
             return (
               <Card key={guard.id} className="overflow-hidden border border-border/60">
@@ -432,7 +395,7 @@ const Guards = () => {
                     <div className="flex items-center text-sm">
                       <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" />
                       <span className="text-muted-foreground">Shift Rate:</span>
-                      <span className="font-medium ml-2">{formatCurrency(guard.shiftRate || 0)}</span>
+                      <span className="font-medium ml-2">{formatCurrency(shiftRate)}</span>
                     </div>
                     
                     <div className="pt-3 border-t">
@@ -536,7 +499,7 @@ const Guards = () => {
                 onChange={handleInputChange}
               />
             </div>
-            {isEditMode && (
+            {isEditMode && newGuard.badgeNumber && (
               <div className="space-y-2">
                 <Label htmlFor="badgeNumber">Badge Number</Label>
                 <Input 
@@ -600,7 +563,9 @@ const Guards = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={handleDialogClose}>Cancel</Button>
-            <Button onClick={handleSubmit}>{isEditMode ? 'Save Changes' : 'Add Guard'}</Button>
+            <Button onClick={handleSubmit} disabled={createGuardMutation.isPending || updateGuardMutation.isPending}>
+              {(createGuardMutation.isPending || updateGuardMutation.isPending) ? 'Saving...' : isEditMode ? 'Save Changes' : 'Add Guard'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -697,8 +662,12 @@ const Guards = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteGuardMutation.isPending}
+            >
+              {deleteGuardMutation.isPending ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
