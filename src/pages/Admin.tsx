@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types';
@@ -48,7 +49,14 @@ const Admin = () => {
         }
 
         console.log('Fetched users:', data);
-        setUsers(data || []);
+        
+        // Cast the role field to UserRole type to satisfy TypeScript
+        const typedUsers = data?.map(user => ({
+          ...user,
+          role: user.role as UserRole
+        })) || [];
+        
+        setUsers(typedUsers);
       } catch (error) {
         console.error('Error fetching users:', error);
         toast({
@@ -127,7 +135,13 @@ const Admin = () => {
         throw error;
       }
 
-      setUsers(data || []);
+      // Cast the role field to UserRole type
+      const typedUsers = data?.map(user => ({
+        ...user,
+        role: user.role as UserRole
+      })) || [];
+      
+      setUsers(typedUsers);
     } catch (error: any) {
       console.error('Error creating user:', error);
       toast({
