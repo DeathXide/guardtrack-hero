@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -26,13 +25,23 @@ import {
 import { Site, Guard, Shift, AttendanceRecord } from '@/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-const AttendanceMarking: React.FC = () => {
+interface AttendanceMarkingProps {
+  preselectedSiteId?: string;
+}
+
+const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedSite, setSelectedSite] = useState<string>('');
   const [selectedGuards, setSelectedGuards] = useState<Record<string, string[]>>({});
   const queryClient = useQueryClient();
   
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+
+  useEffect(() => {
+    if (preselectedSiteId) {
+      setSelectedSite(preselectedSiteId);
+    }
+  }, [preselectedSiteId]);
 
   const { data: sites = [], isLoading: sitesLoading } = useQuery({
     queryKey: ['sites'],
@@ -63,43 +72,27 @@ const AttendanceMarking: React.FC = () => {
   const daySlots = selectedSiteData?.daySlots || 0;
   const nightSlots = selectedSiteData?.nightSlots || 0;
 
-  const markAttendanceMutation = useMutation({
-    mutationFn: (record: Partial<AttendanceRecord>) => createAttendanceRecord(record),
-    onSuccess: () => {
-      toast.success('Attendance marked successfully');
-      queryClient.invalidateQueries({ queryKey: ['attendance', formattedDate] });
-    },
-    onError: (error) => {
-      toast.error('Failed to mark attendance: ' + error.message);
-    }
-  });
+  const dayShiftGuards = shifts
+    .filter(shift => shift.type === 'day' && shift.guardId)
+    .map(shift => {
+      const guard = guards.find(g => g.id === shift.guardId);
+      return {
+        ...shift,
+        guardName: guard?.name || 'Unknown Guard',
+        guardId: shift.guardId,
+      };
+    });
 
-  const deleteAttendanceMutation = useMutation({
-    mutationFn: (id: string) => deleteAttendanceRecord(id),
-    onSuccess: () => {
-      toast.success('Attendance record removed successfully');
-      queryClient.invalidateQueries({ queryKey: ['attendance', formattedDate] });
-    },
-    onError: (error) => {
-      toast.error('Failed to remove attendance: ' + error.message);
-    }
-  });
-
-  const getAssignedGuards = (shiftType: 'day' | 'night') => {
-    return shifts
-      .filter(shift => shift.type === shiftType && shift.guardId)
-      .map(shift => {
-        const guard = guards.find(g => g.id === shift.guardId);
-        return {
-          ...shift,
-          guardName: guard?.name || 'Unknown Guard',
-          guardId: shift.guardId,
-        };
-      });
-  };
-
-  const dayShiftGuards = getAssignedGuards('day');
-  const nightShiftGuards = getAssignedGuards('night');
+  const nightShiftGuards = shifts
+    .filter(shift => shift.type === 'night' && shift.guardId)
+    .map(shift => {
+      const guard = guards.find(g => g.id === shift.guardId);
+      return {
+        ...shift,
+        guardName: guard?.name || 'Unknown Guard',
+        guardId: shift.guardId,
+      };
+    });
 
   useEffect(() => {
     const initialSelectedGuards: Record<string, string[]> = {};
