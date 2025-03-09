@@ -1,4 +1,3 @@
-
 export type UserRole = 'admin' | 'supervisor' | 'guard';
 
 export interface User {
@@ -43,7 +42,7 @@ export interface MonthlyEarning {
 export interface Guard {
   id: string;
   name: string;
-  email: string;
+  email?: string; // Made email optional
   phone: string;
   badgeNumber: string;
   avatar?: string;

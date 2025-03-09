@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,11 +32,10 @@ const Guards = () => {
   const [selectedGuard, setSelectedGuard] = useState<Guard | null>(null);
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM'));
   
-  const initialFormState: Omit<Guard, 'id'> & { id?: string } = {
+  const initialFormState: Omit<Guard, 'id' | 'badgeNumber'> & { id?: string, badgeNumber?: string } = {
     name: '',
     email: '',
     phone: '',
-    badgeNumber: '',
     status: 'active',
     type: 'permanent',
     payRate: 15000.00,
@@ -43,6 +43,14 @@ const Guards = () => {
   };
   
   const [newGuard, setNewGuard] = useState(initialFormState);
+
+  // Function to generate a unique badge number
+  const generateBadgeNumber = (): string => {
+    const prefix = 'SG'; // Security Guard prefix
+    const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
+    const randomDigits = Math.floor(Math.random() * 1000).toString().padStart(3, '0'); // 3 random digits
+    return `${prefix}${timestamp}${randomDigits}`;
+  };
 
   const calculateShiftRate = (monthlyRate: number) => {
     const date = new Date();
@@ -121,7 +129,7 @@ const Guards = () => {
     setNewGuard({
       id: guard.id,
       name: guard.name,
-      email: guard.email,
+      email: guard.email || '',
       phone: guard.phone,
       badgeNumber: guard.badgeNumber,
       status: guard.status,
@@ -226,32 +234,26 @@ const Guards = () => {
   };
 
   const handleSubmit = () => {
-    if (!newGuard.name || !newGuard.email || !newGuard.phone || !newGuard.badgeNumber || !newGuard.payRate) {
+    if (!newGuard.name || !newGuard.phone || !newGuard.payRate) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields (Name, Phone, Pay Rate)",
         variant: "destructive"
       });
       return;
     }
     
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newGuard.email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please provide a valid email address",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!isEditMode && guardList.some(guard => guard.badgeNumber === newGuard.badgeNumber)) {
-      toast({
-        title: "Badge Number Already Exists",
-        description: "Please provide a unique badge number",
-        variant: "destructive"
-      });
-      return;
+    // Only validate email if provided
+    if (newGuard.email && newGuard.email.trim() !== '') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newGuard.email)) {
+        toast({
+          title: "Invalid Email",
+          description: "Please provide a valid email address or leave it blank",
+          variant: "destructive"
+        });
+        return;
+      }
     }
 
     const shiftRate = calculateShiftRate(newGuard.payRate);
@@ -261,9 +263,11 @@ const Guards = () => {
         guard.id === newGuard.id ? 
           { 
             ...newGuard, 
+            badgeNumber: guard.badgeNumber, // Keep the existing badge number
             shiftRate,
             paymentHistory: guard.paymentHistory || [],
-            monthlyEarnings: guard.monthlyEarnings || {}
+            monthlyEarnings: guard.monthlyEarnings || {},
+            email: newGuard.email ? newGuard.email : undefined // Only set email if provided
           } as Guard : 
           guard
       ));
@@ -273,12 +277,15 @@ const Guards = () => {
         description: `${newGuard.name} has been successfully updated`,
       });
     } else {
+      // Generate a unique badge number
+      const badgeNumber = generateBadgeNumber();
+      
       const newGuardObject: Guard = {
         id: `g${guardList.length + 1}`,
         name: newGuard.name,
-        email: newGuard.email,
+        email: newGuard.email && newGuard.email.trim() !== '' ? newGuard.email : undefined,
         phone: newGuard.phone,
-        badgeNumber: newGuard.badgeNumber,
+        badgeNumber,
         status: newGuard.status,
         type: newGuard.type || 'permanent',
         payRate: newGuard.payRate,
@@ -292,7 +299,7 @@ const Guards = () => {
       
       toast({
         title: "Guard Added",
-        description: `${newGuard.name} has been successfully added`,
+        description: `${newGuard.name} has been successfully added with badge number ${badgeNumber}`,
       });
     }
     
@@ -409,10 +416,12 @@ const Guards = () => {
                       <span>{guard.phone}</span>
                     </div>
                     
-                    <div className="flex items-center text-sm">
-                      <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span className="truncate">{guard.email}</span>
-                    </div>
+                    {guard.email && (
+                      <div className="flex items-center text-sm">
+                        <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <span className="truncate">{guard.email}</span>
+                      </div>
+                    )}
                     
                     <div className="flex items-center text-sm">
                       <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -500,7 +509,7 @@ const Guards = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name">Full Name <span className="text-destructive">*</span></Label>
               <Input 
                 id="name" 
                 placeholder="Enter full name" 
@@ -509,17 +518,17 @@ const Guards = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email (Optional)</Label>
               <Input 
                 id="email" 
                 type="email" 
-                placeholder="Enter email address" 
-                value={newGuard.email}
+                placeholder="Enter email address (optional)" 
+                value={newGuard.email || ''}
                 onChange={handleInputChange}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone">Phone Number <span className="text-destructive">*</span></Label>
               <Input 
                 id="phone" 
                 placeholder="Enter phone number" 
@@ -527,18 +536,26 @@ const Guards = () => {
                 onChange={handleInputChange}
               />
             </div>
+            {isEditMode && (
+              <div className="space-y-2">
+                <Label htmlFor="badgeNumber">Badge Number</Label>
+                <Input 
+                  id="badgeNumber" 
+                  value={newGuard.badgeNumber}
+                  disabled={true}
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">Badge numbers cannot be changed</p>
+              </div>
+            )}
+            {!isEditMode && (
+              <div className="bg-muted p-3 rounded-md text-sm">
+                <span className="font-medium">Badge Number:</span>
+                <span className="ml-2 text-muted-foreground">Will be auto-generated</span>
+              </div>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="badgeNumber">Badge Number</Label>
-              <Input 
-                id="badgeNumber" 
-                placeholder="Enter badge number" 
-                value={newGuard.badgeNumber}
-                onChange={handleInputChange}
-                disabled={isEditMode}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="payRate">Monthly Pay Rate ($)</Label>
+              <Label htmlFor="payRate">Monthly Pay Rate ($) <span className="text-destructive">*</span></Label>
               <Input 
                 id="payRate" 
                 type="number"
