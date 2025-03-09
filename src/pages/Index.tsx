@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -33,7 +32,7 @@ const Index = () => {
   // Set default admin credentials for development
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') {
-      setLoginEmail('admin@gmail.com');
+      setLoginEmail('admin@example.com');
       setLoginPassword('password123');
     }
   }, []);
@@ -53,7 +52,7 @@ const Index = () => {
     try {
       console.log(`Attempting to log in with: ${loginEmail}`);
       
-      if (loginEmail === 'admin@gmail.com' && loginPassword === 'password123') {
+      if (loginEmail === 'admin@example.com' && loginPassword === 'password123') {
         console.log('Using default admin login credentials');
       }
       
@@ -280,7 +279,7 @@ const Index = () => {
         
         {process.env.NODE_ENV !== 'production' && (
           <div className="mt-4 p-3 bg-muted rounded-md text-xs">
-            <p>Default admin: admin@example.org / password123</p>
+            <p>Default admin: admin@example.com / password123</p>
           </div>
         )}
       </div>
