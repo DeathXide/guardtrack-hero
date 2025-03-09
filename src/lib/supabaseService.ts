@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { 
   SiteDB, 
@@ -17,7 +16,6 @@ const supabaseUrl = 'https://amntnscgdmxemsjotqdn.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtbnRuc2NnZG14ZW1zam90cWRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE0NjYzNTcsImV4cCI6MjA1NzA0MjM1N30.XZmGGcDWWQiGFYSsusaxeQlnYxTkRn5BvdD0o5R5C_M';
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Utility functions to convert between DB types and app types
 const convertSiteFromDB = (site: SiteDB): Site => ({
   id: site.id,
   name: site.name,
@@ -120,7 +118,6 @@ const convertPaymentToDB = (record: Partial<PaymentRecord>): Partial<PaymentReco
   month: record.month || null
 });
 
-// Sites API
 export const fetchSites = async (): Promise<Site[]> => {
   const { data, error } = await supabase
     .from('sites')
@@ -192,7 +189,6 @@ export const deleteSite = async (id: string): Promise<void> => {
   }
 };
 
-// Guards API
 export const fetchGuards = async (): Promise<Guard[]> => {
   const { data, error } = await supabase
     .from('guards')
@@ -264,7 +260,6 @@ export const deleteGuard = async (id: string): Promise<void> => {
   }
 };
 
-// Shifts API
 export const fetchShifts = async (): Promise<Shift[]> => {
   const { data, error } = await supabase
     .from('shifts')
@@ -335,7 +330,6 @@ export const deleteShift = async (id: string): Promise<void> => {
   }
 };
 
-// Attendance Records API
 export const fetchAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
   const { data, error } = await supabase
     .from('attendance_records')
@@ -392,6 +386,31 @@ export const fetchAttendanceByShift = async (shiftId: string): Promise<Attendanc
 };
 
 export const createAttendanceRecord = async (record: Partial<AttendanceRecord>): Promise<AttendanceRecord> => {
+  if (record.shiftId && record.date) {
+    const { data: existingRecords } = await supabase
+      .from('attendance_records')
+      .select('*')
+      .eq('shift_id', record.shiftId)
+      .eq('date', record.date)
+      .eq('guard_id', record.guardId);
+    
+    if (existingRecords && existingRecords.length > 0) {
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .update(convertAttendanceToDB(record))
+        .eq('id', existingRecords[0].id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating attendance record:', error);
+        throw error;
+      }
+
+      return convertAttendanceFromDB(data as AttendanceRecordDB);
+    }
+  }
+
   const { data, error } = await supabase
     .from('attendance_records')
     .insert(convertAttendanceToDB(record))
@@ -434,7 +453,6 @@ export const deleteAttendanceRecord = async (id: string): Promise<void> => {
   }
 };
 
-// Payment Records API
 export const fetchPaymentRecords = async (): Promise<PaymentRecord[]> => {
   const { data, error } = await supabase
     .from('payment_records')
@@ -519,14 +537,12 @@ export const deletePaymentRecord = async (id: string): Promise<void> => {
   }
 };
 
-// Helper functions for the app
 export const isGuardMarkedPresentElsewhere = async (
   guardId: string, 
   date: string, 
   shiftType: 'day' | 'night', 
   excludeSiteId?: string
 ): Promise<boolean> => {
-  // First, get all shifts of this type that the guard is assigned to
   const { data: shiftData, error: shiftError } = await supabase
     .from('shifts')
     .select('id, site_id')
@@ -542,7 +558,6 @@ export const isGuardMarkedPresentElsewhere = async (
     return false;
   }
 
-  // Filter out the shifts from the excluded site
   const shiftIds = shiftData
     .filter(shift => shift.site_id !== excludeSiteId)
     .map(shift => shift.id);
@@ -551,7 +566,6 @@ export const isGuardMarkedPresentElsewhere = async (
     return false;
   }
 
-  // Check if there are any attendance records for these shifts on the given date
   const { data: attendanceData, error: attendanceError } = await supabase
     .from('attendance_records')
     .select('*')
@@ -581,7 +595,6 @@ export const calculateMonthlyEarnings = async (guard: Guard | undefined, current
   
   const month = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
   
-  // Get attendance records for this guard and month
   const { data: attendanceData, error: attendanceError } = await supabase
     .from('attendance_records')
     .select('*')

@@ -1,0 +1,435 @@
+
+import React, { useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from 'sonner';
+import { AlertCircle, Calendar as CalendarIcon, Check, CheckCircle2, Info } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  fetchSites,
+  fetchGuards,
+  fetchShiftsBySite,
+  createAttendanceRecord,
+  fetchAttendanceByDate,
+  isGuardMarkedPresentElsewhere
+} from '@/lib/supabaseService';
+import { Site, Guard, Shift, AttendanceRecord } from '@/types';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+const AttendanceMarking: React.FC = () => {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedSite, setSelectedSite] = useState<string>('');
+  const [selectedGuards, setSelectedGuards] = useState<Record<string, string[]>>({});
+  const queryClient = useQueryClient();
+  
+  // Format date for API calls
+  const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+
+  // Fetch sites
+  const { data: sites = [], isLoading: sitesLoading } = useQuery({
+    queryKey: ['sites'],
+    queryFn: fetchSites
+  });
+
+  // Fetch guards
+  const { data: guards = [], isLoading: guardsLoading } = useQuery({
+    queryKey: ['guards'],
+    queryFn: fetchGuards
+  });
+
+  // Fetch shifts for selected site
+  const { data: shifts = [], isLoading: shiftsLoading } = useQuery({
+    queryKey: ['shifts', selectedSite],
+    queryFn: () => selectedSite ? fetchShiftsBySite(selectedSite) : Promise.resolve([]),
+    enabled: !!selectedSite
+  });
+
+  // Fetch attendance records for selected date
+  const { data: attendanceRecords = [], isLoading: attendanceLoading, refetch: refetchAttendance } = useQuery({
+    queryKey: ['attendance', formattedDate],
+    queryFn: () => fetchAttendanceByDate(formattedDate),
+    enabled: !!formattedDate
+  });
+
+  // Group shifts by type for easier rendering
+  const dayShifts = shifts.filter(shift => shift.type === 'day');
+  const nightShifts = shifts.filter(shift => shift.type === 'night');
+
+  // Calculate available slots for each shift type
+  const selectedSiteData = sites.find(site => site.id === selectedSite);
+  const daySlots = selectedSiteData?.daySlots || 0;
+  const nightSlots = selectedSiteData?.nightSlots || 0;
+
+  // Create attendance record mutation
+  const markAttendanceMutation = useMutation({
+    mutationFn: (record: Partial<AttendanceRecord>) => createAttendanceRecord(record),
+    onSuccess: () => {
+      toast.success('Attendance marked successfully');
+      queryClient.invalidateQueries({ queryKey: ['attendance', formattedDate] });
+    },
+    onError: (error) => {
+      toast.error('Failed to mark attendance: ' + error.message);
+    }
+  });
+
+  // Find guards assigned to shifts
+  const getAssignedGuards = (shiftType: 'day' | 'night') => {
+    return shifts
+      .filter(shift => shift.type === shiftType && shift.guardId)
+      .map(shift => {
+        const guard = guards.find(g => g.id === shift.guardId);
+        return {
+          ...shift,
+          guardName: guard?.name || 'Unknown Guard',
+          guardId: shift.guardId,
+        };
+      });
+  };
+
+  const dayShiftGuards = getAssignedGuards('day');
+  const nightShiftGuards = getAssignedGuards('night');
+
+  // Initialize selected guards object when shifts change
+  useEffect(() => {
+    const initialSelectedGuards: Record<string, string[]> = {};
+    
+    // Check if there are already attendance records for these shifts on this date
+    shifts.forEach(shift => {
+      const existingAttendance = attendanceRecords.filter(record => 
+        record.shiftId === shift.id && 
+        record.status === 'present'
+      );
+      
+      if (existingAttendance.length > 0) {
+        initialSelectedGuards[shift.type] = existingAttendance.map(record => record.guardId);
+      } else {
+        initialSelectedGuards[shift.type] = [];
+      }
+    });
+    
+    setSelectedGuards(initialSelectedGuards);
+  }, [shifts, attendanceRecords, formattedDate]);
+
+  // Handle guard selection with slot limitation
+  const handleGuardSelection = async (guardId: string, shiftType: 'day' | 'night') => {
+    // Check if guard is already selected
+    const currentSelected = selectedGuards[shiftType] || [];
+    const isSelected = currentSelected.includes(guardId);
+    
+    // Get max slots for the shift type
+    const maxSlots = shiftType === 'day' ? daySlots : nightSlots;
+    
+    if (isSelected) {
+      // If already selected, remove it
+      setSelectedGuards({
+        ...selectedGuards,
+        [shiftType]: currentSelected.filter(id => id !== guardId)
+      });
+    } else {
+      // If not selected, check if max slots reached
+      if (currentSelected.length >= maxSlots) {
+        toast.error(`Cannot assign more than ${maxSlots} guards to this shift`);
+        return;
+      }
+      
+      // Check if guard is already marked present elsewhere
+      try {
+        const isMarkedElsewhere = await isGuardMarkedPresentElsewhere(
+          guardId, 
+          formattedDate, 
+          shiftType, 
+          selectedSite
+        );
+        
+        if (isMarkedElsewhere) {
+          toast.error('This guard is already marked present at another site for this shift');
+          return;
+        }
+        
+        // Add guard to selected
+        setSelectedGuards({
+          ...selectedGuards,
+          [shiftType]: [...currentSelected, guardId]
+        });
+      } catch (error) {
+        console.error('Error checking guard status:', error);
+        toast.error('Failed to check guard availability');
+      }
+    }
+  };
+
+  // Handle attendance submission
+  const handleSubmitAttendance = async () => {
+    // Prepare records for day shift
+    const dayGuardIds = selectedGuards['day'] || [];
+    const dayRecords = dayGuardIds.map(guardId => {
+      const shift = dayShifts.find(s => s.guardId === guardId) || dayShifts[0];
+      return {
+        date: formattedDate,
+        shiftId: shift.id,
+        guardId,
+        status: 'present'
+      };
+    });
+
+    // Prepare records for night shift
+    const nightGuardIds = selectedGuards['night'] || [];
+    const nightRecords = nightGuardIds.map(guardId => {
+      const shift = nightShifts.find(s => s.guardId === guardId) || nightShifts[0];
+      return {
+        date: formattedDate,
+        shiftId: shift.id,
+        guardId,
+        status: 'present'
+      };
+    });
+
+    // Combine and submit all records
+    const allRecords = [...dayRecords, ...nightRecords];
+    
+    if (allRecords.length === 0) {
+      toast.error('No guards selected for attendance');
+      return;
+    }
+
+    // Create attendance records one by one
+    for (const record of allRecords) {
+      try {
+        await markAttendanceMutation.mutateAsync(record);
+      } catch (error) {
+        console.error('Error creating attendance record:', error);
+      }
+    }
+
+    // Refresh attendance data
+    refetchAttendance();
+  };
+
+  // Check if a guard is already marked present
+  const isGuardMarked = (guardId: string, shiftType: 'day' | 'night') => {
+    return attendanceRecords.some(record => {
+      const shift = shifts.find(s => s.id === record.shiftId);
+      return record.guardId === guardId && 
+             record.status === 'present' && 
+             shift?.type === shiftType &&
+             shift?.siteId === selectedSite;
+    });
+  };
+
+  if (sitesLoading || guardsLoading) {
+    return <div className="flex items-center justify-center h-64">Loading sites and guards...</div>;
+  }
+
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Mark Attendance</CardTitle>
+        <CardDescription>
+          Select a date, site and mark guard attendance for shifts
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6">
+          <div className="space-y-6">
+            <div>
+              <Label>Select Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal mt-2"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(selectedDate, 'PPP')}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div>
+              <Label>Select Site</Label>
+              <Select
+                value={selectedSite}
+                onValueChange={setSelectedSite}
+              >
+                <SelectTrigger className="w-full mt-2">
+                  <SelectValue placeholder="Select a site" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sites.map(site => (
+                    <SelectItem key={site.id} value={site.id}>
+                      {site.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedSite && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span>Day shift slots:</span>
+                  <Badge variant="outline">{daySlots}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Night shift slots:</span>
+                  <Badge variant="outline">{nightSlots}</Badge>
+                </div>
+              </div>
+            )}
+
+            <Button 
+              className="w-full" 
+              disabled={!selectedSite || !selectedDate}
+              onClick={handleSubmitAttendance}
+            >
+              <Check className="mr-2 h-4 w-4" /> Save Attendance
+            </Button>
+          </div>
+
+          <div>
+            {!selectedSite ? (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>No site selected</AlertTitle>
+                <AlertDescription>
+                  Please select a site to view and mark attendance
+                </AlertDescription>
+              </Alert>
+            ) : shiftsLoading ? (
+              <div className="flex items-center justify-center h-64">Loading shifts...</div>
+            ) : (
+              <Tabs defaultValue="day">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="day">Day Shift</TabsTrigger>
+                  <TabsTrigger value="night">Night Shift</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="day">
+                  {dayShiftGuards.length === 0 ? (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>No guards allocated</AlertTitle>
+                      <AlertDescription>
+                        No guards have been allocated to day shifts for this site
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Present</TableHead>
+                          <TableHead>Guard Name</TableHead>
+                          <TableHead>Badge Number</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {dayShiftGuards.map((guard) => {
+                          const guardDetails = guards.find(g => g.id === guard.guardId);
+                          const isMarked = isGuardMarked(guard.guardId, 'day');
+                          const isSelected = (selectedGuards['day'] || []).includes(guard.guardId);
+                          
+                          return (
+                            <TableRow key={guard.id}>
+                              <TableCell>
+                                <Checkbox
+                                  checked={isMarked || isSelected}
+                                  onCheckedChange={() => handleGuardSelection(guard.guardId, 'day')}
+                                  disabled={isMarked}
+                                />
+                              </TableCell>
+                              <TableCell>{guardDetails?.name}</TableCell>
+                              <TableCell>{guardDetails?.badgeNumber}</TableCell>
+                              <TableCell>
+                                {isMarked ? (
+                                  <Badge className="bg-green-500">Marked Present</Badge>
+                                ) : (
+                                  <Badge variant="outline">Not Marked</Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="night">
+                  {nightShiftGuards.length === 0 ? (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>No guards allocated</AlertTitle>
+                      <AlertDescription>
+                        No guards have been allocated to night shifts for this site
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Present</TableHead>
+                          <TableHead>Guard Name</TableHead>
+                          <TableHead>Badge Number</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {nightShiftGuards.map((guard) => {
+                          const guardDetails = guards.find(g => g.id === guard.guardId);
+                          const isMarked = isGuardMarked(guard.guardId, 'night');
+                          const isSelected = (selectedGuards['night'] || []).includes(guard.guardId);
+                          
+                          return (
+                            <TableRow key={guard.id}>
+                              <TableCell>
+                                <Checkbox
+                                  checked={isMarked || isSelected}
+                                  onCheckedChange={() => handleGuardSelection(guard.guardId, 'night')}
+                                  disabled={isMarked}
+                                />
+                              </TableCell>
+                              <TableCell>{guardDetails?.name}</TableCell>
+                              <TableCell>{guardDetails?.badgeNumber}</TableCell>
+                              <TableCell>
+                                {isMarked ? (
+                                  <Badge className="bg-green-500">Marked Present</Badge>
+                                ) : (
+                                  <Badge variant="outline">Not Marked</Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </TabsContent>
+              </Tabs>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default AttendanceMarking;
