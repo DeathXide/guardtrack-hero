@@ -65,6 +65,30 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     enabled: !!formattedDate
   });
 
+  const markAttendanceMutation = useMutation({
+    mutationFn: createAttendanceRecord,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance', formattedDate] });
+      toast.success('Attendance marked successfully');
+    },
+    onError: (error) => {
+      console.error('Error marking attendance:', error);
+      toast.error('Failed to mark attendance');
+    }
+  });
+
+  const deleteAttendanceMutation = useMutation({
+    mutationFn: deleteAttendanceRecord,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance', formattedDate] });
+      toast.success('Attendance record removed successfully');
+    },
+    onError: (error) => {
+      console.error('Error removing attendance record:', error);
+      toast.error('Failed to remove attendance record');
+    }
+  });
+
   const dayShifts = shifts.filter(shift => shift.type === 'day');
   const nightShifts = shifts.filter(shift => shift.type === 'night');
 
