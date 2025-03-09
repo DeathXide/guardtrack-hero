@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -12,7 +13,7 @@ import { toast } from '@/hooks/use-toast';
 
 const Index = () => {
   const navigate = useNavigate();
-  const { login, signup, isAuthenticated } = useAuth();
+  const { login, signup, isAuthenticated, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
   
   // Login state
@@ -39,10 +40,23 @@ const Index = () => {
   
   // Redirect if already logged in
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!loading && isAuthenticated) {
+      console.log('User already authenticated, redirecting to dashboard...');
       navigate('/dashboard');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, loading, navigate]);
+  
+  // If still loading authentication status, show a loading indicator
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p>Loading authentication...</p>
+        </div>
+      </div>
+    );
+  }
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +75,7 @@ const Index = () => {
         title: 'Login successful',
         description: 'Welcome to SecureGuard!',
       });
+      console.log('Login successful, redirecting to dashboard...');
       navigate('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
@@ -81,7 +96,7 @@ const Index = () => {
     setSignupError('');
     
     try {
-      const result = await signup(signupEmail, signupPassword, signupName, signupRole);
+      await signup(signupEmail, signupPassword, signupName, signupRole);
       toast({
         title: 'Account Created',
         description: 'Your account has been created. You can now log in.',

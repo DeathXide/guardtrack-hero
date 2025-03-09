@@ -8,7 +8,7 @@ import { supabase } from './supabaseService';
  * Usage:
  * 1. Import the function in your app during development
  * 2. Call the function from the browser console:
- *    await window.createAdminUser('admin@yourcompany.com', 'password123', 'Admin User')
+ *    await window.createAdminUser('admin@example.com', 'password123', 'Admin User')
  */
 export const createAdminUser = async (
   email: string,
@@ -19,18 +19,18 @@ export const createAdminUser = async (
   
   try {
     // First check if the user already exists in auth
-    const { data: existingAuthUsers } = await supabase.auth.admin.listUsers({
-      perPage: 1,
-      page: 1,
-      filter: {
-        email: email
-      }
-    });
+    const { data: userList, error: listError } = await supabase.auth.admin.listUsers();
+    
+    if (listError) {
+      console.error("Error checking existing users:", listError);
+    }
+    
+    const existingAuthUsers = userList?.users?.filter(user => user.email === email) || [];
     
     let userId = null;
     
     // If user doesn't exist in auth, create them
-    if (!existingAuthUsers || existingAuthUsers.users.length === 0) {
+    if (!existingAuthUsers || existingAuthUsers.length === 0) {
       // Sign up the user
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
@@ -49,7 +49,7 @@ export const createAdminUser = async (
       userId = authData.user?.id;
     } else {
       console.log('User already exists in auth system');
-      userId = existingAuthUsers.users[0].id;
+      userId = existingAuthUsers[0].id;
     }
     
     if (!userId) {

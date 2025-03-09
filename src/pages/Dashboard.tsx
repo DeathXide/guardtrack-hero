@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Users, MapPin, Check, Clock } from 'lucide-react';
@@ -22,8 +23,29 @@ import RecentActivity from '@/components/dashboard/RecentActivity';
 import QuickActions from '@/components/dashboard/QuickActions';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, loading } = useAuth();
   const [selectedDay, setSelectedDay] = useState<'today' | 'yesterday'>('today');
+  
+  useEffect(() => {
+    // If authentication check is complete and user is not authenticated, redirect to login
+    if (!loading && !isAuthenticated) {
+      console.log('User not authenticated, redirecting to login...');
+      navigate('/');
+    }
+  }, [isAuthenticated, loading, navigate]);
+  
+  // If still loading or not authenticated, show a loading indicator
+  if (loading || !isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p>Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
   
   // Get today and yesterday dates
   const today = new Date().toISOString().split('T')[0];
