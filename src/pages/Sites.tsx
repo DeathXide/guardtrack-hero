@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,11 +84,11 @@ const Sites = () => {
 
   // Handle form submission
   const handleSubmit = () => {
-    // Validate form
-    if (!newSite.name || !newSite.location || !newSite.supervisorId) {
+    // Validate form - only require name and location
+    if (!newSite.name || !newSite.location) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields",
+        description: "Please fill in the required fields: Site Name and Location",
         variant: "destructive"
       });
       return;
@@ -139,6 +138,7 @@ const Sites = () => {
   );
 
   const getSupervisorName = (supervisorId: string) => {
+    if (!supervisorId) return 'Unassigned';
     const supervisor = users.find(user => user.id === supervisorId);
     return supervisor ? supervisor.name : 'Unassigned';
   };
@@ -239,7 +239,7 @@ const Sites = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="site-name">Site Name</Label>
+              <Label htmlFor="site-name">Site Name <span className="text-destructive">*</span></Label>
               <Input 
                 id="site-name" 
                 placeholder="Enter site name" 
@@ -248,7 +248,7 @@ const Sites = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
+              <Label htmlFor="location">Location <span className="text-destructive">*</span></Label>
               <Input 
                 id="location" 
                 placeholder="Enter site location" 
@@ -281,14 +281,14 @@ const Sites = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="supervisorId">Supervisor</Label>
+              <Label htmlFor="supervisorId">Supervisor (Optional)</Label>
               <select 
                 id="supervisorId" 
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={newSite.supervisorId}
                 onChange={handleInputChange}
               >
-                <option value="">Select a supervisor</option>
+                <option value="">Select a supervisor (optional)</option>
                 {users
                   .filter(user => user.role === 'supervisor')
                   .map(supervisor => (
