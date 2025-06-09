@@ -1,3 +1,4 @@
+
 import { User, Site, Guard, Shift, AttendanceRecord, MonthlyEarning } from '@/types';
 
 // Demo Users with different roles
@@ -22,8 +23,27 @@ export const users: User[] = [
   }
 ];
 
-// Empty Sites
-export const sites: Site[] = [];
+// Sample Sites with local data
+export let sites: Site[] = [
+  {
+    id: '1',
+    name: 'Corporate Tower A',
+    location: 'Business District, Mumbai',
+    daySlots: 2,
+    nightSlots: 3,
+    payRate: 15000,
+    supervisorId: '2'
+  },
+  {
+    id: '2',
+    name: 'Shopping Mall Central',
+    location: 'Central Mumbai',
+    daySlots: 4,
+    nightSlots: 2,
+    payRate: 20000,
+    supervisorId: '2'
+  }
+];
 
 // Empty Guards
 export const guards: Guard[] = [];
@@ -157,4 +177,39 @@ export const getGuardBonuses = (guardId: string): number => {
   
   const bonuses = guard.paymentHistory.filter(payment => payment.type === 'bonus');
   return bonuses.reduce((total, payment) => total + payment.amount, 0);
+};
+
+// Local data manipulation functions
+export const addSite = (site: Omit<Site, 'id'>): Site => {
+  const newSite: Site = {
+    ...site,
+    id: Math.random().toString(36).substring(2, 15)
+  };
+  sites.push(newSite);
+  return newSite;
+};
+
+export const updateSiteLocal = (id: string, updates: Partial<Site>): Site | null => {
+  const index = sites.findIndex(site => site.id === id);
+  if (index === -1) return null;
+  
+  sites[index] = { ...sites[index], ...updates };
+  return sites[index];
+};
+
+export const deleteSiteLocal = (id: string): boolean => {
+  const index = sites.findIndex(site => site.id === id);
+  if (index === -1) return false;
+  
+  sites.splice(index, 1);
+  return true;
+};
+
+export const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount);
 };
