@@ -1,7 +1,53 @@
 import { User, Site, Guard, Shift, AttendanceRecord, MonthlyEarning } from '@/types';
 
-// Empty Users
-export const users: User[] = [];
+// Demo Users with different roles
+export const users: User[] = [
+  {
+    id: '1',
+    name: 'Admin User',
+    email: 'admin@secureguard.com',
+    role: 'admin',
+    phone: '+91 98765 43210',
+    address: 'Mumbai, Maharashtra',
+    joinDate: '2023-01-15',
+    status: 'active',
+    emergencyContact: {
+      name: 'Emergency Contact',
+      phone: '+91 98765 43211',
+      relationship: 'spouse'
+    }
+  },
+  {
+    id: '2',
+    name: 'Site Supervisor',
+    email: 'supervisor@secureguard.com',
+    role: 'supervisor',
+    phone: '+91 98765 43212',
+    address: 'Delhi, India',
+    joinDate: '2023-02-20',
+    status: 'active',
+    emergencyContact: {
+      name: 'Emergency Contact',
+      phone: '+91 98765 43213',
+      relationship: 'parent'
+    }
+  },
+  {
+    id: '3',
+    name: 'Security Guard',
+    email: 'guard@secureguard.com',
+    role: 'guard',
+    phone: '+91 98765 43214',
+    address: 'Bangalore, Karnataka',
+    joinDate: '2023-03-10',
+    status: 'active',
+    emergencyContact: {
+      name: 'Emergency Contact',
+      phone: '+91 98765 43215',
+      relationship: 'sibling'
+    }
+  }
+];
 
 // Empty Sites
 export const sites: Site[] = [];
