@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -42,12 +43,22 @@ const App = () => (
 );
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <div className="flex h-screen">
-        <Sidebar />
+        <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Header />
+          <Header toggleSidebar={toggleSidebar} />
           <main className="flex-1 overflow-auto">
             <div className="container mx-auto px-6 py-8">
               {children}
