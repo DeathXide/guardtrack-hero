@@ -55,17 +55,13 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <div className="flex h-screen">
-        <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header toggleSidebar={toggleSidebar} />
-          <main className="flex-1 overflow-auto">
-            <div className="container mx-auto px-6 py-8">
-              {children}
-            </div>
-          </main>
+      <Header toggleSidebar={toggleSidebar} />
+      <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
+      <main className="pt-16 lg:pl-64 transition-all duration-300 ease-in-out">
+        <div className="container mx-auto px-6 py-8">
+          {children}
         </div>
-      </div>
+      </main>
     </div>
   );
 };
