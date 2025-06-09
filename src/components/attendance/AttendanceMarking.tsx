@@ -24,7 +24,7 @@ import {
   deleteAttendanceRecord,
   fetchSiteMonthlyEarnings,
   formatCurrency
-} from '@/lib/supabaseService';
+} from '@/lib/localService';
 import { Site, Guard, Shift, AttendanceRecord, SiteEarnings } from '@/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 

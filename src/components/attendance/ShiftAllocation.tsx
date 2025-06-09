@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,7 +13,7 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchSites, fetchGuards, fetchShiftsBySite, createShift, updateShift, deleteShift } from '@/lib/supabaseService';
+import { fetchSites, fetchGuards, fetchShiftsBySite, createShift, updateShift, deleteShift } from '@/lib/localService';
 import { Site, Guard, Shift } from '@/types';
 
 const ShiftAllocation: React.FC = () => {

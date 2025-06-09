@@ -23,7 +23,7 @@ import {
   fetchShiftsBySite,
   fetchSiteMonthlyEarnings,
   formatCurrency
-} from "@/lib/supabaseService";
+} from "@/lib/localService";
 import { Site, AttendanceRecord, Shift, SiteEarnings } from "@/types";
 import { useNavigate } from "react-router-dom";
 
