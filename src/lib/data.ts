@@ -537,6 +537,32 @@ export const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
+export const fetchGuardMonthlyStats = async (guardId: string, month: string): Promise<{ totalShifts: number, earnings: number }> => {
+  const guard = guards.find(g => g.id === guardId);
+  if (!guard) {
+    return { totalShifts: 0, earnings: 0 };
+  }
+
+  // For simplicity, calculate based on shifts worked in the month
+  const monthStart = new Date(month + '-01');
+  const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+  const daysInMonth = monthEnd.getDate();
+  
+  // Count attendance records for this guard in the month
+  const monthRecords = attendanceRecords.filter(record => {
+    const recordDate = new Date(record.date);
+    return recordDate >= monthStart && recordDate <= monthEnd &&
+           ((record.guardId === guardId && record.status === 'present') ||
+            (record.replacementGuardId === guardId && record.status === 'replaced'));
+  });
+  
+  const totalShifts = monthRecords.length;
+  const dailyRate = guard.payRate ? guard.payRate / daysInMonth : 0;
+  const earnings = totalShifts * dailyRate;
+  
+  return { totalShifts, earnings };
+};
+
 // Legacy functions for compatibility
 export const addSite = (site: Partial<Site>): Site => {
   const newSite: Site = {

@@ -34,5 +34,6 @@ export {
   createPaymentRecord,
   updatePaymentRecord,
   deletePaymentRecord,
+  fetchGuardMonthlyStats,
   formatCurrency
 } from './data';

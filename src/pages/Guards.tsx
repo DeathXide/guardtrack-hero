@@ -19,7 +19,7 @@ import {
   updateGuard, 
   deleteGuard, 
   fetchGuardMonthlyStats 
-} from '@/lib/supabaseService';
+} from '@/lib/localService';
 import GuardForm from '@/components/forms/GuardForm';
 
 const Guards = () => {
