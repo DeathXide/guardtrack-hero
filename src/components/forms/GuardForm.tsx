@@ -343,23 +343,6 @@ const GuardForm: React.FC<GuardFormProps> = ({
 
         {/* Contact & Address Tab */}
         <TabsContent value="contact" className="space-y-6">
-          {/* Extended Contact Information */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Mail className="h-5 w-5" />
-                Contact Information
-                <Badge variant="outline" className="ml-auto text-xs">Optional</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">No additional contact information needed in this section.</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Addresses */}
           <Card>
