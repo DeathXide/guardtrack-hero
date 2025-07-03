@@ -139,7 +139,7 @@ const GuardForm: React.FC<GuardFormProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">
-                Full Name <Badge variant="destructive" className="ml-1 text-xs">Required</Badge>
+                Full Name <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="name"
@@ -162,7 +162,7 @@ const GuardForm: React.FC<GuardFormProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="gender">
-                Gender <Badge variant="destructive" className="ml-1 text-xs">Required</Badge>
+                Gender <span className="text-destructive">*</span>
               </Label>
               <Select
                 value={form.watch('gender')}
@@ -184,7 +184,7 @@ const GuardForm: React.FC<GuardFormProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="languagesSpoken">
-                Languages Spoken <Badge variant="destructive" className="ml-1 text-xs">Required</Badge>
+                Languages Spoken <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="languagesSpoken"
@@ -211,7 +211,7 @@ const GuardForm: React.FC<GuardFormProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="phone">
-                Primary Phone Number <Badge variant="destructive" className="ml-1 text-xs">Required</Badge>
+                Primary Phone Number <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="phone"
@@ -263,7 +263,7 @@ const GuardForm: React.FC<GuardFormProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="type">
-                Guard Type <Badge variant="destructive" className="ml-1 text-xs">Required</Badge>
+                Guard Type <span className="text-destructive">*</span>
               </Label>
               <Select
                 value={form.watch('type')}
@@ -284,7 +284,7 @@ const GuardForm: React.FC<GuardFormProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="status">
-                Status <Badge variant="destructive" className="ml-1 text-xs">Required</Badge>
+                Status <span className="text-destructive">*</span>
               </Label>
               <Select
                 value={form.watch('status')}
@@ -317,7 +317,7 @@ const GuardForm: React.FC<GuardFormProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="payRate">
-                Monthly Pay Rate ($) <Badge variant="destructive" className="ml-1 text-xs">Required</Badge>
+                Monthly Pay Rate ($) <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="payRate"
