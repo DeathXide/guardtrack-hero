@@ -247,6 +247,15 @@ const GuardForm: React.FC<GuardFormProps> = ({
                     <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
                   )}
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="alternatePhone">Alternate Phone Number</Label>
+                  <Input
+                    id="alternatePhone"
+                    {...form.register('alternatePhone')}
+                    placeholder="Enter alternate phone number"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -344,30 +353,9 @@ const GuardForm: React.FC<GuardFormProps> = ({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="alternatePhone">Alternate Phone Number</Label>
-                  <Input
-                    id="alternatePhone"
-                    {...form.register('alternatePhone')}
-                    placeholder="Enter alternate phone number"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">
-                    <Mail className="h-4 w-4 inline mr-1" />
-                    Email Address
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    {...form.register('email')}
-                    placeholder="Enter email address (optional)"
-                  />
-                  {form.formState.errors.email && (
-                    <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
-                  )}
+                  <p className="text-sm text-muted-foreground">No additional contact information needed in this section.</p>
                 </div>
               </div>
             </CardContent>
