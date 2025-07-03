@@ -9,14 +9,31 @@ export interface User {
   avatar?: string;
 }
 
+export interface StaffingSlot {
+  id: string;
+  role: 'Security Guard' | 'Supervisor' | 'Housekeeping';
+  daySlots: number;
+  nightSlots: number;
+  budgetPerSlot: number;
+}
+
 export interface Site {
   id: string;
   name: string;
-  location: string;
+  organizationName: string;
+  gstNumber: string;
+  addressLine1: string;
+  addressLine2: string;
+  addressLine3: string;
+  gstType: 'GST' | 'NGST' | 'RCM' | 'PERSONAL';
+  siteType: string;
   supervisorId: string;
-  daySlots: number;
-  nightSlots: number;
-  payRate: number;
+  staffingSlots: StaffingSlot[];
+  // Legacy fields for backward compatibility
+  location?: string;
+  daySlots?: number;
+  nightSlots?: number;
+  payRate?: number;
   created_at?: string;
 }
 

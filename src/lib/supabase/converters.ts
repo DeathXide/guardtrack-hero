@@ -16,11 +16,19 @@ import {
 export const convertSiteFromDB = (site: SiteDB): Site => ({
   id: site.id,
   name: site.name,
+  organizationName: '',
+  gstNumber: '',
+  addressLine1: site.location,
+  addressLine2: '',
+  addressLine3: '',
+  gstType: 'GST',
+  siteType: '',
   location: site.location,
   supervisorId: site.supervisor_id || '',
   daySlots: site.day_slots,
   nightSlots: site.night_slots,
   payRate: site.pay_rate || 0,
+  staffingSlots: [],
   created_at: site.created_at
 });
 

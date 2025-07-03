@@ -28,20 +28,52 @@ export let sites: Site[] = [
   {
     id: '1',
     name: 'Corporate Tower A',
+    organizationName: 'Alpha Technologies',
+    gstNumber: '07AAECA1234M1ZX',
+    addressLine1: 'B-4, Sector 62',
+    addressLine2: 'Industrial Area',
+    addressLine3: 'Noida, UP - 201309',
+    gstType: 'GST',
+    siteType: 'Corporate Office',
     location: 'Business District, Mumbai',
     daySlots: 2,
     nightSlots: 3,
     payRate: 15000,
-    supervisorId: '2'
+    supervisorId: '2',
+    staffingSlots: [
+      {
+        id: '1',
+        role: 'Security Guard',
+        daySlots: 2,
+        nightSlots: 3,
+        budgetPerSlot: 3000
+      }
+    ]
   },
   {
     id: '2',
     name: 'Shopping Mall Central',
+    organizationName: 'Plaza Enterprises',
+    gstNumber: '07BBFCA5678N2YZ',
+    addressLine1: 'Block A, Connaught Place',
+    addressLine2: 'Central Delhi',
+    addressLine3: 'New Delhi - 110001',
+    gstType: 'GST',
+    siteType: 'Corporate Office',
     location: 'Central Mumbai',
     daySlots: 4,
     nightSlots: 2,
     payRate: 20000,
-    supervisorId: '2'
+    supervisorId: '2',
+    staffingSlots: [
+      {
+        id: '2',
+        role: 'Security Guard',
+        daySlots: 4,
+        nightSlots: 2,
+        budgetPerSlot: 3333
+      }
+    ]
   }
 ];
 
@@ -499,10 +531,25 @@ export const formatCurrency = (amount: number): string => {
 };
 
 // Legacy functions for compatibility
-export const addSite = (site: Omit<Site, 'id'>): Site => {
+export const addSite = (site: Partial<Site>): Site => {
   const newSite: Site = {
-    ...site,
-    id: Math.random().toString(36).substring(2, 15)
+    id: Math.random().toString(36).substring(2, 15),
+    name: site.name || '',
+    organizationName: site.organizationName || '',
+    gstNumber: site.gstNumber || '',
+    addressLine1: site.addressLine1 || site.location || '',
+    addressLine2: site.addressLine2 || '',
+    addressLine3: site.addressLine3 || '',
+    gstType: site.gstType || 'GST',
+    siteType: site.siteType || '',
+    supervisorId: site.supervisorId || '',
+    staffingSlots: site.staffingSlots || [],
+    // Legacy compatibility
+    location: site.location || site.addressLine1 || '',
+    daySlots: site.daySlots || 0,
+    nightSlots: site.nightSlots || 0,
+    payRate: site.payRate || 0,
+    ...site
   };
   sites.push(newSite);
   return newSite;
