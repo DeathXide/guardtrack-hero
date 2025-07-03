@@ -154,6 +154,15 @@ const SitesEnhanced = () => {
       return;
     }
 
+    if (newSite.staffingSlots.length === 0) {
+      toast({
+        title: "Missing Staffing Requirements",
+        description: "Please add at least one staffing role to create the site",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const siteData = {
       name: newSite.name,
       organizationName: newSite.organizationName,
