@@ -49,7 +49,7 @@ const SitesEnhanced = () => {
     addressLine3: '',
     gstType: 'GST' as 'GST' | 'NGST' | 'RCM' | 'PERSONAL',
     siteType: '',
-    supervisorId: '',
+    
     staffingSlots: [] as StaffingSlot[]
   };
   
@@ -106,7 +106,7 @@ const SitesEnhanced = () => {
       addressLine3: site.addressLine3 || '',
       gstType: (site.gstType || 'GST') as 'GST' | 'NGST' | 'RCM' | 'PERSONAL',
       siteType: site.siteType || '',
-      supervisorId: site.supervisorId,
+      
       staffingSlots: site.staffingSlots || []
     });
     setIsEditMode(true);
@@ -172,7 +172,7 @@ const SitesEnhanced = () => {
       addressLine3: newSite.addressLine3,
       gstType: newSite.gstType,
       siteType: newSite.siteType,
-      supervisorId: newSite.supervisorId || '',
+      
       staffingSlots: newSite.staffingSlots,
       // Legacy compatibility
       location: `${newSite.addressLine1}${newSite.addressLine2 ? ', ' + newSite.addressLine2 : ''}${newSite.addressLine3 ? ', ' + newSite.addressLine3 : ''}`,
@@ -209,11 +209,6 @@ const SitesEnhanced = () => {
     (site.location && site.location.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const getSupervisorName = (supervisorId: string) => {
-    if (!supervisorId) return 'Unassigned';
-    const supervisor = users.find(user => user.id === supervisorId);
-    return supervisor ? supervisor.name : 'Unassigned';
-  };
 
   const getTotalSlots = (site: Site) => {
     if (site.staffingSlots && site.staffingSlots.length > 0) {
@@ -298,11 +293,6 @@ const SitesEnhanced = () => {
                     {site.addressLine3 && <><br />{site.addressLine3}</>}
                   </div>
                   
-                  <div className="flex items-center text-sm">
-                    <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className="text-muted-foreground">Supervisor:</span>
-                    <span className="font-medium ml-2">{getSupervisorName(site.supervisorId)}</span>
-                  </div>
                   
                   <div className="flex flex-col gap-2">
                     <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 w-fit">

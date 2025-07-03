@@ -27,7 +27,6 @@ export interface Site {
   addressLine3: string;
   gstType: 'GST' | 'NGST' | 'RCM' | 'PERSONAL';
   siteType: string;
-  supervisorId: string;
   staffingSlots: StaffingSlot[];
   // Legacy fields for backward compatibility
   location?: string;

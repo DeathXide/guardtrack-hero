@@ -37,7 +37,7 @@ const Sites = () => {
     daySlots: 0,
     nightSlots: 0,
     payRate: 0,
-    supervisorId: ''
+    
   };
   
   const [newSite, setNewSite] = useState(initialFormState);
@@ -126,7 +126,7 @@ const Sites = () => {
       daySlots: site.daySlots,
       nightSlots: site.nightSlots,
       payRate: site.payRate || 0,
-      supervisorId: site.supervisorId
+      
     });
     setIsEditMode(true);
     setIsDialogOpen(true);
@@ -171,7 +171,7 @@ const Sites = () => {
         site: {
           name: newSite.name,
           location: newSite.location,
-          supervisorId: newSite.supervisorId,
+          
           daySlots: newSite.daySlots,
           nightSlots: newSite.nightSlots,
           payRate: newSite.payRate
@@ -182,7 +182,7 @@ const Sites = () => {
       const siteData: Partial<Site> = {
         name: newSite.name,
         location: newSite.location,
-        supervisorId: newSite.supervisorId || undefined,
+        
         daySlots: newSite.daySlots,
         nightSlots: newSite.nightSlots,
         payRate: newSite.payRate
@@ -198,11 +198,6 @@ const Sites = () => {
     site.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getSupervisorName = (supervisorId: string) => {
-    if (!supervisorId) return 'Unassigned';
-    const supervisor = users.find(user => user.id === supervisorId);
-    return supervisor ? supervisor.name : 'Unassigned';
-  };
 
   // Calculate pay rate per shift
   const getPayRatePerShift = (site: Site) => {
@@ -286,11 +281,6 @@ const Sites = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center text-sm">
-                    <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className="text-muted-foreground">Supervisor:</span>
-                    <span className="font-medium ml-2">{getSupervisorName(site.supervisorId)}</span>
-                  </div>
                   
                   <div className="flex flex-col gap-2">
                     <div className="flex flex-wrap gap-2">
@@ -384,25 +374,6 @@ const Sites = () => {
                   onChange={handleInputChange}
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="supervisorId">Supervisor (Optional)</Label>
-              <select 
-                id="supervisorId" 
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={newSite.supervisorId}
-                onChange={handleInputChange}
-              >
-                <option value="">Select a supervisor (optional)</option>
-                {users
-                  .filter(user => user.role === 'supervisor')
-                  .map(supervisor => (
-                    <option key={supervisor.id} value={supervisor.id}>
-                      {supervisor.name}
-                    </option>
-                  ))
-                }
-              </select>
             </div>
           </div>
           <DialogFooter>

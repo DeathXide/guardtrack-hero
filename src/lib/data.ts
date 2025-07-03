@@ -39,7 +39,6 @@ export let sites: Site[] = [
     daySlots: 2,
     nightSlots: 3,
     payRate: 15000,
-    supervisorId: '2',
     staffingSlots: [
       {
         id: '1',
@@ -64,7 +63,7 @@ export let sites: Site[] = [
     daySlots: 4,
     nightSlots: 2,
     payRate: 20000,
-    supervisorId: '2',
+    
     staffingSlots: [
       {
         id: '2',
@@ -542,7 +541,7 @@ export const addSite = (site: Partial<Site>): Site => {
     addressLine3: site.addressLine3 || '',
     gstType: site.gstType || 'GST',
     siteType: site.siteType || '',
-    supervisorId: site.supervisorId || '',
+    
     staffingSlots: site.staffingSlots || [],
     // Legacy compatibility
     location: site.location || site.addressLine1 || '',

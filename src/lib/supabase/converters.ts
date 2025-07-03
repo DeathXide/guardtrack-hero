@@ -24,7 +24,7 @@ export const convertSiteFromDB = (site: SiteDB): Site => ({
   gstType: 'GST',
   siteType: '',
   location: site.location,
-  supervisorId: site.supervisor_id || '',
+  
   daySlots: site.day_slots,
   nightSlots: site.night_slots,
   payRate: site.pay_rate || 0,
@@ -35,7 +35,7 @@ export const convertSiteFromDB = (site: SiteDB): Site => ({
 export const convertSiteToDB = (site: Partial<Site>): Partial<SiteDB> => ({
   name: site.name,
   location: site.location,
-  supervisor_id: site.supervisorId || null,
+  
   day_slots: site.daySlots,
   night_slots: site.nightSlots,
   pay_rate: site.payRate || 0
