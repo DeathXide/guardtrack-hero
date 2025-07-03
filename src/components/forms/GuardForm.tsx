@@ -256,12 +256,12 @@ const GuardForm: React.FC<GuardFormProps> = ({
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <User className="h-5 w-5" />
-                Employment Status
+                Employment Status & Pay Rate
                 <Badge variant="secondary" className="ml-auto text-xs">Required</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="type">
                     Guard Type <span className="text-destructive">*</span>
@@ -301,6 +301,30 @@ const GuardForm: React.FC<GuardFormProps> = ({
                   </Select>
                   {form.formState.errors.status && (
                     <p className="text-sm text-destructive">{form.formState.errors.status.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payRate">
+                    Monthly Pay Rate ($) <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="payRate"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    {...form.register('payRate', { valueAsNumber: true })}
+                    placeholder="Enter monthly pay rate in USD"
+                  />
+                  {payRateValue && (
+                    <div className="text-xs text-muted-foreground">
+                      Per shift rate: ${calculateShiftRate(payRateValue).toFixed(2)}
+                      <br />
+                      <span className="italic">*Calculated based on current month's days</span>
+                    </div>
+                  )}
+                  {form.formState.errors.payRate && (
+                    <p className="text-sm text-destructive">{form.formState.errors.payRate.message}</p>
                   )}
                 </div>
               </div>
@@ -384,45 +408,6 @@ const GuardForm: React.FC<GuardFormProps> = ({
 
         {/* Compensation Tab */}
         <TabsContent value="compensation" className="space-y-6">
-          {/* Salary & Pay Rates */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Banknote className="h-5 w-5" />
-                Salary & Pay Rates
-                <Badge variant="secondary" className="ml-auto text-xs">Required</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                <div className="space-y-2">
-                  <Label htmlFor="payRate">
-                    Monthly Pay Rate ($) <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="payRate"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    {...form.register('payRate', { valueAsNumber: true })}
-                    placeholder="Enter monthly pay rate in USD"
-                  />
-                  {payRateValue && (
-                    <div className="text-xs text-muted-foreground">
-                      Per shift rate: ${calculateShiftRate(payRateValue).toFixed(2)}
-                      <br />
-                      <span className="italic">*Calculated based on current month's days</span>
-                    </div>
-                  )}
-                  {form.formState.errors.payRate && (
-                    <p className="text-sm text-destructive">{form.formState.errors.payRate.message}</p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Banking & Payments */}
           <Card>
             <CardHeader className="pb-3">
