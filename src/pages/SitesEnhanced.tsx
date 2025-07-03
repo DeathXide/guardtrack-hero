@@ -437,7 +437,7 @@ const SitesEnhanced = () => {
                       <SelectValue placeholder="Select supervisor" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No supervisor assigned</SelectItem>
+                      <SelectItem value="unassigned">No supervisor assigned</SelectItem>
                       {users
                         .filter(user => user.role === 'supervisor')
                         .map(supervisor => (
