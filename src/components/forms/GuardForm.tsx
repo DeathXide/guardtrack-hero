@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { Guard } from '@/types';
 import { User, Phone, Mail, MapPin, Banknote, CreditCard, FileText, CheckCircle } from 'lucide-react';
 
@@ -18,7 +19,7 @@ const guardSchema = z.object({
   // Personal Details - Required
   name: z.string().min(1, 'Full name is required'),
   gender: z.enum(['male', 'female', 'other'], { required_error: 'Gender is required' }),
-  languagesSpoken: z.string().min(1, 'Languages spoken is required'),
+  languagesSpoken: z.array(z.string()).min(1, 'At least one language is required'),
   
   // Personal Details - Optional
   dateOfBirth: z.string().optional(),
@@ -78,7 +79,7 @@ const GuardForm: React.FC<GuardFormProps> = ({
       name: guard?.name || '',
       dateOfBirth: guard?.dateOfBirth || '',
       gender: guard?.gender || 'male',
-      languagesSpoken: guard?.languagesSpoken?.join(', ') || '',
+      languagesSpoken: guard?.languagesSpoken || [],
       guardPhoto: guard?.guardPhoto || '',
       aadhaarNumber: guard?.aadhaarNumber || '',
       aadhaarCardPhoto: guard?.aadhaarCardPhoto || '',
@@ -102,7 +103,6 @@ const GuardForm: React.FC<GuardFormProps> = ({
   const handleSubmit = (data: GuardFormData) => {
     const processedData = {
       ...data,
-      languagesSpoken: data.languagesSpoken.split(',').map(lang => lang.trim()).filter(Boolean),
       email: data.email === '' ? undefined : data.email,
     } as any;
     onSubmit(processedData);
@@ -125,6 +125,15 @@ const GuardForm: React.FC<GuardFormProps> = ({
   };
 
   const payRateValue = form.watch('payRate');
+  const languagesValue = form.watch('languagesSpoken');
+
+  const languageOptions = [
+    { value: 'english', label: 'English' },
+    { value: 'hindi', label: 'Hindi' },
+    { value: 'telugu', label: 'Telugu' },
+    { value: 'bihari', label: 'Bihari' },
+    { value: 'other', label: 'Other' },
+  ];
 
   return (
     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -210,10 +219,11 @@ const GuardForm: React.FC<GuardFormProps> = ({
                   <Label htmlFor="languagesSpoken">
                     Languages Spoken <span className="text-destructive">*</span>
                   </Label>
-                  <Input
-                    id="languagesSpoken"
-                    {...form.register('languagesSpoken')}
-                    placeholder="e.g., English, Hindi, Tamil"
+                  <MultiSelect
+                    options={languageOptions}
+                    selected={languagesValue || []}
+                    onChange={(selected) => form.setValue('languagesSpoken', selected)}
+                    placeholder="Select languages..."
                   />
                   {form.formState.errors.languagesSpoken && (
                     <p className="text-sm text-destructive">{form.formState.errors.languagesSpoken.message}</p>
