@@ -58,15 +58,45 @@ export interface MonthlyEarning {
 
 export interface Guard {
   id: string;
+  // Personal Details
   name: string;
-  email?: string;
+  dateOfBirth?: string;
+  gender: 'male' | 'female' | 'other';
+  languagesSpoken: string[];
+  guardPhoto?: string;
+  
+  // Identity Documents
+  aadhaarNumber?: string;
+  aadhaarCardPhoto?: string;
+  panCard?: string;
+  
+  // Contact Information
   phone: string;
-  badgeNumber: string;
-  avatar?: string;
+  alternatePhone?: string;
+  email?: string;
+  
+  // Addresses
+  currentAddress?: string;
+  permanentAddress?: string;
+  
+  // Employment Status
+  type: 'permanent' | 'contract';
   status: 'active' | 'inactive';
-  type?: 'permanent' | 'temporary';
+  
+  // Compensation
+  salary?: number;
   payRate?: number;
   shiftRate?: number;
+  
+  // Banking & Payments
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  upiId?: string;
+  
+  // System fields
+  badgeNumber: string;
+  avatar?: string;
   paymentHistory?: PaymentRecord[];
   monthlyEarnings?: { [key: string]: MonthlyEarning };
   created_at?: string;
@@ -150,13 +180,29 @@ export type SiteDB = {
 export type GuardDB = {
   id: string;
   name: string;
-  email: string;
+  date_of_birth: string | null;
+  gender: 'male' | 'female' | 'other';
+  languages_spoken: string[];
+  guard_photo: string | null;
+  aadhaar_number: string | null;
+  aadhaar_card_photo: string | null;
+  pan_card: string | null;
   phone: string;
+  alternate_phone: string | null;
+  email: string | null;
+  current_address: string | null;
+  permanent_address: string | null;
+  type: 'permanent' | 'contract';
+  status: 'active' | 'inactive';
+  salary: number | null;
+  pay_rate: number | null;
+  shift_rate: number | null;
+  bank_name: string | null;
+  account_number: string | null;
+  ifsc_code: string | null;
+  upi_id: string | null;
   badge_number: string;
   avatar: string | null;
-  status: 'active' | 'inactive';
-  type: 'permanent' | 'temporary';
-  pay_rate: number;
   created_at: string;
 }
 

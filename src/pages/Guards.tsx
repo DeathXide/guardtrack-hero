@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Search, Phone, Mail, Shield, Edit, Trash, UserPlus, DollarSign, Plus, Minus, CalendarDays } from 'lucide-react';
@@ -20,6 +20,7 @@ import {
   deleteGuard, 
   fetchGuardMonthlyStats 
 } from '@/lib/supabaseService';
+import GuardForm from '@/components/forms/GuardForm';
 
 const Guards = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -28,7 +29,7 @@ const Guards = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedGuardId, setSelectedGuardId] = useState<string | null>(null);
-  const [guardType, setGuardType] = useState<'permanent' | 'temporary'>('permanent');
+  const [guardType, setGuardType] = useState<'permanent' | 'contract'>('permanent');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -45,24 +46,18 @@ const Guards = () => {
     queryFn: fetchGuards
   });
 
-  const initialFormState: Omit<Guard, 'id' | 'badgeNumber'> & { id?: string, badgeNumber?: string } = {
-    name: '',
-    email: '',
-    phone: '',
-    status: 'active',
-    type: 'permanent',
-    payRate: 15000.00
-  };
-
-  const [newGuard, setNewGuard] = useState(initialFormState);
+  const [selectedGuardForForm, setSelectedGuardForForm] = useState<Guard | undefined>(undefined);
 
   const createGuardMutation = useMutation({
-    mutationFn: createGuard,
+    mutationFn: (guardData: any) => {
+      const badgeNumber = generateBadgeNumber();
+      return createGuard({ ...guardData, badgeNumber });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guards'] });
       toast({
         title: "Guard Added",
-        description: `${newGuard.name} has been successfully added`,
+        description: "Guard has been successfully added",
       });
       handleDialogClose();
     },
@@ -82,7 +77,7 @@ const Guards = () => {
       queryClient.invalidateQueries({ queryKey: ['guards'] });
       toast({
         title: "Guard Updated",
-        description: `${newGuard.name} has been successfully updated`,
+        description: "Guard has been successfully updated",
       });
       handleDialogClose();
     },
@@ -130,35 +125,8 @@ const Guards = () => {
     return monthlyRate / daysInMonth;
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { id, value } = e.target;
-    
-    if (id === 'payRate') {
-      const payRate = parseFloat(value);
-      
-      setNewGuard({
-        ...newGuard,
-        payRate
-      });
-    } else {
-      setNewGuard({
-        ...newGuard,
-        [id]: id === 'status' ? value as 'active' | 'inactive' : 
-               id === 'type' ? value as 'permanent' | 'temporary' : value
-      });
-    }
-  };
-
   const handleEditGuard = (guard: Guard) => {
-    setNewGuard({
-      id: guard.id,
-      name: guard.name,
-      email: guard.email || '',
-      phone: guard.phone || '',
-      status: guard.status || 'active',
-      type: guard.type || 'permanent',
-      payRate: guard.payRate || 15000.00
-    });
+    setSelectedGuardForForm(guard);
     setIsEditMode(true);
     setIsDialogOpen(true);
   };
@@ -202,57 +170,17 @@ const Guards = () => {
   const handleDialogClose = () => {
     setIsDialogOpen(false);
     setIsEditMode(false);
-    setNewGuard(initialFormState);
+    setSelectedGuardForForm(undefined);
   };
 
-  const handleSubmit = () => {
-    if (!newGuard.name || !newGuard.phone || !newGuard.payRate) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields (Name, Phone, Pay Rate)",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (newGuard.email && newGuard.email.trim() !== '') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(newGuard.email)) {
-        toast({
-          title: "Invalid Email",
-          description: "Please provide a valid email address or leave it blank",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-
-    if (isEditMode && newGuard.id) {
+  const handleFormSubmit = (data: any) => {
+    if (isEditMode && selectedGuardForForm) {
       updateGuardMutation.mutate({ 
-        id: newGuard.id, 
-        guard: {
-          name: newGuard.name,
-          email: newGuard.email.trim() !== '' ? newGuard.email : undefined,
-          phone: newGuard.phone,
-          status: newGuard.status,
-          type: newGuard.type,
-          payRate: newGuard.payRate
-        }
+        id: selectedGuardForForm.id, 
+        guard: data
       });
     } else {
-      const badgeNumber = generateBadgeNumber();
-      
-      const guardData: Partial<Guard> = {
-        name: newGuard.name,
-        email: newGuard.email && newGuard.email.trim() !== '' ? newGuard.email : undefined,
-        phone: newGuard.phone,
-        badgeNumber,
-        status: newGuard.status,
-        type: newGuard.type,
-        payRate: newGuard.payRate
-      };
-      
-      createGuardMutation.mutate(guardData);
+      createGuardMutation.mutate(data);
     }
   };
 
@@ -262,7 +190,7 @@ const Guards = () => {
      guard.badgeNumber.includes(searchTerm)) &&
     (guardType === 'permanent' ? 
       guard.type === 'permanent' || !guard.type : 
-      guard.type === 'temporary')
+      guard.type === 'contract')
   );
 
   const getCurrentMonthEarnings = (guard: Guard): MonthlyEarning => {
@@ -361,10 +289,10 @@ const Guards = () => {
           />
         </div>
         
-        <Tabs defaultValue="permanent" className="w-full md:w-auto" onValueChange={(v) => setGuardType(v as 'permanent' | 'temporary')}>
+        <Tabs defaultValue="permanent" className="w-full md:w-auto" onValueChange={(v) => setGuardType(v as 'permanent' | 'contract')}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="permanent">Permanent</TabsTrigger>
-            <TabsTrigger value="temporary">Temporary</TabsTrigger>
+            <TabsTrigger value="contract">Contract</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -385,8 +313,8 @@ const Guards = () => {
                   <div>
                     <CardTitle className="text-base font-medium">{guard.name}</CardTitle>
                     <Badge 
-                      variant={guard.type === 'temporary' ? 'outline' : 'default'}
-                      className={`mt-1 ${guard.type === 'temporary' ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500' : ''}`}
+                      variant={guard.type === 'contract' ? 'outline' : 'default'}
+                      className={`mt-1 ${guard.type === 'contract' ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500' : ''}`}
                     >
                       {guard.type || 'Permanent'} Guard
                     </Badge>
@@ -493,112 +421,22 @@ const Guards = () => {
       </div>
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isEditMode ? 'Edit Guard' : 'Add New Guard'}</DialogTitle>
             <DialogDescription>
               {isEditMode 
-                ? 'Update guard profile and contact details' 
-                : 'Create a new security guard profile with contact details'}
+                ? 'Update guard profile and details' 
+                : 'Create a comprehensive security guard profile'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name <span className="text-destructive">*</span></Label>
-              <Input 
-                id="name" 
-                placeholder="Enter full name" 
-                value={newGuard.name}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email (Optional)</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="Enter email address (optional)" 
-                value={newGuard.email || ''}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number <span className="text-destructive">*</span></Label>
-              <Input 
-                id="phone" 
-                placeholder="Enter phone number" 
-                value={newGuard.phone}
-                onChange={handleInputChange}
-              />
-            </div>
-            {isEditMode && newGuard.badgeNumber && (
-              <div className="space-y-2">
-                <Label htmlFor="badgeNumber">Badge Number</Label>
-                <Input 
-                  id="badgeNumber" 
-                  value={newGuard.badgeNumber}
-                  disabled={true}
-                  className="bg-muted"
-                />
-                <p className="text-xs text-muted-foreground">Badge numbers cannot be changed</p>
-              </div>
-            )}
-            {!isEditMode && (
-              <div className="bg-muted p-3 rounded-md text-sm">
-                <span className="font-medium">Badge Number:</span>
-                <span className="ml-2 text-muted-foreground">Will be auto-generated</span>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="payRate">Monthly Pay Rate ($) <span className="text-destructive">*</span></Label>
-              <Input 
-                id="payRate" 
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="Enter monthly pay rate" 
-                value={newGuard.payRate?.toString() || ''}
-                onChange={handleInputChange}
-              />
-              {newGuard.payRate && (
-                <div className="text-xs text-muted-foreground mt-1">
-                  Per shift rate: {formatCurrency(calculateShiftRate(newGuard.payRate))}
-                  <br />
-                  <span className="italic">*Calculated based on current month's days</span>
-                </div>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="type">Guard Type</Label>
-              <select 
-                id="type" 
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={newGuard.type || 'permanent'}
-                onChange={handleInputChange}
-              >
-                <option value="permanent">Permanent</option>
-                <option value="temporary">Temporary</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <select 
-                id="status" 
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={newGuard.status}
-                onChange={handleInputChange}
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={handleDialogClose}>Cancel</Button>
-            <Button onClick={handleSubmit} disabled={createGuardMutation.isPending || updateGuardMutation.isPending}>
-              {(createGuardMutation.isPending || updateGuardMutation.isPending) ? 'Saving...' : isEditMode ? 'Save Changes' : 'Add Guard'}
-            </Button>
-          </DialogFooter>
+          <GuardForm
+            guard={selectedGuardForForm}
+            onSubmit={handleFormSubmit}
+            onCancel={handleDialogClose}
+            isLoading={createGuardMutation.isPending || updateGuardMutation.isPending}
+            isEditMode={isEditMode}
+          />
         </DialogContent>
       </Dialog>
       

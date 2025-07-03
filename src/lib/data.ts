@@ -86,7 +86,9 @@ export let guards: Guard[] = [
     badgeNumber: 'SG001',
     status: 'active',
     type: 'permanent',
-    payRate: 25000
+    payRate: 25000,
+    gender: 'male',
+    languagesSpoken: ['Hindi', 'English']
   },
   {
     id: 'g2',
@@ -96,7 +98,9 @@ export let guards: Guard[] = [
     badgeNumber: 'SG002',
     status: 'active',
     type: 'permanent',
-    payRate: 22000
+    payRate: 22000,
+    gender: 'female',
+    languagesSpoken: ['Hindi', 'English', 'Marathi']
   },
   {
     id: 'g3',
@@ -105,8 +109,10 @@ export let guards: Guard[] = [
     phone: '+91-9876543212',
     badgeNumber: 'SG003',
     status: 'active',
-    type: 'temporary',
-    payRate: 20000
+    type: 'contract',
+    payRate: 20000,
+    gender: 'male',
+    languagesSpoken: ['Hindi', 'English', 'Punjabi']
   },
   {
     id: 'g4',
@@ -116,7 +122,9 @@ export let guards: Guard[] = [
     badgeNumber: 'SG004',
     status: 'active',
     type: 'permanent',
-    payRate: 24000
+    payRate: 24000,
+    gender: 'female',
+    languagesSpoken: ['Hindi', 'English', 'Bengali']
   }
 ];
 
