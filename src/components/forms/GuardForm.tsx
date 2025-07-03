@@ -395,17 +395,6 @@ const GuardForm: React.FC<GuardFormProps> = ({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="salary">Salary (₹)</Label>
-                  <Input
-                    id="salary"
-                    type="number"
-                    min="0"
-                    step="1"
-                    {...form.register('salary', { valueAsNumber: true })}
-                    placeholder="Enter salary in INR"
-                  />
-                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="payRate">
