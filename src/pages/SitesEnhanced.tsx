@@ -430,25 +430,6 @@ const SitesEnhanced = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="supervisor">Supervisor</Label>
-                  <Select value={newSite.supervisorId} onValueChange={value => handleInputChange('supervisorId', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select supervisor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">No supervisor assigned</SelectItem>
-                      {users
-                        .filter(user => user.role === 'supervisor')
-                        .map(supervisor => (
-                          <SelectItem key={supervisor.id} value={supervisor.id}>
-                            {supervisor.name}
-                          </SelectItem>
-                        ))
-                      }
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
             </div>
 
