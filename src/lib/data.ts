@@ -533,10 +533,10 @@ export const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-export const fetchGuardMonthlyStats = async (guardId: string, month: string): Promise<{ totalShifts: number, earnings: number }> => {
+export const fetchGuardMonthlyStats = async (guardId: string, month: string): Promise<{ totalShifts: number, earnings: number, bonuses: number, deductions: number, netAmount: number }> => {
   const guard = guards.find(g => g.id === guardId);
   if (!guard) {
-    return { totalShifts: 0, earnings: 0 };
+    return { totalShifts: 0, earnings: 0, bonuses: 0, deductions: 0, netAmount: 0 };
   }
 
   // For simplicity, calculate based on shifts worked in the month
@@ -556,7 +556,22 @@ export const fetchGuardMonthlyStats = async (guardId: string, month: string): Pr
   const dailyRate = guard.payRate ? guard.payRate / daysInMonth : 0;
   const earnings = totalShifts * dailyRate;
   
-  return { totalShifts, earnings };
+  // Calculate bonuses and deductions for the month
+  const monthPayments = paymentRecords.filter(record => 
+    record.guardId === guardId && record.month === month
+  );
+  
+  const bonuses = monthPayments
+    .filter(payment => payment.type === 'bonus')
+    .reduce((sum, payment) => sum + payment.amount, 0);
+    
+  const deductions = monthPayments
+    .filter(payment => payment.type === 'deduction')
+    .reduce((sum, payment) => sum + payment.amount, 0);
+  
+  const netAmount = earnings + bonuses - deductions;
+  
+  return { totalShifts, earnings, bonuses, deductions, netAmount };
 };
 
 // Legacy functions for compatibility

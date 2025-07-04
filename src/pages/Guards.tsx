@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Search, Phone, Mail, Shield, Edit, Trash, UserPlus, DollarSign, Plus, Minus, CalendarDays } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { User, Search, Phone, Mail, Shield, Edit, Trash, UserPlus, DollarSign, Plus, Minus, CalendarDays, History } from 'lucide-react';
 import { Guard, PaymentRecord, MonthlyEarning } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -18,7 +19,11 @@ import {
   createGuard, 
   updateGuard, 
   deleteGuard, 
-  fetchGuardMonthlyStats 
+  fetchGuardMonthlyStats,
+  createPaymentRecord,
+  fetchPaymentsByGuard,
+  updatePaymentRecord,
+  deletePaymentRecord
 } from '@/lib/localService';
 import GuardForm from '@/components/forms/GuardForm';
 
@@ -40,10 +45,18 @@ const Guards = () => {
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM'));
   
   const [guardEarnings, setGuardEarnings] = useState<Record<string, MonthlyEarning>>({});
+  const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null);
+  const [paymentHistoryTab, setPaymentHistoryTab] = useState('new');
 
   const { data: guardList = [], isLoading } = useQuery({
     queryKey: ['guards'],
     queryFn: fetchGuards
+  });
+
+  const { data: paymentHistory = [] } = useQuery({
+    queryKey: ['payments', selectedGuard?.id],
+    queryFn: () => selectedGuard ? fetchPaymentsByGuard(selectedGuard.id) : Promise.resolve([]),
+    enabled: !!selectedGuard
   });
 
   const [selectedGuardForForm, setSelectedGuardForForm] = useState<Guard | undefined>(undefined);
@@ -110,6 +123,70 @@ const Guards = () => {
     }
   });
 
+  const createPaymentMutation = useMutation({
+    mutationFn: createPaymentRecord,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payments', selectedGuard?.id] });
+      queryClient.invalidateQueries({ queryKey: ['guards'] });
+      toast({
+        title: paymentType === 'deduction' ? "Deduction Recorded" : "Bonus Recorded",
+        description: `${paymentType === 'deduction' ? 'Deduction' : 'Bonus'} of $${paymentAmount} recorded for ${selectedGuard?.name}`,
+      });
+      setIsPaymentDialogOpen(false);
+      setPaymentAmount('');
+      setPaymentNote('');
+      setEditingPayment(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to record payment: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const updatePaymentMutation = useMutation({
+    mutationFn: ({ id, payment }: { id: string; payment: Partial<PaymentRecord> }) => 
+      updatePaymentRecord(id, payment),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payments', selectedGuard?.id] });
+      queryClient.invalidateQueries({ queryKey: ['guards'] });
+      toast({
+        title: "Payment Updated",
+        description: "Payment record has been successfully updated",
+      });
+      setIsPaymentDialogOpen(false);
+      setEditingPayment(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to update payment: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deletePaymentMutation = useMutation({
+    mutationFn: deletePaymentRecord,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payments', selectedGuard?.id] });
+      queryClient.invalidateQueries({ queryKey: ['guards'] });
+      toast({
+        title: "Payment Deleted",
+        description: "Payment record has been successfully deleted",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete payment: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
+
   const generateBadgeNumber = (): string => {
     const prefix = 'SG';
     const timestamp = Date.now().toString().slice(-6);
@@ -136,7 +213,17 @@ const Guards = () => {
     setPaymentAmount('');
     setPaymentNote('');
     setPaymentType('bonus');
+    setEditingPayment(null);
+    setPaymentHistoryTab('new');
     setIsPaymentDialogOpen(true);
+  };
+
+  const handleEditPayment = (payment: PaymentRecord) => {
+    setEditingPayment(payment);
+    setPaymentAmount(payment.amount.toString());
+    setPaymentNote(payment.note || '');
+    setPaymentType(payment.type);
+    setPaymentHistoryTab('new');
   };
 
   const handleSavePayment = () => {
@@ -149,11 +236,20 @@ const Guards = () => {
       return;
     }
 
-    setIsPaymentDialogOpen(false);
-    toast({
-      title: paymentType === 'deduction' ? "Deduction Recorded" : "Bonus Recorded",
-      description: `${paymentType === 'deduction' ? 'Deduction' : 'Bonus'} of $${paymentAmount} recorded for ${selectedGuard.name}`,
-    });
+    const paymentData = {
+      guardId: selectedGuard.id,
+      amount: parseFloat(paymentAmount),
+      note: paymentNote || undefined,
+      type: paymentType,
+      date: new Date().toISOString().split('T')[0],
+      month: currentMonth
+    };
+
+    if (editingPayment) {
+      updatePaymentMutation.mutate({ id: editingPayment.id, payment: paymentData });
+    } else {
+      createPaymentMutation.mutate(paymentData);
+    }
   };
 
   const handleDeleteClick = (guardId: string) => {
@@ -214,9 +310,9 @@ const Guards = () => {
             month: currentMonth,
             totalShifts: result.totalShifts,
             baseSalary: result.earnings,
-            bonuses: 0,
-            deductions: 0,
-            netAmount: result.earnings
+            bonuses: result.bonuses,
+            deductions: result.deductions,
+            netAmount: result.netAmount
           };
         } catch (error) {
           console.error('Error fetching monthly earnings for guard:', error);
@@ -434,84 +530,182 @@ const Guards = () => {
       </Dialog>
       
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Record Payment</DialogTitle>
+            <DialogTitle>Payment Management - {selectedGuard?.name}</DialogTitle>
             <DialogDescription>
-              Add payment information for {selectedGuard?.name}
+              Record new payments and manage payment history
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="payment-type">Payment Type</Label>
-              <Select 
-                value={paymentType} 
-                onValueChange={(value) => setPaymentType(value as 'bonus' | 'deduction')}
-              >
-                <SelectTrigger id="payment-type">
-                  <SelectValue placeholder="Select payment type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bonus">Bonus Payment</SelectItem>
-                  <SelectItem value="deduction">Deduction/Advance</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="payment-amount">
-                {paymentType === 'deduction' ? 'Deduction Amount ($)' : 'Bonus Amount ($)'}
-              </Label>
-              <Input 
-                id="payment-amount" 
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="Enter amount" 
-                value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="payment-note">Note (Optional)</Label>
-              <Input 
-                id="payment-note" 
-                placeholder={
-                  paymentType === 'deduction' ? 'Reason for deduction' : 'Reason for bonus'
-                }
-                value={paymentNote}
-                onChange={(e) => setPaymentNote(e.target.value)}
-              />
-            </div>
+          
+          <Tabs value={paymentHistoryTab} onValueChange={setPaymentHistoryTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="new">
+                {editingPayment ? 'Edit Payment' : 'New Payment'}
+              </TabsTrigger>
+              <TabsTrigger value="history">
+                <History className="h-4 w-4 mr-2" />
+                Payment History
+              </TabsTrigger>
+            </TabsList>
             
-            <div className="bg-muted p-3 rounded-md text-sm">
-              <div className="font-medium mb-1">Current Month Summary</div>
-              <div className="grid grid-cols-2 gap-1">
-                <span className="text-muted-foreground">Month:</span>
-                <span>{format(new Date(currentMonth + '-01'), 'MMMM yyyy')}</span>
+            <TabsContent value="new" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="payment-type">Payment Type</Label>
+                  <Select 
+                    value={paymentType} 
+                    onValueChange={(value) => setPaymentType(value as 'bonus' | 'deduction')}
+                  >
+                    <SelectTrigger id="payment-type">
+                      <SelectValue placeholder="Select payment type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bonus">Bonus Payment</SelectItem>
+                      <SelectItem value="deduction">Deduction/Advance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="payment-amount">
+                    {paymentType === 'deduction' ? 'Deduction Amount ($)' : 'Bonus Amount ($)'}
+                  </Label>
+                  <Input 
+                    id="payment-amount" 
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Enter amount" 
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="payment-note">Note (Optional)</Label>
+                  <Input 
+                    id="payment-note" 
+                    placeholder={
+                      paymentType === 'deduction' ? 'Reason for deduction' : 'Reason for bonus'
+                    }
+                    value={paymentNote}
+                    onChange={(e) => setPaymentNote(e.target.value)}
+                  />
+                </div>
                 
-                <span className="text-muted-foreground">Shifts Worked:</span>
-                <span>{selectedGuard ? getCurrentMonthEarnings(selectedGuard).totalShifts : 0}</span>
+                <div className="bg-muted p-3 rounded-md text-sm">
+                  <div className="font-medium mb-1">Current Month Summary</div>
+                  <div className="grid grid-cols-2 gap-1">
+                    <span className="text-muted-foreground">Month:</span>
+                    <span>{format(new Date(currentMonth + '-01'), 'MMMM yyyy')}</span>
+                    
+                    <span className="text-muted-foreground">Shifts Worked:</span>
+                    <span>{selectedGuard ? getCurrentMonthEarnings(selectedGuard).totalShifts : 0}</span>
+                    
+                    <span className="text-muted-foreground">Salary Earned:</span>
+                    <span>{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).baseSalary) : '$0.00'}</span>
+                    
+                    <span className="text-muted-foreground">Total Bonuses:</span>
+                    <span className="text-green-500">{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).bonuses) : '$0.00'}</span>
+                    
+                    <span className="text-muted-foreground">Total Deductions:</span>
+                    <span className="text-red-500">{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).deductions) : '$0.00'}</span>
+                    
+                    <span className="font-medium border-t pt-1 mt-1">Net Amount:</span>
+                    <span className="font-medium border-t pt-1 mt-1">{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).netAmount) : '$0.00'}</span>
+                  </div>
+                </div>
                 
-                <span className="text-muted-foreground">Salary Earned:</span>
-                <span>{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).baseSalary) : '$0.00'}</span>
-                
-                <span className="text-muted-foreground">Total Bonuses:</span>
-                <span className="text-green-500">{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).bonuses) : '$0.00'}</span>
-                
-                <span className="text-muted-foreground">Total Deductions:</span>
-                <span className="text-red-500">{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).deductions) : '$0.00'}</span>
-                
-                <span className="font-medium border-t pt-1 mt-1">Net Amount:</span>
-                <span className="font-medium border-t pt-1 mt-1">{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).netAmount) : '$0.00'}</span>
+                <div className="flex gap-2 pt-4">
+                  <Button variant="outline" onClick={() => {
+                    setEditingPayment(null);
+                    setPaymentAmount('');
+                    setPaymentNote('');
+                    setIsPaymentDialogOpen(false);
+                  }}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleSavePayment}
+                    disabled={createPaymentMutation.isPending || updatePaymentMutation.isPending}
+                  >
+                    {createPaymentMutation.isPending || updatePaymentMutation.isPending 
+                      ? 'Saving...' 
+                      : editingPayment 
+                        ? 'Update Payment' 
+                        : (paymentType === 'deduction' ? 'Record Deduction' : 'Record Bonus')
+                    }
+                  </Button>
+                </div>
               </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSavePayment}>
-              {paymentType === 'deduction' ? 'Record Deduction' : 'Record Bonus'}
-            </Button>
-          </DialogFooter>
+            </TabsContent>
+            
+            <TabsContent value="history" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                {paymentHistory.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No payment history found</p>
+                    <p className="text-sm">Add payments to see them here</p>
+                  </div>
+                ) : (
+                  <div className="border rounded-md">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Note</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paymentHistory.map((payment) => (
+                          <TableRow key={payment.id}>
+                            <TableCell className="font-medium">
+                              {format(new Date(payment.date), 'MMM dd, yyyy')}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={payment.type === 'bonus' ? 'default' : 'destructive'}>
+                                {payment.type === 'bonus' ? 'Bonus' : 'Deduction'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className={payment.type === 'bonus' ? 'text-green-500' : 'text-red-500'}>
+                              {payment.type === 'bonus' ? '+' : '-'}{formatCurrency(payment.amount)}
+                            </TableCell>
+                            <TableCell className="max-w-32 truncate">
+                              {payment.note || '-'}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="h-8 px-2"
+                                  onClick={() => handleEditPayment(payment)}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="h-8 px-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+                                  onClick={() => deletePaymentMutation.mutate(payment.id)}
+                                  disabled={deletePaymentMutation.isPending}
+                                >
+                                  <Trash className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
