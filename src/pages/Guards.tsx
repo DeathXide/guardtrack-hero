@@ -186,7 +186,6 @@ const Guards = () => {
 
   const filteredGuards = guardList.filter(guard => 
     (guard.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     (guard.email && guard.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
      guard.badgeNumber.includes(searchTerm)) &&
     (guardType === 'permanent' ? 
       guard.type === 'permanent' || !guard.type : 
@@ -339,12 +338,6 @@ const Guards = () => {
                       <span>{guard.phone}</span>
                     </div>
                     
-                    {guard.email && (
-                      <div className="flex items-center text-sm">
-                        <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="truncate">{guard.email}</span>
-                      </div>
-                    )}
                     
                     <div className="flex items-center text-sm">
                       <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />

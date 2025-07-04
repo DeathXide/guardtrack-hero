@@ -81,7 +81,6 @@ export let guards: Guard[] = [
   {
     id: 'g1',
     name: 'Rajesh Kumar',
-    email: 'rajesh@secureguard.com',
     phone: '+91-9876543210',
     badgeNumber: 'SG001',
     status: 'active',
@@ -93,7 +92,6 @@ export let guards: Guard[] = [
   {
     id: 'g2',
     name: 'Priya Sharma',
-    email: 'priya@secureguard.com',
     phone: '+91-9876543211',
     badgeNumber: 'SG002',
     status: 'active',
@@ -105,7 +103,6 @@ export let guards: Guard[] = [
   {
     id: 'g3',
     name: 'Amit Singh',
-    email: 'amit@secureguard.com',
     phone: '+91-9876543212',
     badgeNumber: 'SG003',
     status: 'active',
@@ -117,7 +114,6 @@ export let guards: Guard[] = [
   {
     id: 'g4',
     name: 'Sunita Devi',
-    email: 'sunita@secureguard.com',
     phone: '+91-9876543213',
     badgeNumber: 'SG004',
     status: 'active',

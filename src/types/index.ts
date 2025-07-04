@@ -73,7 +73,6 @@ export interface Guard {
   // Contact Information
   phone: string;
   alternatePhone?: string;
-  email?: string;
   
   // Addresses
   currentAddress?: string;
@@ -84,7 +83,6 @@ export interface Guard {
   status: 'active' | 'inactive';
   
   // Compensation
-  salary?: number;
   payRate?: number;
   shiftRate?: number;
   

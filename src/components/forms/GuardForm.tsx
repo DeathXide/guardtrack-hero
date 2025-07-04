@@ -35,7 +35,6 @@ const guardSchema = z.object({
   
   // Contact Information - Optional
   alternatePhone: z.string().optional(),
-  email: z.string().email('Invalid email format').optional().or(z.literal('')),
   
   // Addresses - Optional
   currentAddress: z.string().optional(),
@@ -46,7 +45,6 @@ const guardSchema = z.object({
   status: z.enum(['active', 'inactive'], { required_error: 'Status is required' }),
   
   // Compensation - Required
-  salary: z.number().min(0, 'Salary must be positive').optional(),
   payRate: z.number().min(0, 'Monthly pay rate must be positive'),
   
   // Banking & Payments - Optional
@@ -86,12 +84,10 @@ const GuardForm: React.FC<GuardFormProps> = ({
       panCard: guard?.panCard || '',
       phone: guard?.phone || '',
       alternatePhone: guard?.alternatePhone || '',
-      email: guard?.email || '',
       currentAddress: guard?.currentAddress || '',
       permanentAddress: guard?.permanentAddress || '',
       type: guard?.type || 'permanent',
       status: guard?.status || 'active',
-      salary: guard?.salary || undefined,
       payRate: guard?.payRate || 15000,
       bankName: guard?.bankName || '',
       accountNumber: guard?.accountNumber || '',
@@ -101,11 +97,7 @@ const GuardForm: React.FC<GuardFormProps> = ({
   });
 
   const handleSubmit = (data: GuardFormData) => {
-    const processedData = {
-      ...data,
-      email: data.email === '' ? undefined : data.email,
-    } as any;
-    onSubmit(processedData);
+    onSubmit(data);
   };
 
   const calculateShiftRate = (monthlyRate: number) => {
