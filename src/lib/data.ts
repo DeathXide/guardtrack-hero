@@ -63,7 +63,6 @@ export let sites: Site[] = [
     daySlots: 4,
     nightSlots: 2,
     payRate: 20000,
-    
     staffingSlots: [
       {
         id: '2',
@@ -71,6 +70,1158 @@ export let sites: Site[] = [
         daySlots: 4,
         nightSlots: 2,
         budgetPerSlot: 3333
+      }
+    ]
+  },
+  {
+    id: '3',
+    name: 'Phoenix Mall',
+    organizationName: 'Phoenix Mills Ltd',
+    gstNumber: '27AABCP1234Q1Z5',
+    addressLine1: '462, Senapati Bapat Marg',
+    addressLine2: 'Lower Parel',
+    addressLine3: 'Mumbai, MH - 400013',
+    gstType: 'GST',
+    siteType: 'Shopping Mall',
+    location: 'Lower Parel, Mumbai',
+    daySlots: 6,
+    nightSlots: 4,
+    payRate: 28000,
+    staffingSlots: [
+      {
+        id: '3',
+        role: 'Security Guard',
+        daySlots: 6,
+        nightSlots: 4,
+        budgetPerSlot: 2800
+      }
+    ]
+  },
+  {
+    id: '4',
+    name: 'Max Hospital',
+    organizationName: 'Max Healthcare Institute',
+    gstNumber: '07AABCM5678P1Z2',
+    addressLine1: 'FC-50, C & D Block',
+    addressLine2: 'Shalimar Bagh',
+    addressLine3: 'New Delhi - 110088',
+    gstType: 'GST',
+    siteType: 'Healthcare',
+    location: 'Shalimar Bagh, Delhi',
+    daySlots: 8,
+    nightSlots: 6,
+    payRate: 35000,
+    staffingSlots: [
+      {
+        id: '4',
+        role: 'Security Guard',
+        daySlots: 8,
+        nightSlots: 6,
+        budgetPerSlot: 2500
+      }
+    ]
+  },
+  {
+    id: '5',
+    name: 'Cyber City Office Complex',
+    organizationName: 'DLF Cyber City',
+    gstNumber: '06AABCD1234E1Z3',
+    addressLine1: 'DLF Phase III',
+    addressLine2: 'Sector 24',
+    addressLine3: 'Gurugram, HR - 122002',
+    gstType: 'GST',
+    siteType: 'IT Park',
+    location: 'Cyber City, Gurugram',
+    daySlots: 10,
+    nightSlots: 5,
+    payRate: 42000,
+    staffingSlots: [
+      {
+        id: '5',
+        role: 'Security Guard',
+        daySlots: 10,
+        nightSlots: 5,
+        budgetPerSlot: 2800
+      }
+    ]
+  },
+  {
+    id: '6',
+    name: 'HDFC Bank Branch',
+    organizationName: 'HDFC Bank Ltd',
+    gstNumber: '27AABCH1234F1Z4',
+    addressLine1: 'Ground Floor, Nariman Point',
+    addressLine2: 'Fort District',
+    addressLine3: 'Mumbai, MH - 400021',
+    gstType: 'GST',
+    siteType: 'Banking',
+    location: 'Nariman Point, Mumbai',
+    daySlots: 3,
+    nightSlots: 2,
+    payRate: 18000,
+    staffingSlots: [
+      {
+        id: '6',
+        role: 'Security Guard',
+        daySlots: 3,
+        nightSlots: 2,
+        budgetPerSlot: 3600
+      }
+    ]
+  },
+  {
+    id: '7',
+    name: 'Marriott Hotel',
+    organizationName: 'Marriott International',
+    gstNumber: '29AABCM5678G1Z5',
+    addressLine1: 'Whitefield Road',
+    addressLine2: 'ITPL Main Road',
+    addressLine3: 'Bangalore, KA - 560066',
+    gstType: 'GST',
+    siteType: 'Hospitality',
+    location: 'Whitefield, Bangalore',
+    daySlots: 12,
+    nightSlots: 8,
+    payRate: 45000,
+    staffingSlots: [
+      {
+        id: '7',
+        role: 'Security Guard',
+        daySlots: 12,
+        nightSlots: 8,
+        budgetPerSlot: 2250
+      }
+    ]
+  },
+  {
+    id: '8',
+    name: 'Tata Steel Plant',
+    organizationName: 'Tata Steel Limited',
+    gstNumber: '20AABCT1234H1Z6',
+    addressLine1: 'Jamshedpur Works',
+    addressLine2: 'Bistupur',
+    addressLine3: 'Jamshedpur, JH - 831001',
+    gstType: 'GST',
+    siteType: 'Manufacturing',
+    location: 'Jamshedpur, Jharkhand',
+    daySlots: 15,
+    nightSlots: 12,
+    payRate: 60000,
+    staffingSlots: [
+      {
+        id: '8',
+        role: 'Security Guard',
+        daySlots: 15,
+        nightSlots: 12,
+        budgetPerSlot: 2222
+      }
+    ]
+  },
+  {
+    id: '9',
+    name: 'Prestige Shantiniketan',
+    organizationName: 'Prestige Group',
+    gstNumber: '29AABCP1234I1Z7',
+    addressLine1: 'Whitefield Main Road',
+    addressLine2: 'Hoodi Circle',
+    addressLine3: 'Bangalore, KA - 560048',
+    gstType: 'GST',
+    siteType: 'Residential',
+    location: 'Whitefield, Bangalore',
+    daySlots: 6,
+    nightSlots: 4,
+    payRate: 25000,
+    staffingSlots: [
+      {
+        id: '9',
+        role: 'Security Guard',
+        daySlots: 6,
+        nightSlots: 4,
+        budgetPerSlot: 2500
+      }
+    ]
+  },
+  {
+    id: '10',
+    name: 'Amazon Fulfillment Center',
+    organizationName: 'Amazon India',
+    gstNumber: '06AABCA1234J1Z8',
+    addressLine1: 'Plot No. 142-143',
+    addressLine2: 'Sector 37',
+    addressLine3: 'Gurugram, HR - 122001',
+    gstType: 'GST',
+    siteType: 'Warehouse',
+    location: 'Sector 37, Gurugram',
+    daySlots: 18,
+    nightSlots: 15,
+    payRate: 52000,
+    staffingSlots: [
+      {
+        id: '10',
+        role: 'Security Guard',
+        daySlots: 18,
+        nightSlots: 15,
+        budgetPerSlot: 1576
+      }
+    ]
+  },
+  {
+    id: '11',
+    name: 'IIT Delhi Campus',
+    organizationName: 'Indian Institute of Technology',
+    gstNumber: '07AABCI1234K1Z9',
+    addressLine1: 'Hauz Khas',
+    addressLine2: '',
+    addressLine3: 'New Delhi - 110016',
+    gstType: 'GST',
+    siteType: 'Educational',
+    location: 'Hauz Khas, Delhi',
+    daySlots: 20,
+    nightSlots: 12,
+    payRate: 48000,
+    staffingSlots: [
+      {
+        id: '11',
+        role: 'Security Guard',
+        daySlots: 20,
+        nightSlots: 12,
+        budgetPerSlot: 1500
+      }
+    ]
+  },
+  {
+    id: '12',
+    name: 'Infosys Mysore Campus',
+    organizationName: 'Infosys Limited',
+    gstNumber: '29AABCI5678L1ZA',
+    addressLine1: 'Electronics City',
+    addressLine2: 'Hosur Road',
+    addressLine3: 'Bangalore, KA - 560100',
+    gstType: 'GST',
+    siteType: 'IT Campus',
+    location: 'Electronics City, Bangalore',
+    daySlots: 25,
+    nightSlots: 15,
+    payRate: 65000,
+    staffingSlots: [
+      {
+        id: '12',
+        role: 'Security Guard',
+        daySlots: 25,
+        nightSlots: 15,
+        budgetPerSlot: 1625
+      }
+    ]
+  },
+  {
+    id: '13',
+    name: 'Oberoi Mall',
+    organizationName: 'Oberoi Realty',
+    gstNumber: '27AABCO1234M1ZB',
+    addressLine1: 'Western Express Highway',
+    addressLine2: 'Goregaon East',
+    addressLine3: 'Mumbai, MH - 400063',
+    gstType: 'GST',
+    siteType: 'Shopping Mall',
+    location: 'Goregaon, Mumbai',
+    daySlots: 8,
+    nightSlots: 5,
+    payRate: 32000,
+    staffingSlots: [
+      {
+        id: '13',
+        role: 'Security Guard',
+        daySlots: 8,
+        nightSlots: 5,
+        budgetPerSlot: 2462
+      }
+    ]
+  },
+  {
+    id: '14',
+    name: 'Apollo Hospital',
+    organizationName: 'Apollo Hospitals',
+    gstNumber: '33AABCA1234N1ZC',
+    addressLine1: '21, Greams Lane',
+    addressLine2: 'Off Greams Road',
+    addressLine3: 'Chennai, TN - 600006',
+    gstType: 'GST',
+    siteType: 'Healthcare',
+    location: 'Greams Road, Chennai',
+    daySlots: 10,
+    nightSlots: 8,
+    payRate: 38000,
+    staffingSlots: [
+      {
+        id: '14',
+        role: 'Security Guard',
+        daySlots: 10,
+        nightSlots: 8,
+        budgetPerSlot: 2111
+      }
+    ]
+  },
+  {
+    id: '15',
+    name: 'Godrej & Boyce',
+    organizationName: 'Godrej & Boyce Mfg Co Ltd',
+    gstNumber: '27AABCG1234O1ZD',
+    addressLine1: 'Pirojshanagar',
+    addressLine2: 'Vikhroli East',
+    addressLine3: 'Mumbai, MH - 400079',
+    gstType: 'GST',
+    siteType: 'Manufacturing',
+    location: 'Vikhroli, Mumbai',
+    daySlots: 12,
+    nightSlots: 10,
+    payRate: 44000,
+    staffingSlots: [
+      {
+        id: '15',
+        role: 'Security Guard',
+        daySlots: 12,
+        nightSlots: 10,
+        budgetPerSlot: 2000
+      }
+    ]
+  },
+  {
+    id: '16',
+    name: 'SBI Corporate Centre',
+    organizationName: 'State Bank of India',
+    gstNumber: '27AABCS1234P1ZE',
+    addressLine1: 'Nariman Point',
+    addressLine2: 'Madam Cama Road',
+    addressLine3: 'Mumbai, MH - 400021',
+    gstType: 'GST',
+    siteType: 'Banking',
+    location: 'Nariman Point, Mumbai',
+    daySlots: 6,
+    nightSlots: 4,
+    payRate: 24000,
+    staffingSlots: [
+      {
+        id: '16',
+        role: 'Security Guard',
+        daySlots: 6,
+        nightSlots: 4,
+        budgetPerSlot: 2400
+      }
+    ]
+  },
+  {
+    id: '17',
+    name: 'The Leela Palace',
+    organizationName: 'The Leela Palaces Hotels',
+    gstNumber: '07AABCL1234Q1ZF',
+    addressLine1: 'Diplomatic Enclave',
+    addressLine2: 'Chanakyapuri',
+    addressLine3: 'New Delhi - 110023',
+    gstType: 'GST',
+    siteType: 'Hospitality',
+    location: 'Chanakyapuri, Delhi',
+    daySlots: 15,
+    nightSlots: 10,
+    payRate: 55000,
+    staffingSlots: [
+      {
+        id: '17',
+        role: 'Security Guard',
+        daySlots: 15,
+        nightSlots: 10,
+        budgetPerSlot: 2200
+      }
+    ]
+  },
+  {
+    id: '18',
+    name: 'DLF Mall of India',
+    organizationName: 'DLF Limited',
+    gstNumber: '07AABCD1234R1ZG',
+    addressLine1: 'Sector 18',
+    addressLine2: 'NH-24',
+    addressLine3: 'Noida, UP - 201301',
+    gstType: 'GST',
+    siteType: 'Shopping Mall',
+    location: 'Sector 18, Noida',
+    daySlots: 20,
+    nightSlots: 12,
+    payRate: 58000,
+    staffingSlots: [
+      {
+        id: '18',
+        role: 'Security Guard',
+        daySlots: 20,
+        nightSlots: 12,
+        budgetPerSlot: 1812
+      }
+    ]
+  },
+  {
+    id: '19',
+    name: 'Tech Mahindra Campus',
+    organizationName: 'Tech Mahindra Limited',
+    gstNumber: '36AABCT1234S1ZH',
+    addressLine1: 'Rajiv Gandhi Salai',
+    addressLine2: 'Sholinganallur',
+    addressLine3: 'Chennai, TN - 600119',
+    gstType: 'GST',
+    siteType: 'IT Campus',
+    location: 'Sholinganallur, Chennai',
+    daySlots: 16,
+    nightSlots: 10,
+    payRate: 48000,
+    staffingSlots: [
+      {
+        id: '19',
+        role: 'Security Guard',
+        daySlots: 16,
+        nightSlots: 10,
+        budgetPerSlot: 1846
+      }
+    ]
+  },
+  {
+    id: '20',
+    name: 'Reliance Industries',
+    organizationName: 'Reliance Industries Ltd',
+    gstNumber: '24AABCR1234T1ZI',
+    addressLine1: 'Hazira Manufacturing Complex',
+    addressLine2: 'Hazira',
+    addressLine3: 'Surat, GJ - 394270',
+    gstType: 'GST',
+    siteType: 'Manufacturing',
+    location: 'Hazira, Surat',
+    daySlots: 30,
+    nightSlots: 25,
+    payRate: 85000,
+    staffingSlots: [
+      {
+        id: '20',
+        role: 'Security Guard',
+        daySlots: 30,
+        nightSlots: 25,
+        budgetPerSlot: 1545
+      }
+    ]
+  },
+  {
+    id: '21',
+    name: 'Wipro SEZ Campus',
+    organizationName: 'Wipro Limited',
+    gstNumber: '29AABCW1234U1ZJ',
+    addressLine1: 'Sarjapur Road',
+    addressLine2: 'Electronic City Phase 1',
+    addressLine3: 'Bangalore, KA - 560100',
+    gstType: 'GST',
+    siteType: 'IT Campus',
+    location: 'Electronic City, Bangalore',
+    daySlots: 22,
+    nightSlots: 14,
+    payRate: 62000,
+    staffingSlots: [
+      {
+        id: '21',
+        role: 'Security Guard',
+        daySlots: 22,
+        nightSlots: 14,
+        budgetPerSlot: 1722
+      }
+    ]
+  },
+  {
+    id: '22',
+    name: 'Fortis Hospital',
+    organizationName: 'Fortis Healthcare',
+    gstNumber: '06AABCF1234V1ZK',
+    addressLine1: 'Sector 62',
+    addressLine2: 'Phase VIII',
+    addressLine3: 'Mohali, PB - 160062',
+    gstType: 'GST',
+    siteType: 'Healthcare',
+    location: 'Mohali, Punjab',
+    daySlots: 14,
+    nightSlots: 10,
+    payRate: 42000,
+    staffingSlots: [
+      {
+        id: '22',
+        role: 'Security Guard',
+        daySlots: 14,
+        nightSlots: 10,
+        budgetPerSlot: 1750
+      }
+    ]
+  },
+  {
+    id: '23',
+    name: 'Palladium Mall',
+    organizationName: 'Palladium Mall Mumbai',
+    gstNumber: '27AABCP1234W1ZL',
+    addressLine1: 'High Street Phoenix',
+    addressLine2: 'Lower Parel',
+    addressLine3: 'Mumbai, MH - 400013',
+    gstType: 'GST',
+    siteType: 'Shopping Mall',
+    location: 'Lower Parel, Mumbai',
+    daySlots: 12,
+    nightSlots: 8,
+    payRate: 38000,
+    staffingSlots: [
+      {
+        id: '23',
+        role: 'Security Guard',
+        daySlots: 12,
+        nightSlots: 8,
+        budgetPerSlot: 1900
+      }
+    ]
+  },
+  {
+    id: '24',
+    name: 'Mahindra Towers',
+    organizationName: 'Mahindra Group',
+    gstNumber: '27AABCM1234X1ZM',
+    addressLine1: 'Dr. G M Bhosale Marg',
+    addressLine2: 'Worli',
+    addressLine3: 'Mumbai, MH - 400018',
+    gstType: 'GST',
+    siteType: 'Corporate Office',
+    location: 'Worli, Mumbai',
+    daySlots: 8,
+    nightSlots: 5,
+    payRate: 32000,
+    staffingSlots: [
+      {
+        id: '24',
+        role: 'Security Guard',
+        daySlots: 8,
+        nightSlots: 5,
+        budgetPerSlot: 2462
+      }
+    ]
+  },
+  {
+    id: '25',
+    name: 'ITC Grand Chola',
+    organizationName: 'ITC Hotels',
+    gstNumber: '33AABCI1234Y1ZN',
+    addressLine1: '63, Mount Road',
+    addressLine2: 'Guindy',
+    addressLine3: 'Chennai, TN - 600032',
+    gstType: 'GST',
+    siteType: 'Hospitality',
+    location: 'Guindy, Chennai',
+    daySlots: 18,
+    nightSlots: 12,
+    payRate: 52000,
+    staffingSlots: [
+      {
+        id: '25',
+        role: 'Security Guard',
+        daySlots: 18,
+        nightSlots: 12,
+        budgetPerSlot: 1733
+      }
+    ]
+  },
+  {
+    id: '26',
+    name: 'Bharti Airtel Office',
+    organizationName: 'Bharti Airtel Limited',
+    gstNumber: '06AABCB1234Z1ZO',
+    addressLine1: 'Bharti Crescent',
+    addressLine2: 'Nelson Mandela Road',
+    addressLine3: 'Gurugram, HR - 122003',
+    gstType: 'GST',
+    siteType: 'Corporate Office',
+    location: 'Vasant Kunj, Gurugram',
+    daySlots: 10,
+    nightSlots: 6,
+    payRate: 35000,
+    staffingSlots: [
+      {
+        id: '26',
+        role: 'Security Guard',
+        daySlots: 10,
+        nightSlots: 6,
+        budgetPerSlot: 2188
+      }
+    ]
+  },
+  {
+    id: '27',
+    name: 'Ambience Mall',
+    organizationName: 'Ambience Group',
+    gstNumber: '06AABCA1234A2ZP',
+    addressLine1: 'Ambience Island',
+    addressLine2: 'NH-8',
+    addressLine3: 'Gurugram, HR - 122001',
+    gstType: 'GST',
+    siteType: 'Shopping Mall',
+    location: 'NH-8, Gurugram',
+    daySlots: 16,
+    nightSlots: 10,
+    payRate: 48000,
+    staffingSlots: [
+      {
+        id: '27',
+        role: 'Security Guard',
+        daySlots: 16,
+        nightSlots: 10,
+        budgetPerSlot: 1846
+      }
+    ]
+  },
+  {
+    id: '28',
+    name: 'Adani Mundra Port',
+    organizationName: 'Adani Ports & SEZ',
+    gstNumber: '24AABCA1234B2ZQ',
+    addressLine1: 'Mundra Port',
+    addressLine2: 'Mundra',
+    addressLine3: 'Kutch, GJ - 370421',
+    gstType: 'GST',
+    siteType: 'Port/Logistics',
+    location: 'Mundra, Gujarat',
+    daySlots: 35,
+    nightSlots: 30,
+    payRate: 95000,
+    staffingSlots: [
+      {
+        id: '28',
+        role: 'Security Guard',
+        daySlots: 35,
+        nightSlots: 30,
+        budgetPerSlot: 1462
+      }
+    ]
+  },
+  {
+    id: '29',
+    name: 'Hiranandani Gardens',
+    organizationName: 'Hiranandani Group',
+    gstNumber: '27AABCH1234C2ZR',
+    addressLine1: 'Hiranandani Gardens',
+    addressLine2: 'Powai',
+    addressLine3: 'Mumbai, MH - 400076',
+    gstType: 'GST',
+    siteType: 'Residential',
+    location: 'Powai, Mumbai',
+    daySlots: 8,
+    nightSlots: 6,
+    payRate: 28000,
+    staffingSlots: [
+      {
+        id: '29',
+        role: 'Security Guard',
+        daySlots: 8,
+        nightSlots: 6,
+        budgetPerSlot: 2000
+      }
+    ]
+  },
+  {
+    id: '30',
+    name: 'Express Avenue Mall',
+    organizationName: 'Express Infrastructure',
+    gstNumber: '33AABCE1234D2ZS',
+    addressLine1: 'Express Avenue',
+    addressLine2: 'Royapettah',
+    addressLine3: 'Chennai, TN - 600014',
+    gstType: 'GST',
+    siteType: 'Shopping Mall',
+    location: 'Royapettah, Chennai',
+    daySlots: 14,
+    nightSlots: 9,
+    payRate: 42000,
+    staffingSlots: [
+      {
+        id: '30',
+        role: 'Security Guard',
+        daySlots: 14,
+        nightSlots: 9,
+        budgetPerSlot: 1826
+      }
+    ]
+  },
+  {
+    id: '31',
+    name: 'Hyatt Regency',
+    organizationName: 'Hyatt Hotels Corporation',
+    gstNumber: '07AABCH1234E2ZT',
+    addressLine1: 'Bhikaji Cama Place',
+    addressLine2: 'Ring Road',
+    addressLine3: 'New Delhi - 110066',
+    gstType: 'GST',
+    siteType: 'Hospitality',
+    location: 'Bhikaji Cama Place, Delhi',
+    daySlots: 12,
+    nightSlots: 8,
+    payRate: 40000,
+    staffingSlots: [
+      {
+        id: '31',
+        role: 'Security Guard',
+        daySlots: 12,
+        nightSlots: 8,
+        budgetPerSlot: 2000
+      }
+    ]
+  },
+  {
+    id: '32',
+    name: 'L&T Technology Services',
+    organizationName: 'Larsen & Toubro Infotech',
+    gstNumber: '27AABCL1234F2ZU',
+    addressLine1: 'L&T Campus',
+    addressLine2: 'Saki Vihar Road, Powai',
+    addressLine3: 'Mumbai, MH - 400072',
+    gstType: 'GST',
+    siteType: 'IT Campus',
+    location: 'Powai, Mumbai',
+    daySlots: 20,
+    nightSlots: 12,
+    payRate: 55000,
+    staffingSlots: [
+      {
+        id: '32',
+        role: 'Security Guard',
+        daySlots: 20,
+        nightSlots: 12,
+        budgetPerSlot: 1719
+      }
+    ]
+  },
+  {
+    id: '33',
+    name: 'Jindal Steel Works',
+    organizationName: 'Jindal Steel & Power',
+    gstNumber: '22AABCJ1234G2ZV',
+    addressLine1: 'Raigarh Steel Plant',
+    addressLine2: 'Raigarh',
+    addressLine3: 'Raigarh, CG - 496001',
+    gstType: 'GST',
+    siteType: 'Manufacturing',
+    location: 'Raigarh, Chhattisgarh',
+    daySlots: 25,
+    nightSlots: 20,
+    payRate: 72000,
+    staffingSlots: [
+      {
+        id: '33',
+        role: 'Security Guard',
+        daySlots: 25,
+        nightSlots: 20,
+        budgetPerSlot: 1600
+      }
+    ]
+  },
+  {
+    id: '34',
+    name: 'ICICI Bank Tower',
+    organizationName: 'ICICI Bank Limited',
+    gstNumber: '27AABCI1234H2ZW',
+    addressLine1: 'ICICI Bank Towers',
+    addressLine2: 'Bandra Kurla Complex',
+    addressLine3: 'Mumbai, MH - 400051',
+    gstType: 'GST',
+    siteType: 'Banking',
+    location: 'BKC, Mumbai',
+    daySlots: 8,
+    nightSlots: 5,
+    payRate: 28000,
+    staffingSlots: [
+      {
+        id: '34',
+        role: 'Security Guard',
+        daySlots: 8,
+        nightSlots: 5,
+        budgetPerSlot: 2154
+      }
+    ]
+  },
+  {
+    id: '35',
+    name: 'Manipal Hospital',
+    organizationName: 'Manipal Health Enterprises',
+    gstNumber: '29AABCM1234I2ZX',
+    addressLine1: '98, Rustom Bagh',
+    addressLine2: 'Airport Road',
+    addressLine3: 'Bangalore, KA - 560017',
+    gstType: 'GST',
+    siteType: 'Healthcare',
+    location: 'Airport Road, Bangalore',
+    daySlots: 16,
+    nightSlots: 12,
+    payRate: 48000,
+    staffingSlots: [
+      {
+        id: '35',
+        role: 'Security Guard',
+        daySlots: 16,
+        nightSlots: 12,
+        budgetPerSlot: 1714
+      }
+    ]
+  },
+  {
+    id: '36',
+    name: 'Flipkart Warehouse',
+    organizationName: 'Flipkart Internet Pvt Ltd',
+    gstNumber: '29AABCF1234J2ZY',
+    addressLine1: 'Sarjapur Road',
+    addressLine2: 'Bellandur',
+    addressLine3: 'Bangalore, KA - 560103',
+    gstType: 'GST',
+    siteType: 'Warehouse',
+    location: 'Bellandur, Bangalore',
+    daySlots: 22,
+    nightSlots: 18,
+    payRate: 65000,
+    staffingSlots: [
+      {
+        id: '36',
+        role: 'Security Guard',
+        daySlots: 22,
+        nightSlots: 18,
+        budgetPerSlot: 1625
+      }
+    ]
+  },
+  {
+    id: '37',
+    name: 'Brigade Gateway',
+    organizationName: 'Brigade Group',
+    gstNumber: '29AABCB1234K2ZZ',
+    addressLine1: '26/1, Dr. Rajkumar Road',
+    addressLine2: 'Malleswaram West',
+    addressLine3: 'Bangalore, KA - 560055',
+    gstType: 'GST',
+    siteType: 'Mixed Use',
+    location: 'Rajajinagar, Bangalore',
+    daySlots: 18,
+    nightSlots: 12,
+    payRate: 52000,
+    staffingSlots: [
+      {
+        id: '37',
+        role: 'Security Guard',
+        daySlots: 18,
+        nightSlots: 12,
+        budgetPerSlot: 1733
+      }
+    ]
+  },
+  {
+    id: '38',
+    name: 'Axis Bank Corporate Office',
+    organizationName: 'Axis Bank Limited',
+    gstNumber: '27AABCA1234L3ZA',
+    addressLine1: 'Axis House, C-2',
+    addressLine2: 'Wadia International Centre',
+    addressLine3: 'Mumbai, MH - 400025',
+    gstType: 'GST',
+    siteType: 'Banking',
+    location: 'Pandurang Budhkar Marg, Mumbai',
+    daySlots: 10,
+    nightSlots: 6,
+    payRate: 32000,
+    staffingSlots: [
+      {
+        id: '38',
+        role: 'Security Guard',
+        daySlots: 10,
+        nightSlots: 6,
+        budgetPerSlot: 2000
+      }
+    ]
+  },
+  {
+    id: '39',
+    name: 'Sarath City Capital Mall',
+    organizationName: 'Sarath City Capital',
+    gstNumber: '36AABCS1234M3ZB',
+    addressLine1: 'Kondapur Cross Roads',
+    addressLine2: 'Gachibowli',
+    addressLine3: 'Hyderabad, TS - 500032',
+    gstType: 'GST',
+    siteType: 'Shopping Mall',
+    location: 'Gachibowli, Hyderabad',
+    daySlots: 15,
+    nightSlots: 10,
+    payRate: 45000,
+    staffingSlots: [
+      {
+        id: '39',
+        role: 'Security Guard',
+        daySlots: 15,
+        nightSlots: 10,
+        budgetPerSlot: 1800
+      }
+    ]
+  },
+  {
+    id: '40',
+    name: 'Microsoft India Campus',
+    organizationName: 'Microsoft Corporation India',
+    gstNumber: '36AABCM1234N3ZC',
+    addressLine1: 'Survey No. 31 & 32',
+    addressLine2: 'Gachibowli',
+    addressLine3: 'Hyderabad, TS - 500032',
+    gstType: 'GST',
+    siteType: 'IT Campus',
+    location: 'Gachibowli, Hyderabad',
+    daySlots: 28,
+    nightSlots: 16,
+    payRate: 75000,
+    staffingSlots: [
+      {
+        id: '40',
+        role: 'Security Guard',
+        daySlots: 28,
+        nightSlots: 16,
+        budgetPerSlot: 1705
+      }
+    ]
+  },
+  {
+    id: '41',
+    name: 'Essar Steel Plant',
+    organizationName: 'Essar Steel India Limited',
+    gstNumber: '24AABCE1234O3ZD',
+    addressLine1: 'Hazira Industrial Area',
+    addressLine2: 'Hazira',
+    addressLine3: 'Surat, GJ - 394270',
+    gstType: 'GST',
+    siteType: 'Manufacturing',
+    location: 'Hazira, Surat',
+    daySlots: 32,
+    nightSlots: 28,
+    payRate: 88000,
+    staffingSlots: [
+      {
+        id: '41',
+        role: 'Security Guard',
+        daySlots: 32,
+        nightSlots: 28,
+        budgetPerSlot: 1467
+      }
+    ]
+  },
+  {
+    id: '42',
+    name: 'DLF Cyberhub',
+    organizationName: 'DLF Limited',
+    gstNumber: '06AABCD1234P3ZE',
+    addressLine1: 'DLF Cyber City',
+    addressLine2: 'Phase II',
+    addressLine3: 'Gurugram, HR - 122002',
+    gstType: 'GST',
+    siteType: 'Mixed Use',
+    location: 'Cyber City, Gurugram',
+    daySlots: 24,
+    nightSlots: 15,
+    payRate: 68000,
+    staffingSlots: [
+      {
+        id: '42',
+        role: 'Security Guard',
+        daySlots: 24,
+        nightSlots: 15,
+        budgetPerSlot: 1744
+      }
+    ]
+  },
+  {
+    id: '43',
+    name: 'JW Marriott Pune',
+    organizationName: 'Marriott International',
+    gstNumber: '27AABCJ1234Q3ZF',
+    addressLine1: 'Senapati Bapat Road',
+    addressLine2: 'Pune',
+    addressLine3: 'Pune, MH - 411053',
+    gstType: 'GST',
+    siteType: 'Hospitality',
+    location: 'Senapati Bapat Road, Pune',
+    daySlots: 14,
+    nightSlots: 10,
+    payRate: 45000,
+    staffingSlots: [
+      {
+        id: '43',
+        role: 'Security Guard',
+        daySlots: 14,
+        nightSlots: 10,
+        budgetPerSlot: 1875
+      }
+    ]
+  },
+  {
+    id: '44',
+    name: 'Cognizant Campus',
+    organizationName: 'Cognizant Technology Solutions',
+    gstNumber: '33AABCC1234R3ZG',
+    addressLine1: 'Rajiv Gandhi Salai',
+    addressLine2: 'OMR',
+    addressLine3: 'Chennai, TN - 600096',
+    gstType: 'GST',
+    siteType: 'IT Campus',
+    location: 'OMR, Chennai',
+    daySlots: 26,
+    nightSlots: 16,
+    payRate: 72000,
+    staffingSlots: [
+      {
+        id: '44',
+        role: 'Security Guard',
+        daySlots: 26,
+        nightSlots: 16,
+        budgetPerSlot: 1714
+      }
+    ]
+  },
+  {
+    id: '45',
+    name: 'Kotak Mahindra Bank',
+    organizationName: 'Kotak Mahindra Bank Ltd',
+    gstNumber: '27AABCK1234S3ZH',
+    addressLine1: '27BKC, C 12, G Block',
+    addressLine2: 'Bandra Kurla Complex',
+    addressLine3: 'Mumbai, MH - 400051',
+    gstType: 'GST',
+    siteType: 'Banking',
+    location: 'BKC, Mumbai',
+    daySlots: 7,
+    nightSlots: 4,
+    payRate: 25000,
+    staffingSlots: [
+      {
+        id: '45',
+        role: 'Security Guard',
+        daySlots: 7,
+        nightSlots: 4,
+        budgetPerSlot: 2273
+      }
+    ]
+  },
+  {
+    id: '46',
+    name: 'Pune IT Park',
+    organizationName: 'Rajiv Gandhi Infotech Park',
+    gstNumber: '27AABCP1234T3ZI',
+    addressLine1: 'Phase 1, Hinjawadi',
+    addressLine2: 'Pune',
+    addressLine3: 'Pune, MH - 411057',
+    gstType: 'GST',
+    siteType: 'IT Park',
+    location: 'Hinjawadi, Pune',
+    daySlots: 30,
+    nightSlots: 20,
+    payRate: 75000,
+    staffingSlots: [
+      {
+        id: '46',
+        role: 'Security Guard',
+        daySlots: 30,
+        nightSlots: 20,
+        budgetPerSlot: 1500
+      }
+    ]
+  },
+  {
+    id: '47',
+    name: 'Narayana Multispeciality Hospital',
+    organizationName: 'Narayana Health',
+    gstNumber: '29AABCN1234U3ZJ',
+    addressLine1: '258/A, Bommasandra',
+    addressLine2: 'Anekal Taluk',
+    addressLine3: 'Bangalore, KA - 560099',
+    gstType: 'GST',
+    siteType: 'Healthcare',
+    location: 'Bommasandra, Bangalore',
+    daySlots: 18,
+    nightSlots: 14,
+    payRate: 52000,
+    staffingSlots: [
+      {
+        id: '47',
+        role: 'Security Guard',
+        daySlots: 18,
+        nightSlots: 14,
+        budgetPerSlot: 1625
+      }
+    ]
+  },
+  {
+    id: '48',
+    name: 'Cipla Pharmaceutical',
+    organizationName: 'Cipla Limited',
+    gstNumber: '27AABCC1234V3ZK',
+    addressLine1: 'Cipla House',
+    addressLine2: 'Peninsula Business Park',
+    addressLine3: 'Mumbai, MH - 400013',
+    gstType: 'GST',
+    siteType: 'Manufacturing',
+    location: 'Lower Parel, Mumbai',
+    daySlots: 20,
+    nightSlots: 16,
+    payRate: 58000,
+    staffingSlots: [
+      {
+        id: '48',
+        role: 'Security Guard',
+        daySlots: 20,
+        nightSlots: 16,
+        budgetPerSlot: 1611
+      }
+    ]
+  },
+  {
+    id: '49',
+    name: 'VR Mall Chennai',
+    organizationName: 'Virtuous Retail',
+    gstNumber: '33AABCV1234W3ZL',
+    addressLine1: 'Dr MGR Race Course Road',
+    addressLine2: 'Guindy',
+    addressLine3: 'Chennai, TN - 600032',
+    gstType: 'GST',
+    siteType: 'Shopping Mall',
+    location: 'Guindy, Chennai',
+    daySlots: 16,
+    nightSlots: 10,
+    payRate: 48000,
+    staffingSlots: [
+      {
+        id: '49',
+        role: 'Security Guard',
+        daySlots: 16,
+        nightSlots: 10,
+        budgetPerSlot: 1846
+      }
+    ]
+  },
+  {
+    id: '50',
+    name: 'Oracle Campus',
+    organizationName: 'Oracle Corporation India',
+    gstNumber: '29AABCO1234X3ZM',
+    addressLine1: 'RMZ Ecoworld',
+    addressLine2: 'Sarjapur Road',
+    addressLine3: 'Bangalore, KA - 560103',
+    gstType: 'GST',
+    siteType: 'IT Campus',
+    location: 'Sarjapur Road, Bangalore',
+    daySlots: 24,
+    nightSlots: 16,
+    payRate: 68000,
+    staffingSlots: [
+      {
+        id: '50',
+        role: 'Security Guard',
+        daySlots: 24,
+        nightSlots: 16,
+        budgetPerSlot: 1700
       }
     ]
   }
