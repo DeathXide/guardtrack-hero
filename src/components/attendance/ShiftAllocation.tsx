@@ -5,9 +5,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, Edit, Plus, Save, ShieldAlert, Trash, UserPlus, Users } from 'lucide-react';
+import { CheckCircle, Edit, Plus, Save, Search, ShieldAlert, Trash, UserPlus, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -21,6 +22,7 @@ const ShiftAllocation: React.FC = () => {
   const [isAllocationDialogOpen, setIsAllocationDialogOpen] = useState(false);
   const [selectedShiftType, setSelectedShiftType] = useState<'day' | 'night'>('day');
   const [selectedGuards, setSelectedGuards] = useState<string[]>([]);
+  const [guardSearchTerm, setGuardSearchTerm] = useState('');
   const queryClient = useQueryClient();
   
   const { data: sites = [], isLoading: sitesLoading } = useQuery({
@@ -91,6 +93,7 @@ const ShiftAllocation: React.FC = () => {
     const currentShifts = shifts.filter(shift => shift.type === shiftType);
     const currentGuardIds = currentShifts.map(shift => shift.guardId).filter(id => id) as string[];
     setSelectedGuards(currentGuardIds);
+    setGuardSearchTerm('');
     
     setIsAllocationDialogOpen(true);
   };
@@ -278,31 +281,71 @@ const ShiftAllocation: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="max-h-[300px] overflow-y-auto">
-            {guards.length === 0 ? (
-              <p className="text-center py-4 text-muted-foreground">No guards available</p>
-            ) : (
-              <div className="space-y-1">
-                {guards
-                  .filter(guard => guard.status === 'active')
-                  .map(guard => (
-                    <div key={guard.id} className="flex items-center p-2 hover:bg-muted rounded-md">
-                      <Checkbox 
-                        id={`guard-${guard.id}`}
-                        checked={selectedGuards.includes(guard.id)}
-                        onCheckedChange={() => handleGuardSelection(guard.id)}
-                      />
-                      <label 
-                        htmlFor={`guard-${guard.id}`}
-                        className="ml-2 text-sm font-medium leading-none cursor-pointer flex-1"
-                      >
-                        {guard.name} ({guard.badgeNumber})
-                      </label>
-                    </div>
-                  ))
-                }
-              </div>
-            )}
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search by name or badge number..."
+                className="pl-8"
+                value={guardSearchTerm}
+                onChange={(e) => setGuardSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            <div className="max-h-[250px] overflow-y-auto">
+              {guards.length === 0 ? (
+                <p className="text-center py-4 text-muted-foreground">No guards available</p>
+              ) : (
+                <div className="space-y-1">
+                  {guards
+                    .filter(guard => guard.status === 'active')
+                    .filter(guard => 
+                      guardSearchTerm === '' || 
+                      guard.name.toLowerCase().includes(guardSearchTerm.toLowerCase()) ||
+                      guard.badgeNumber.toLowerCase().includes(guardSearchTerm.toLowerCase())
+                    )
+                    .sort((a, b) => {
+                      const aSelected = selectedGuards.includes(a.id);
+                      const bSelected = selectedGuards.includes(b.id);
+                      
+                      if (aSelected && !bSelected) return -1;
+                      if (!aSelected && bSelected) return 1;
+                      return a.name.localeCompare(b.name);
+                    })
+                    .map(guard => (
+                      <div key={guard.id} className="flex items-center p-2 hover:bg-muted rounded-md">
+                        <Checkbox 
+                          id={`guard-${guard.id}`}
+                          checked={selectedGuards.includes(guard.id)}
+                          onCheckedChange={() => handleGuardSelection(guard.id)}
+                        />
+                        <label 
+                          htmlFor={`guard-${guard.id}`}
+                          className="ml-2 text-sm font-medium leading-none cursor-pointer flex-1"
+                        >
+                          {guard.name} ({guard.badgeNumber})
+                          {selectedGuards.includes(guard.id) && (
+                            <CheckCircle className="inline h-4 w-4 ml-2 text-green-600" />
+                          )}
+                        </label>
+                      </div>
+                    ))
+                  }
+                  {guards
+                    .filter(guard => guard.status === 'active')
+                    .filter(guard => 
+                      guardSearchTerm === '' || 
+                      guard.name.toLowerCase().includes(guardSearchTerm.toLowerCase()) ||
+                      guard.badgeNumber.toLowerCase().includes(guardSearchTerm.toLowerCase())
+                    ).length === 0 && (
+                    <p className="text-center py-4 text-muted-foreground">
+                      No guards found matching "{guardSearchTerm}"
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           
           <DialogFooter className="mt-4">
