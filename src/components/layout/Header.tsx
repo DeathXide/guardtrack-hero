@@ -4,11 +4,11 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { 
   Bell, 
-  Menu, 
   Moon, 
   Sun, 
   User
 } from 'lucide-react';
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,11 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
-interface HeaderProps {
-  toggleSidebar: () => void;
-}
-
-const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
+const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   
@@ -44,17 +40,9 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   };
   
   return (
-    <header className="h-16 border-b bg-background/80 backdrop-blur-md fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-4">
+    <header className="h-16 border-b bg-background/80 backdrop-blur-md flex items-center justify-between px-4">
       <div className="flex items-center">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="mr-2 md:mr-4"
-          onClick={toggleSidebar}
-          aria-label="Toggle sidebar"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
+        <SidebarTrigger className="mr-2 md:mr-4" />
         <Link to="/dashboard" className="flex items-center">
           <div className="rounded-md bg-primary p-1.5 mr-3">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
