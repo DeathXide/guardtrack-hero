@@ -22,6 +22,7 @@ import {
   fetchGuardMonthlyStats,
   createPaymentRecord,
   fetchPaymentsByGuard,
+  fetchPaymentsByMonth,
   updatePaymentRecord,
   deletePaymentRecord
 } from '@/lib/localService';
@@ -127,6 +128,7 @@ const Guards = () => {
     mutationFn: createPaymentRecord,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments', selectedGuard?.id] });
+      queryClient.invalidateQueries({ queryKey: ['all-payments', currentMonth] });
       queryClient.invalidateQueries({ queryKey: ['guards'] });
       toast({
         title: paymentType === 'deduction' ? "Deduction Recorded" : "Bonus Recorded",
@@ -151,6 +153,7 @@ const Guards = () => {
       updatePaymentRecord(id, payment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments', selectedGuard?.id] });
+      queryClient.invalidateQueries({ queryKey: ['all-payments', currentMonth] });
       queryClient.invalidateQueries({ queryKey: ['guards'] });
       toast({
         title: "Payment Updated",
@@ -172,6 +175,7 @@ const Guards = () => {
     mutationFn: deletePaymentRecord,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments', selectedGuard?.id] });
+      queryClient.invalidateQueries({ queryKey: ['all-payments', currentMonth] });
       queryClient.invalidateQueries({ queryKey: ['guards'] });
       toast({
         title: "Payment Deleted",
@@ -298,6 +302,13 @@ const Guards = () => {
       netAmount: 0
     };
   };
+
+  // Add a query to track payments for all guards to trigger earnings recalculation
+  useQuery({
+    queryKey: ['all-payments', currentMonth],
+    queryFn: () => fetchPaymentsByMonth(currentMonth),
+    enabled: guardList.length > 0
+  });
 
   useEffect(() => {
     const fetchAllGuardEarnings = async () => {
