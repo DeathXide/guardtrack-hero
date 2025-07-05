@@ -303,8 +303,8 @@ const Guards = () => {
     };
   };
 
-  // Add a query to track payments for all guards to trigger earnings recalculation
-  useQuery({
+  // Query to track payments and trigger earnings recalculation
+  const { data: allPayments } = useQuery({
     queryKey: ['all-payments', currentMonth],
     queryFn: () => fetchPaymentsByMonth(currentMonth),
     enabled: guardList.length > 0
@@ -312,11 +312,13 @@ const Guards = () => {
 
   useEffect(() => {
     const fetchAllGuardEarnings = async () => {
+      console.log('Fetching guard earnings for month:', currentMonth);
       const earningsMap: Record<string, MonthlyEarning> = {};
       
       for (const guard of guardList) {
         try {
           const result = await fetchGuardMonthlyStats(guard.id, currentMonth);
+          console.log(`Guard ${guard.name} earnings:`, result);
           earningsMap[guard.id] = {
             month: currentMonth,
             totalShifts: result.totalShifts,
@@ -344,7 +346,7 @@ const Guards = () => {
     if (guardList.length > 0) {
       fetchAllGuardEarnings();
     }
-  }, [guardList, currentMonth]);
+  }, [guardList, currentMonth, allPayments]);
 
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-US', {
