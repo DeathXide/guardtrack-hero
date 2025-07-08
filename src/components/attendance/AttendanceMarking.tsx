@@ -17,6 +17,7 @@ import {
   fetchSites,
   fetchGuards,
   fetchShiftsBySite,
+  createShift,
   createAttendanceRecord,
   fetchAttendanceByDate,
   isGuardMarkedPresentElsewhere,
@@ -41,6 +42,8 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     shiftType: 'day' | 'night';
     title: string;
   }>({ isOpen: false, shiftType: 'day', title: '' });
+  const [unavailableGuards, setUnavailableGuards] = useState<string[]>([]);
+  const [modalSelectedGuards, setModalSelectedGuards] = useState<string[]>([]);
   
   const queryClient = useQueryClient();
   
@@ -205,7 +208,12 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     }
   };
 
-  const handleAddGuard = (shiftType: 'day' | 'night') => {
+  const handleAddGuard = async (shiftType: 'day' | 'night') => {
+    const unavailable = await getUnavailableGuards(shiftType);
+    setUnavailableGuards(unavailable);
+    // Reset modal selection and set currently assigned guards as selected
+    const currentlyAssigned = shiftType === 'day' ? dayShiftGuards.map(g => g.id) : nightShiftGuards.map(g => g.id);
+    setModalSelectedGuards(currentlyAssigned);
     setGuardSelectionModal({
       isOpen: true,
       shiftType,
@@ -239,8 +247,30 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
   };
 
   const handleGuardSelectionConfirm = async () => {
-    // This will be implemented when the modal selection is confirmed
+    const { shiftType } = guardSelectionModal;
+    
+    // Create shift assignments for selected guards
+    for (const guardId of modalSelectedGuards) {
+      const existingShift = shifts.find(s => s.type === shiftType && s.guardId === guardId && s.siteId === selectedSite);
+      if (!existingShift) {
+        try {
+          await createShift({
+            siteId: selectedSite,
+            guardId: guardId,
+            type: shiftType
+          });
+        } catch (error) {
+          console.error('Error creating shift assignment:', error);
+          toast.error(`Failed to assign guard to ${shiftType} shift`);
+        }
+      }
+    }
+    
+    // Refresh shifts data
+    queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
+    toast.success('Guards assigned to shift successfully');
     setGuardSelectionModal({ isOpen: false, shiftType: 'day', title: '' });
+    setModalSelectedGuards([]);
   };
 
   if (sitesLoading || guardsLoading) {
@@ -389,15 +419,12 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
         isOpen={guardSelectionModal.isOpen}
         onClose={() => setGuardSelectionModal({ isOpen: false, shiftType: 'day', title: '' })}
         guards={guards}
-        selectedGuards={selectedGuards[guardSelectionModal.shiftType] || []}
-        onSelectionChange={(guardIds) => setSelectedGuards({
-          ...selectedGuards,
-          [guardSelectionModal.shiftType]: guardIds
-        })}
+        selectedGuards={modalSelectedGuards}
+        onSelectionChange={setModalSelectedGuards}
         onConfirm={handleGuardSelectionConfirm}
         maxSelections={guardSelectionModal.shiftType === 'day' ? daySlots : nightSlots}
         title={guardSelectionModal.title}
-        unavailableGuards={[]} // This would be populated with unavailable guards
+        unavailableGuards={unavailableGuards}
       />
     </div>
   );
