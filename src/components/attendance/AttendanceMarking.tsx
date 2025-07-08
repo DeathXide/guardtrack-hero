@@ -49,7 +49,6 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
   
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
   const currentMonth = format(selectedDate, 'yyyy-MM');
-  const yesterdayDate = format(new Date(selectedDate.getTime() - 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
 
   useEffect(() => {
     if (preselectedSiteId) {
@@ -77,12 +76,6 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     queryKey: ['attendance', formattedDate],
     queryFn: () => fetchAttendanceByDate(formattedDate),
     enabled: !!formattedDate
-  });
-
-  const { data: yesterdayAttendance = [] } = useQuery({
-    queryKey: ['attendance', yesterdayDate],
-    queryFn: () => fetchAttendanceByDate(yesterdayDate),
-    enabled: !!yesterdayDate
   });
 
   const { data: siteEarnings, isLoading: earningsLoading } = useQuery({
@@ -147,30 +140,6 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
       return record.status === 'present' && shift?.type === 'night' && shift?.siteId === selectedSite;
     })
     .map(record => record.guardId);
-
-  // Get yesterday's present guards as suggestions
-  const yesterdayPresentDayGuards = yesterdayAttendance
-    .filter(record => {
-      const shift = shifts.find(s => s.id === record.shiftId);
-      return record.status === 'present' && shift?.type === 'day' && shift?.siteId === selectedSite;
-    })
-    .map(record => record.guardId);
-
-  const yesterdayPresentNightGuards = yesterdayAttendance
-    .filter(record => {
-      const shift = shifts.find(s => s.id === record.shiftId);
-      return record.status === 'present' && shift?.type === 'night' && shift?.siteId === selectedSite;
-    })
-    .map(record => record.guardId);
-
-  // Create suggested guards arrays for display (show yesterday's guards when no current attendance)
-  const suggestedDayGuards = presentDayGuards.length > 0 ? dayShiftGuards : 
-    guards.filter(guard => yesterdayPresentDayGuards.includes(guard.id) && 
-      dayShiftGuards.some(assignedGuard => assignedGuard.id === guard.id));
-
-  const suggestedNightGuards = presentNightGuards.length > 0 ? nightShiftGuards : 
-    guards.filter(guard => yesterdayPresentNightGuards.includes(guard.id) && 
-      nightShiftGuards.some(assignedGuard => assignedGuard.id === guard.id));
 
   // Initialize selected guards based on attendance records
   useEffect(() => {
@@ -311,60 +280,6 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     setModalSelectedGuards([]);
   };
 
-  const handleCopyYesterday = async () => {
-    if (!selectedSite) return;
-    
-    try {
-      // Copy yesterday's attendance for day shift
-      for (const guardId of yesterdayPresentDayGuards) {
-        const shift = shifts.find(s => s.type === 'day' && s.guardId === guardId && s.siteId === selectedSite);
-        if (shift && presentDayGuards.length < daySlots) {
-          await markAttendanceMutation.mutateAsync({
-            date: formattedDate,
-            shiftId: shift.id,
-            guardId,
-            status: 'present' as const
-          });
-        }
-      }
-      
-      // Copy yesterday's attendance for night shift
-      for (const guardId of yesterdayPresentNightGuards) {
-        const shift = shifts.find(s => s.type === 'night' && s.guardId === guardId && s.siteId === selectedSite);
-        if (shift && presentNightGuards.length < nightSlots) {
-          await markAttendanceMutation.mutateAsync({
-            date: formattedDate,
-            shiftId: shift.id,
-            guardId,
-            status: 'present' as const
-          });
-        }
-      }
-      
-      toast.success('Yesterday\'s attendance copied successfully');
-    } catch (error) {
-      console.error('Error copying yesterday\'s attendance:', error);
-      toast.error('Failed to copy yesterday\'s attendance');
-    }
-  };
-
-  const handleReset = async () => {
-    try {
-      // Remove all attendance records for today
-      for (const record of attendanceRecords) {
-        const shift = shifts.find(s => s.id === record.shiftId);
-        if (shift?.siteId === selectedSite && record.id) {
-          await deleteAttendanceMutation.mutateAsync(record.id);
-        }
-      }
-      
-      toast.success('Attendance reset successfully');
-    } catch (error) {
-      console.error('Error resetting attendance:', error);
-      toast.error('Failed to reset attendance');
-    }
-  };
-
   if (sitesLoading || guardsLoading) {
     return <div className="flex items-center justify-center h-64">Loading sites and guards...</div>;
   }
@@ -426,11 +341,11 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             <div className="space-y-2">
               <Label>Quick Actions</Label>
               <div className="flex space-x-2">
-                <Button variant="outline" size="sm" className="flex-1" onClick={handleCopyYesterday}>
+                <Button variant="outline" size="sm" className="flex-1">
                   <Copy className="h-3 w-3 mr-1" />
                   Copy Yesterday
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1" onClick={handleReset}>
+                <Button variant="outline" size="sm" className="flex-1">
                   <RefreshCw className="h-3 w-3 mr-1" />
                   Reset
                 </Button>
@@ -481,7 +396,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             title="Day Shift"
             shiftType="day"
             totalSlots={daySlots}
-            assignedGuards={suggestedDayGuards}
+            assignedGuards={dayShiftGuards}
             presentGuards={presentDayGuards}
             payRatePerShift={payRatePerShift}
             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'day')}
@@ -495,7 +410,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             title="Night Shift"
             shiftType="night"
             totalSlots={nightSlots}
-            assignedGuards={suggestedNightGuards}
+            assignedGuards={nightShiftGuards}
             presentGuards={presentNightGuards}
             payRatePerShift={payRatePerShift}
             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'night')}
