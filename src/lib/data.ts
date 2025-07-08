@@ -1345,34 +1345,67 @@ export let guards: Guard[] = [
 
 // Sample Shifts
 export let shifts: Shift[] = [
-  {
-    id: 's1',
-    siteId: '1',
-    type: 'day',
-    guardId: 'g1'
-  },
-  {
-    id: 's2',
-    siteId: '1',
-    type: 'day',
-    guardId: 'g2'
-  },
-  {
-    id: 's3',
-    siteId: '1',
-    type: 'night',
-    guardId: 'g3'
-  },
-  {
-    id: 's4',
-    siteId: '2',
-    type: 'day',
-    guardId: 'g4'
-  }
+  // Site 1 - Corporate Tower A (2 day, 3 night)
+  { id: 's1', siteId: '1', type: 'day', guardId: 'g1' },
+  { id: 's2', siteId: '1', type: 'day', guardId: 'g2' },
+  { id: 's3', siteId: '1', type: 'night', guardId: 'g3' },
+  { id: 's4', siteId: '1', type: 'night', guardId: 'g4' },
+  { id: 's5', siteId: '1', type: 'night', guardId: 'g5' },
+  
+  // Site 2 - Shopping Mall Central (4 day, 2 night)
+  { id: 's6', siteId: '2', type: 'day', guardId: 'g6' },
+  { id: 's7', siteId: '2', type: 'day', guardId: 'g7' },
+  { id: 's8', siteId: '2', type: 'day', guardId: 'g8' },
+  { id: 's9', siteId: '2', type: 'day', guardId: 'g9' },
+  { id: 's10', siteId: '2', type: 'night', guardId: 'g10' },
+  { id: 's11', siteId: '2', type: 'night', guardId: 'g11' },
+  
+  // Site 3 - Phoenix Mall (6 day, 4 night)
+  { id: 's12', siteId: '3', type: 'day', guardId: 'g12' },
+  { id: 's13', siteId: '3', type: 'day', guardId: 'g13' },
+  { id: 's14', siteId: '3', type: 'day', guardId: 'g14' },
+  { id: 's15', siteId: '3', type: 'day', guardId: 'g15' },
+  { id: 's16', siteId: '3', type: 'day', guardId: 'g16' },
+  { id: 's17', siteId: '3', type: 'day', guardId: 'g17' },
+  { id: 's18', siteId: '3', type: 'night', guardId: 'g18' },
+  { id: 's19', siteId: '3', type: 'night', guardId: 'g19' },
+  { id: 's20', siteId: '3', type: 'night', guardId: 'g20' },
+  { id: 's21', siteId: '3', type: 'night', guardId: 'g21' }
 ];
 
 // Sample Attendance Records
-export let attendanceRecords: AttendanceRecord[] = [];
+const today = new Date().toISOString().split('T')[0];
+const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+export let attendanceRecords: AttendanceRecord[] = [
+  // Today's attendance - Site 1
+  { id: 'a1', date: today, shiftId: 's1', guardId: 'g1', status: 'present' },
+  { id: 'a2', date: today, shiftId: 's2', guardId: 'g2', status: 'present' },
+  { id: 'a3', date: today, shiftId: 's3', guardId: 'g3', status: 'present' },
+  { id: 'a4', date: today, shiftId: 's4', guardId: 'g4', status: 'absent' },
+  
+  // Today's attendance - Site 2
+  { id: 'a5', date: today, shiftId: 's6', guardId: 'g6', status: 'present' },
+  { id: 'a6', date: today, shiftId: 's7', guardId: 'g7', status: 'present' },
+  { id: 'a7', date: today, shiftId: 's8', guardId: 'g8', status: 'absent' },
+  { id: 'a8', date: today, shiftId: 's10', guardId: 'g10', status: 'present' },
+  
+  // Yesterday's attendance - Site 1
+  { id: 'a9', date: yesterday, shiftId: 's1', guardId: 'g1', status: 'present' },
+  { id: 'a10', date: yesterday, shiftId: 's2', guardId: 'g2', status: 'absent' },
+  { id: 'a11', date: yesterday, shiftId: 's3', guardId: 'g3', status: 'present' },
+  { id: 'a12', date: yesterday, shiftId: 's4', guardId: 'g4', status: 'present' },
+  { id: 'a13', date: yesterday, shiftId: 's5', guardId: 'g5', status: 'present' },
+  
+  // Two days ago - Site 3
+  { id: 'a14', date: twoDaysAgo, shiftId: 's12', guardId: 'g12', status: 'present' },
+  { id: 'a15', date: twoDaysAgo, shiftId: 's13', guardId: 'g13', status: 'present' },
+  { id: 'a16', date: twoDaysAgo, shiftId: 's14', guardId: 'g14', status: 'present' },
+  { id: 'a17', date: twoDaysAgo, shiftId: 's15', guardId: 'g15', status: 'absent' },
+  { id: 'a18', date: twoDaysAgo, shiftId: 's18', guardId: 'g18', status: 'present' },
+  { id: 'a19', date: twoDaysAgo, shiftId: 's19', guardId: 'g19', status: 'present' }
+];
 
 // Sample Payment Records
 export let paymentRecords: PaymentRecord[] = [];
