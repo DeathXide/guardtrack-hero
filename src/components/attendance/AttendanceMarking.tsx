@@ -152,6 +152,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
   const handleGuardSelect = async (guardId: string, shiftType: 'day' | 'night') => {
     const currentSelected = selectedGuards[shiftType] || [];
     const isSelected = currentSelected.includes(guardId);
+    const maxSlots = shiftType === 'day' ? daySlots : nightSlots;
     
     if (isSelected) {
       // Remove guard - also remove from attendance
@@ -172,6 +173,12 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
         [shiftType]: currentSelected.filter(id => id !== guardId)
       });
     } else {
+      // Check slot limit first
+      if (currentSelected.length >= maxSlots) {
+        toast.error(`Cannot mark more than ${maxSlots} guards present for ${shiftType} shift`);
+        return;
+      }
+      
       // Add guard - check availability first
       try {
         const isMarkedElsewhere = await isGuardMarkedPresentElsewhere(
@@ -422,7 +429,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
         selectedGuards={modalSelectedGuards}
         onSelectionChange={setModalSelectedGuards}
         onConfirm={handleGuardSelectionConfirm}
-        maxSelections={guardSelectionModal.shiftType === 'day' ? daySlots : nightSlots}
+        maxSelections={undefined} // Allow unlimited guard assignment
         title={guardSelectionModal.title}
         unavailableGuards={unavailableGuards}
       />
