@@ -1374,38 +1374,7 @@ export let shifts: Shift[] = [
 ];
 
 // Sample Attendance Records
-const today = new Date().toISOString().split('T')[0];
-const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-export let attendanceRecords: AttendanceRecord[] = [
-  // Today's attendance - Site 1
-  { id: 'a1', date: today, shiftId: 's1', guardId: 'g1', status: 'present' },
-  { id: 'a2', date: today, shiftId: 's2', guardId: 'g2', status: 'present' },
-  { id: 'a3', date: today, shiftId: 's3', guardId: 'g3', status: 'present' },
-  { id: 'a4', date: today, shiftId: 's4', guardId: 'g4', status: 'absent' },
-  
-  // Today's attendance - Site 2
-  { id: 'a5', date: today, shiftId: 's6', guardId: 'g6', status: 'present' },
-  { id: 'a6', date: today, shiftId: 's7', guardId: 'g7', status: 'present' },
-  { id: 'a7', date: today, shiftId: 's8', guardId: 'g8', status: 'absent' },
-  { id: 'a8', date: today, shiftId: 's10', guardId: 'g10', status: 'present' },
-  
-  // Yesterday's attendance - Site 1
-  { id: 'a9', date: yesterday, shiftId: 's1', guardId: 'g1', status: 'present' },
-  { id: 'a10', date: yesterday, shiftId: 's2', guardId: 'g2', status: 'absent' },
-  { id: 'a11', date: yesterday, shiftId: 's3', guardId: 'g3', status: 'present' },
-  { id: 'a12', date: yesterday, shiftId: 's4', guardId: 'g4', status: 'present' },
-  { id: 'a13', date: yesterday, shiftId: 's5', guardId: 'g5', status: 'present' },
-  
-  // Two days ago - Site 3
-  { id: 'a14', date: twoDaysAgo, shiftId: 's12', guardId: 'g12', status: 'present' },
-  { id: 'a15', date: twoDaysAgo, shiftId: 's13', guardId: 'g13', status: 'present' },
-  { id: 'a16', date: twoDaysAgo, shiftId: 's14', guardId: 'g14', status: 'present' },
-  { id: 'a17', date: twoDaysAgo, shiftId: 's15', guardId: 'g15', status: 'absent' },
-  { id: 'a18', date: twoDaysAgo, shiftId: 's18', guardId: 'g18', status: 'present' },
-  { id: 'a19', date: twoDaysAgo, shiftId: 's19', guardId: 'g19', status: 'present' }
-];
+export let attendanceRecords: AttendanceRecord[] = [];
 
 // Sample Payment Records
 export let paymentRecords: PaymentRecord[] = [];
