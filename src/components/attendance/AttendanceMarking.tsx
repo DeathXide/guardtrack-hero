@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Calendar as CalendarIcon, Check, Copy, RefreshCw, Info } from 'lucide-react';
+import { Calendar as CalendarIcon, Check, Copy, RefreshCw, Info, UserPlus } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import AttendanceSlotCard from './AttendanceSlotCard';
 import GuardSelectionModal from './GuardSelectionModal';
 import TemporarySlotDialog from './TemporarySlotDialog';
+import BulkTemporarySlotDialog from './BulkTemporarySlotDialog';
 import {
   fetchSites,
   fetchGuards,
@@ -60,6 +61,11 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     isOpen: boolean;
     shiftType: 'day' | 'night';
   }>({ isOpen: false, shiftType: 'day' });
+  const [bulkTempSlotDialog, setBulkTempSlotDialog] = useState(false);
+  const [editTempSlotDialog, setEditTempSlotDialog] = useState<{
+    isOpen: boolean;
+    slot: Shift | null;
+  }>({ isOpen: false, slot: null });
   
   const queryClient = useQueryClient();
   
@@ -133,13 +139,28 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
   const totalSlots = daySlots + nightSlots;
   const payRatePerShift = totalSlots > 0 ? sitePayRate / totalSlots : 0;
 
-  // Get assigned guards for each shift type
+  // Get assigned guards for each shift type (exclude temporary slots)
   const dayShiftGuards = guards.filter(guard => 
-    shifts.some(shift => shift.type === 'day' && shift.guardId === guard.id)
+    shifts.some(shift => shift.type === 'day' && shift.guardId === guard.id && !shift.isTemporary)
   );
   
   const nightShiftGuards = guards.filter(guard => 
-    shifts.some(shift => shift.type === 'night' && shift.guardId === guard.id)
+    shifts.some(shift => shift.type === 'night' && shift.guardId === guard.id && !shift.isTemporary)
+  );
+
+  // Get temporary slots filtered by date
+  const dayTemporarySlots = shifts.filter(shift => 
+    shift.type === 'day' && 
+    shift.isTemporary && 
+    shift.temporaryDate === formattedDate &&
+    shift.siteId === selectedSite
+  );
+  
+  const nightTemporarySlots = shifts.filter(shift => 
+    shift.type === 'night' && 
+    shift.isTemporary && 
+    shift.temporaryDate === formattedDate &&
+    shift.siteId === selectedSite
   );
 
   // Get present guards from attendance records
@@ -327,6 +348,99 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
       console.error('Error creating temporary slot:', error);
       toast.error('Failed to create temporary slot');
     }
+  };
+
+  const handleBulkTempSlotSave = async (data: {
+    daySlots: number;
+    nightSlots: number;
+    role: string;
+    payRatePerSlot: number;
+  }) => {
+    if (!selectedSite) {
+      toast.error('Please select a site first');
+      return;
+    }
+
+    try {
+      const promises = [];
+      
+      // Create day slots
+      for (let i = 0; i < data.daySlots; i++) {
+        promises.push(createShift({
+          siteId: selectedSite,
+          type: 'day',
+          guardId: '',
+          isTemporary: true,
+          temporaryDate: formattedDate,
+          temporaryRole: data.role,
+          temporaryPayRate: data.payRatePerSlot
+        }));
+      }
+      
+      // Create night slots
+      for (let i = 0; i < data.nightSlots; i++) {
+        promises.push(createShift({
+          siteId: selectedSite,
+          type: 'night',
+          guardId: '',
+          isTemporary: true,
+          temporaryDate: formattedDate,
+          temporaryRole: data.role,
+          temporaryPayRate: data.payRatePerSlot
+        }));
+      }
+
+      await Promise.all(promises);
+
+      // Refresh shifts data
+      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
+      toast.success(`Created ${data.daySlots} day and ${data.nightSlots} night temporary slots`);
+      setBulkTempSlotDialog(false);
+    } catch (error) {
+      console.error('Error creating bulk temporary slots:', error);
+      toast.error('Failed to create temporary slots');
+    }
+  };
+
+  const handleEditTemporarySlot = (slot: Shift) => {
+    setEditTempSlotDialog({ isOpen: true, slot });
+  };
+
+  const handleDeleteTemporarySlot = async (slotId: string) => {
+    try {
+      // Check if there's an attendance record for this slot
+      const attendanceRecord = attendanceRecords.find(record => 
+        record.shiftId === slotId && record.status === 'present'
+      );
+      
+      if (attendanceRecord && attendanceRecord.id) {
+        await deleteAttendanceMutation.mutateAsync(attendanceRecord.id);
+      }
+      
+      await deleteShift(slotId);
+      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
+      toast.success('Temporary slot deleted successfully');
+    } catch (error) {
+      console.error('Error deleting temporary slot:', error);
+      toast.error('Failed to delete temporary slot');
+    }
+  };
+
+  const handleAssignGuardToTempSlot = async (slotId: string) => {
+    const slot = shifts.find(s => s.id === slotId);
+    if (!slot) return;
+    
+    const unavailable = await getUnavailableGuards(slot.type);
+    setUnavailableGuards(unavailable);
+    setModalSelectedGuards([]);
+    setGuardSelectionModal({
+      isOpen: true,
+      shiftType: slot.type,
+      title: `Assign Guard to ${slot.temporaryRole} (${slot.type === 'day' ? 'Day' : 'Night'} Shift)`
+    });
+    
+    // Store the slot ID for assignment
+    setEditTempSlotDialog({ isOpen: false, slot: slot });
   };
 
   const getUnavailableGuards = async (shiftType: 'day' | 'night') => {
@@ -687,6 +801,17 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                   Reset
                 </Button>
               </div>
+              {selectedSite && (
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="w-full mt-2"
+                  onClick={() => setBulkTempSlotDialog(true)}
+                >
+                  <UserPlus className="h-3 w-3 mr-1" />
+                  Add Bulk Temp Slots
+                </Button>
+              )}
             </div>
 
             {/* Site Info */}
@@ -736,9 +861,14 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             presentGuards={presentDayGuards}
             unavailableGuards={unavailableDayGuards}
             payRatePerShift={payRatePerShift}
+            temporarySlots={dayTemporarySlots}
+            guards={guards}
             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'day')}
             onAddGuard={() => handleAddGuard('day')}
             onAddTemporarySlot={() => handleAddTemporarySlot('day')}
+            onEditTemporarySlot={handleEditTemporarySlot}
+            onDeleteTemporarySlot={handleDeleteTemporarySlot}
+            onAssignGuardToTempSlot={handleAssignGuardToTempSlot}
             isExpanded={expandedCards.day}
             onToggleExpand={() => handleToggleCardExpansion('day')}
           />
@@ -752,9 +882,14 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             presentGuards={presentNightGuards}
             unavailableGuards={unavailableNightGuards}
             payRatePerShift={payRatePerShift}
+            temporarySlots={nightTemporarySlots}
+            guards={guards}
             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'night')}
             onAddGuard={() => handleAddGuard('night')}
             onAddTemporarySlot={() => handleAddTemporarySlot('night')}
+            onEditTemporarySlot={handleEditTemporarySlot}
+            onDeleteTemporarySlot={handleDeleteTemporarySlot}
+            onAssignGuardToTempSlot={handleAssignGuardToTempSlot}
             isExpanded={expandedCards.night}
             onToggleExpand={() => handleToggleCardExpansion('night')}
           />
@@ -800,6 +935,18 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
         date={selectedDate}
         isSaving={false}
       />
+
+      {/* Bulk Temporary Slot Dialog */}
+      {selectedSiteData && (
+        <BulkTemporarySlotDialog
+          isOpen={bulkTempSlotDialog}
+          onClose={() => setBulkTempSlotDialog(false)}
+          onSave={handleBulkTempSlotSave}
+          site={selectedSiteData}
+          date={selectedDate}
+          isSaving={false}
+        />
+      )}
     </div>
   );
 };

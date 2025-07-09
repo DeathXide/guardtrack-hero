@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Plus, Users, Clock, UserPlus } from 'lucide-react';
 import { Guard, Shift } from '@/types';
 import { formatCurrency } from '@/lib/localService';
+import TemporarySlotManager from './TemporarySlotManager';
 
 interface AttendanceSlotCardProps {
   title: string;
@@ -16,9 +17,13 @@ interface AttendanceSlotCardProps {
   unavailableGuards?: string[];
   payRatePerShift: number;
   temporarySlots?: Shift[];
+  guards: Guard[];
   onGuardSelect: (guardId: string) => void;
   onAddGuard: () => void;
   onAddTemporarySlot: () => void;
+  onEditTemporarySlot: (slot: Shift) => void;
+  onDeleteTemporarySlot: (slotId: string) => void;
+  onAssignGuardToTempSlot: (slotId: string) => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
 }
@@ -32,9 +37,13 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
   unavailableGuards = [],
   payRatePerShift,
   temporarySlots = [],
+  guards,
   onGuardSelect,
   onAddGuard,
   onAddTemporarySlot,
+  onEditTemporarySlot,
+  onDeleteTemporarySlot,
+  onAssignGuardToTempSlot,
   isExpanded,
   onToggleExpand,
 }) => {
@@ -189,6 +198,19 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
               <p className="text-xs">Click "Manage Guards" to assign guards</p>
             </div>
           )}
+
+          {/* Temporary Slots Section */}
+          <TemporarySlotManager
+            title={title}
+            shiftType={shiftType}
+            temporarySlots={temporarySlots}
+            guards={guards}
+            presentGuards={presentGuards}
+            onEditSlot={onEditTemporarySlot}
+            onDeleteSlot={onDeleteTemporarySlot}
+            onAssignGuard={onAssignGuardToTempSlot}
+            onGuardSelect={onGuardSelect}
+          />
         </CardContent>
       )}
     </Card>
