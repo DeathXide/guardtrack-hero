@@ -102,7 +102,10 @@ export function AttendanceDataTable({
   // Load saved table state from sessionStorage
   const [pagination, setPagination] = useState(() => {
     const saved = sessionStorage.getItem('attendance-table-pagination');
-    return saved ? JSON.parse(saved) : { pageIndex: 0, pageSize: 10 };
+    console.log('Loading saved pagination:', saved);
+    const parsed = saved ? JSON.parse(saved) : { pageIndex: 0, pageSize: 10 };
+    console.log('Parsed pagination:', parsed);
+    return parsed;
   });
 
   // Load other saved states
@@ -120,6 +123,7 @@ export function AttendanceDataTable({
 
   // Save table state to sessionStorage whenever it changes
   useEffect(() => {
+    console.log('Saving pagination to sessionStorage:', pagination);
     sessionStorage.setItem('attendance-table-pagination', JSON.stringify(pagination));
   }, [pagination]);
 
@@ -297,7 +301,9 @@ export function AttendanceDataTable({
           onClick={(e) => {
             e.stopPropagation();
             // Save current table state before navigating
+            console.log('Clicking Mark Attendance - Current pagination:', pagination);
             sessionStorage.setItem('attendance-table-return-flag', 'true');
+            sessionStorage.setItem('attendance-table-pagination', JSON.stringify(pagination));
             onSiteClick(site.id);
           }}
             >
