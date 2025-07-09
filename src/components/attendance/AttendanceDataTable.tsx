@@ -307,19 +307,19 @@ export function AttendanceDataTable({
         {/* Status Filter */}
         <Select
           value={
-            (table.getColumn("overallStatus")?.getFilterValue() as string[])?.join(",") || ""
+            (table.getColumn("overallStatus")?.getFilterValue() as string[])?.join(",") || "all"
           }
           onValueChange={(value) => {
             table
               .getColumn("overallStatus")
-              ?.setFilterValue(value ? value.split(",") : []);
+              ?.setFilterValue(value === "all" ? [] : value.split(","));
           }}
         >
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Status</SelectItem>
+            <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="fully-marked">Fully Marked</SelectItem>
             <SelectItem value="partially-marked">Partially Marked</SelectItem>
             <SelectItem value="not-marked">Not Marked</SelectItem>
