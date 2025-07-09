@@ -45,8 +45,10 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
   isExpanded,
   onToggleExpand,
 }) => {
+  // Include temporary slots in total count
+  const totalSlotsWithTemp = totalSlots + temporarySlots.length;
   const filledSlots = presentGuards.length;
-  const completionPercentage = totalSlots > 0 ? (filledSlots / totalSlots) * 100 : 0;
+  const completionPercentage = totalSlotsWithTemp > 0 ? (filledSlots / totalSlotsWithTemp) * 100 : 0;
 
   const getInitials = (name: string) => {
     return name
@@ -91,7 +93,7 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
               variant={completionPercentage === 100 ? "default" : "secondary"}
               className="px-2 py-1"
             >
-              {filledSlots}/{totalSlots}
+              {filledSlots}/{totalSlotsWithTemp}
             </Badge>
           </div>
         </div>
@@ -186,18 +188,6 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
             </div>
           )}
 
-          {/* Temporary Slots Section */}
-          <TemporarySlotManager
-            title={title}
-            shiftType={shiftType}
-            temporarySlots={temporarySlots}
-            guards={guards}
-            presentGuards={presentGuards}
-            onEditSlot={onEditTemporarySlot}
-            onDeleteSlot={onDeleteTemporarySlot}
-            onGuardSelect={onGuardSelect}
-            onGuardChange={onAssignGuardToTempSlot}
-          />
         </CardContent>
       )}
     </Card>
