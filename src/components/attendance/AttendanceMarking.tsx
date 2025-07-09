@@ -814,7 +814,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                   onClick={() => setBulkTempSlotDialog(true)}
                 >
                   <UserPlus className="h-3 w-3 mr-1" />
-                  Add/Manage Temp Slots
+                  Temp Slots
                 </Button>
               )}
             </div>
