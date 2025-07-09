@@ -1,6 +1,5 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { format } from "date-fns";
-import { useSearchParams } from "react-router-dom";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -99,26 +98,10 @@ export function AttendanceDataTable({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
-  const [searchParams, setSearchParams] = useSearchParams();
-  
-  // Get initial page from URL params
-  const initialPage = parseInt(searchParams.get('page') || '0', 10);
   const [pagination, setPagination] = useState({
-    pageIndex: initialPage,
+    pageIndex: 0,
     pageSize: 10,
   });
-
-  console.log('Current pagination state:', pagination);
-  console.log('URL page param:', searchParams.get('page'));
-  console.log('Initial page:', initialPage);
-
-  // Update URL when pagination changes
-  useEffect(() => {
-    const newSearchParams = new URLSearchParams(searchParams);
-    newSearchParams.set('page', pagination.pageIndex.toString());
-    setSearchParams(newSearchParams, { replace: true });
-    console.log('Updated URL with page:', pagination.pageIndex);
-  }, [pagination.pageIndex, searchParams, setSearchParams]);
 
   // Transform data to include status and earnings
   const data = useMemo<SiteWithStatus[]>(() => {
