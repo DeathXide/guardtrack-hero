@@ -927,14 +927,16 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
       />
 
       {/* Temporary Slot Dialog */}
-      <TemporarySlotDialog
-        isOpen={tempSlotDialog.isOpen}
-        onClose={() => setTempSlotDialog({ isOpen: false, shiftType: 'day' })}
-        onSave={handleSaveTemporarySlot}
-        site={selectedSiteData!}
-        date={selectedDate}
-        isSaving={false}
-      />
+      {selectedSiteData && (
+        <TemporarySlotDialog
+          isOpen={tempSlotDialog.isOpen}
+          onClose={() => setTempSlotDialog({ isOpen: false, shiftType: 'day' })}
+          onSave={handleSaveTemporarySlot}
+          site={selectedSiteData}
+          date={selectedDate}
+          isSaving={false}
+        />
+      )}
 
       {/* Bulk Temporary Slot Dialog */}
       {selectedSiteData && (
