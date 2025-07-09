@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -269,6 +269,99 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     return unavailable;
   };
 
+  const handleCopyYesterday = async () => {
+    if (!selectedSite) {
+      toast.error('Please select a site first');
+      return;
+    }
+
+    const yesterday = subDays(selectedDate, 1);
+    const yesterdayFormatted = format(yesterday, 'yyyy-MM-dd');
+    
+    try {
+      // Get yesterday's attendance records
+      const yesterdayRecords = await fetchAttendanceByDate(yesterdayFormatted);
+      
+      // Filter records for the selected site
+      const siteYesterdayRecords = yesterdayRecords.filter(record => {
+        const shift = shifts.find(s => s.id === record.shiftId);
+        return shift?.siteId === selectedSite && record.status === 'present';
+      });
+
+      if (siteYesterdayRecords.length === 0) {
+        toast.info('No attendance records found for yesterday at this site');
+        return;
+      }
+
+      // Mark the same guards present for today
+      for (const record of siteYesterdayRecords) {
+        const shift = shifts.find(s => s.id === record.shiftId);
+        if (shift) {
+          // Check if guard is available today
+          const isMarkedElsewhere = await isGuardMarkedPresentElsewhere(
+            record.guardId, 
+            formattedDate, 
+            shift.type, 
+            selectedSite
+          );
+          
+          if (!isMarkedElsewhere) {
+            // Check slot limits
+            const shiftType = shift.type;
+            const maxSlots = shiftType === 'day' ? daySlots : nightSlots;
+            const currentSelected = selectedGuards[shiftType] || [];
+            
+            if (currentSelected.length < maxSlots) {
+              await markAttendanceMutation.mutateAsync({
+                date: formattedDate,
+                shiftId: shift.id,
+                guardId: record.guardId,
+                status: 'present' as const
+              });
+            }
+          }
+        }
+      }
+      
+      toast.success('Yesterday\'s attendance copied successfully');
+    } catch (error) {
+      console.error('Error copying yesterday\'s attendance:', error);
+      toast.error('Failed to copy yesterday\'s attendance');
+    }
+  };
+
+  const handleReset = async () => {
+    if (!selectedSite) {
+      toast.error('Please select a site first');
+      return;
+    }
+
+    try {
+      // Get today's attendance records for this site
+      const todayRecords = attendanceRecords.filter(record => {
+        const shift = shifts.find(s => s.id === record.shiftId);
+        return shift?.siteId === selectedSite && record.status === 'present';
+      });
+
+      if (todayRecords.length === 0) {
+        toast.info('No attendance records to clear for today');
+        return;
+      }
+
+      // Delete all attendance records for today at this site
+      for (const record of todayRecords) {
+        if (record.id) {
+          await deleteAttendanceMutation.mutateAsync(record.id);
+        }
+      }
+      
+      toast.success('All attendance records cleared for today');
+    } catch (error) {
+      console.error('Error resetting attendance:', error);
+      toast.error('Failed to reset attendance');
+    }
+  };
+
   const handleGuardSelectionConfirm = async () => {
     const { shiftType } = guardSelectionModal;
     const currentlyAssigned = shiftType === 'day' ? dayShiftGuards.map(g => g.id) : nightShiftGuards.map(g => g.id);
@@ -374,11 +467,23 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             <div className="space-y-2">
               <Label>Quick Actions</Label>
               <div className="flex space-x-2">
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={handleCopyYesterday}
+                  disabled={markAttendanceMutation.isPending}
+                >
                   <Copy className="h-3 w-3 mr-1" />
                   Copy Yesterday
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={handleReset}
+                  disabled={deleteAttendanceMutation.isPending}
+                >
                   <RefreshCw className="h-3 w-3 mr-1" />
                   Reset
                 </Button>
