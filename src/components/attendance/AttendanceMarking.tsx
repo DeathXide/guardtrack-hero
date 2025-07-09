@@ -729,133 +729,140 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header Controls */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Mark Attendance</CardTitle>
-          <CardDescription>
-            Select date and site, then mark guard attendance using the visual interface
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Date Selection */}
-            <div className="space-y-2">
-              <Label>Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(selectedDate, 'PPP')}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Site Selection */}
-            <div className="space-y-2">
-              <Label>Site</Label>
-              <Select value={selectedSite} onValueChange={setSelectedSite}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a site" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sites.map(site => (
-                    <SelectItem key={site.id} value={site.id}>
-                      {site.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="space-y-2">
-              <Label>Quick Actions</Label>
-              <div className="flex space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={handleCopyYesterday}
-                  disabled={markAttendanceMutation.isPending}
-                >
-                  <Copy className="h-3 w-3 mr-1" />
-                  Copy Yesterday
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={handleReset}
-                  disabled={deleteAttendanceMutation.isPending}
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Reset
-                </Button>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-6 space-y-8">
+        {/* Header Controls */}
+        <Card className="shadow-sm border-0 bg-card">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-2xl font-semibold text-foreground">Mark Attendance</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Select date and site, then mark guard attendance using the visual interface
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Date Selection */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-foreground">Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal h-10 px-3 border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <span className="text-foreground">{format(selectedDate, 'PPP')}</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-[1000] bg-popover border border-border shadow-lg" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => date && setSelectedDate(date)}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-              {selectedSite && (
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  className="w-full mt-2"
-                  onClick={() => setBulkTempSlotDialog(true)}
-                >
-                  <UserPlus className="h-3 w-3 mr-1" />
-                  Temp Slots
-                </Button>
-              )}
-            </div>
 
-            {/* Site Info */}
-            {selectedSite && (
-              <div className="space-y-2">
-                <Label>Site Details</Label>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span>Day slots:</span>
-                    <Badge variant="outline">{daySlots}</Badge>
+              {/* Site Selection */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-foreground">Site</Label>
+                <Select value={selectedSite} onValueChange={setSelectedSite}>
+                  <SelectTrigger className="w-full h-10 border-input bg-background hover:bg-accent">
+                    <SelectValue placeholder="Select a site" className="text-foreground" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[1000] bg-popover border border-border shadow-lg">
+                    {sites.map(site => (
+                      <SelectItem key={site.id} value={site.id} className="hover:bg-accent hover:text-accent-foreground">
+                        {site.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-foreground">Quick Actions</Label>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1 h-9 text-xs hover:bg-accent hover:text-accent-foreground"
+                      onClick={handleCopyYesterday}
+                      disabled={markAttendanceMutation.isPending}
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Copy Yesterday
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1 h-9 text-xs hover:bg-accent hover:text-accent-foreground"
+                      onClick={handleReset}
+                      disabled={deleteAttendanceMutation.isPending}
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      Reset
+                    </Button>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Night slots:</span>
-                    <Badge variant="outline">{nightSlots}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Pay rate:</span>
-                    <div className="flex items-center">
-                      <Badge variant="outline">{formatCurrency(payRatePerShift)}</Badge>
+                  {selectedSite && (
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="w-full h-9 text-xs bg-primary hover:bg-primary/90 text-primary-foreground"
+                      onClick={() => setBulkTempSlotDialog(true)}
+                    >
+                      <UserPlus className="h-3 w-3 mr-1" />
+                      Temp Slots
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Site Info */}
+              {selectedSite && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-foreground">Site Details</Label>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-sm text-muted-foreground">Day slots:</span>
+                      <Badge variant="outline" className="text-xs font-medium">{daySlots}</Badge>
+                    </div>
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-sm text-muted-foreground">Night slots:</span>
+                      <Badge variant="outline" className="text-xs font-medium">{nightSlots}</Badge>
+                    </div>
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-sm text-muted-foreground">Pay rate:</span>
+                      <Badge variant="outline" className="text-xs font-medium">{formatCurrency(payRatePerShift)}</Badge>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-      {!selectedSite ? (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertTitle>No site selected</AlertTitle>
-          <AlertDescription>
-            Please select a site to view and mark attendance
-          </AlertDescription>
-        </Alert>
-      ) : shiftsLoading ? (
-        <div className="flex items-center justify-center h-64">Loading shifts...</div>
-      ) : (
+        {!selectedSite ? (
+          <Alert className="border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950/20">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="text-blue-800 dark:text-blue-200">No site selected</AlertTitle>
+            <AlertDescription className="text-blue-700 dark:text-blue-300">
+              Please select a site to view and mark attendance
+            </AlertDescription>
+          </Alert>
+        ) : shiftsLoading ? (
+          <div className="flex items-center justify-center h-64 bg-card rounded-lg border">
+            <div className="text-center space-y-2">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="text-muted-foreground">Loading shifts...</p>
+            </div>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Day Shift Card */}
           <AttendanceSlotCard
@@ -897,61 +904,62 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             onToggleExpand={() => handleToggleCardExpansion('night')}
           />
         </div>
-      )}
+        )}
 
-      {/* Guard Selection Modal */}
-      <GuardSelectionModal
-        isOpen={guardSelectionModal.isOpen}
-        onClose={() => setGuardSelectionModal({ isOpen: false, shiftType: 'day', title: '' })}
-        guards={guards}
-        selectedGuards={modalSelectedGuards}
-        onSelectionChange={setModalSelectedGuards}
-        onConfirm={handleGuardSelectionConfirm}
-        maxSelections={undefined} // Allow unlimited guard assignment
-        title={guardSelectionModal.title}
-        unavailableGuards={unavailableGuards}
-      />
-
-      {/* Unassign Confirmation Dialog */}
-      <UnassignGuardConfirmationDialog
-        isOpen={showUnassignConfirmation}
-        onConfirm={handleConfirmUnassign}
-        onCancel={handleCancelUnassign}
-        siteName={selectedSiteData?.name || 'Unknown Site'}
-        date={selectedDate}
-        guards={guardsToUnassign.map(info => {
-          const guard = guards.find(g => g.id === info.guardId);
-          return {
-            id: info.guardId,
-            name: guard?.name || 'Unknown Guard',
-            badgeNumber: guard?.badgeNumber || 'N/A'
-          };
-        })}
-      />
-
-      {/* Temporary Slot Dialog */}
-      {selectedSiteData && (
-        <TemporarySlotDialog
-          isOpen={tempSlotDialog.isOpen}
-          onClose={() => setTempSlotDialog({ isOpen: false, shiftType: 'day' })}
-          onSave={handleSaveTemporarySlot}
-          site={selectedSiteData}
-          date={selectedDate}
-          isSaving={false}
+        {/* Guard Selection Modal */}
+        <GuardSelectionModal
+          isOpen={guardSelectionModal.isOpen}
+          onClose={() => setGuardSelectionModal({ isOpen: false, shiftType: 'day', title: '' })}
+          guards={guards}
+          selectedGuards={modalSelectedGuards}
+          onSelectionChange={setModalSelectedGuards}
+          onConfirm={handleGuardSelectionConfirm}
+          maxSelections={undefined} // Allow unlimited guard assignment
+          title={guardSelectionModal.title}
+          unavailableGuards={unavailableGuards}
         />
-      )}
 
-      {/* Bulk Temporary Slot Dialog */}
-      {selectedSiteData && (
-        <BulkTemporarySlotDialog
-          isOpen={bulkTempSlotDialog}
-          onClose={() => setBulkTempSlotDialog(false)}
-          onSave={handleBulkTempSlotSave}
-          site={selectedSiteData}
+        {/* Unassign Confirmation Dialog */}
+        <UnassignGuardConfirmationDialog
+          isOpen={showUnassignConfirmation}
+          onConfirm={handleConfirmUnassign}
+          onCancel={handleCancelUnassign}
+          siteName={selectedSiteData?.name || 'Unknown Site'}
           date={selectedDate}
-          isSaving={false}
+          guards={guardsToUnassign.map(info => {
+            const guard = guards.find(g => g.id === info.guardId);
+            return {
+              id: info.guardId,
+              name: guard?.name || 'Unknown Guard',
+              badgeNumber: guard?.badgeNumber || 'N/A'
+            };
+          })}
         />
-      )}
+
+        {/* Temporary Slot Dialog */}
+        {selectedSiteData && (
+          <TemporarySlotDialog
+            isOpen={tempSlotDialog.isOpen}
+            onClose={() => setTempSlotDialog({ isOpen: false, shiftType: 'day' })}
+            onSave={handleSaveTemporarySlot}
+            site={selectedSiteData}
+            date={selectedDate}
+            isSaving={false}
+          />
+        )}
+
+        {/* Bulk Temporary Slot Dialog */}
+        {selectedSiteData && (
+          <BulkTemporarySlotDialog
+            isOpen={bulkTempSlotDialog}
+            onClose={() => setBulkTempSlotDialog(false)}
+            onSave={handleBulkTempSlotSave}
+            site={selectedSiteData}
+            date={selectedDate}
+            isSaving={false}
+          />
+        )}
+      </div>
     </div>
   );
 };
