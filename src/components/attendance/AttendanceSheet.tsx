@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { format, getDaysInMonth, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,13 @@ const AttendanceSheet: React.FC<AttendanceSheetProps> = ({
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedSite, setSelectedSite] = useState<string>(preselectedSiteId || '');
+
+  // Update selected site when preselectedSiteId changes
+  useEffect(() => {
+    if (preselectedSiteId) {
+      setSelectedSite(preselectedSiteId);
+    }
+  }, [preselectedSiteId]);
 
   const currentMonth = format(selectedDate, 'yyyy-MM');
   const monthStart = startOfMonth(selectedDate);
