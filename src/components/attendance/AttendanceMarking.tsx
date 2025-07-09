@@ -170,8 +170,19 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     const isSelected = currentSelected.includes(guardId);
     const maxSlots = shiftType === 'day' ? daySlots : nightSlots;
     
+    // Validate inputs
+    if (!selectedSite) {
+      toast.error('Please select a site first');
+      return;
+    }
+    
+    if (maxSlots === 0) {
+      toast.error(`No ${shiftType} slots available for this site`);
+      return;
+    }
+    
     if (isSelected) {
-      // Remove guard - remove from attendance and unassign from site
+      // Remove guard - remove from attendance only (keep shift assignment)
       const record = attendanceRecords.find(record => {
         const shift = shifts.find(s => s.id === record.shiftId);
         return record.guardId === guardId && 
@@ -181,17 +192,39 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
       });
       
       if (record && record.id) {
-        await deleteAttendanceMutation.mutateAsync(record.id);
+        try {
+          await deleteAttendanceMutation.mutateAsync(record.id);
+          setSelectedGuards({
+            ...selectedGuards,
+            [shiftType]: currentSelected.filter(id => id !== guardId)
+          });
+        } catch (error) {
+          console.error('Error removing attendance:', error);
+          toast.error('Failed to remove attendance');
+        }
+      } else {
+        // If no attendance record found, just update local state
+        setSelectedGuards({
+          ...selectedGuards,
+          [shiftType]: currentSelected.filter(id => id !== guardId)
+        });
       }
-      
-      setSelectedGuards({
-        ...selectedGuards,
-        [shiftType]: currentSelected.filter(id => id !== guardId)
-      });
     } else {
       // Check slot limit first
       if (currentSelected.length >= maxSlots) {
         toast.error(`Cannot mark more than ${maxSlots} guards present for ${shiftType} shift`);
+        return;
+      }
+      
+      // Check if guard is assigned to this shift
+      const assignedShift = shifts.find(s => 
+        s.type === shiftType && 
+        s.siteId === selectedSite && 
+        s.guardId === guardId
+      );
+      
+      if (!assignedShift) {
+        toast.error(`Guard is not assigned to ${shiftType} shift at this site. Please assign them first.`);
         return;
       }
       
@@ -210,23 +243,20 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
         }
         
         // Mark attendance
-        const shift = shifts.find(s => s.type === shiftType && s.siteId === selectedSite);
-        if (shift) {
-          await markAttendanceMutation.mutateAsync({
-            date: formattedDate,
-            shiftId: shift.id,
-            guardId,
-            status: 'present' as const
-          });
-        }
+        await markAttendanceMutation.mutateAsync({
+          date: formattedDate,
+          shiftId: assignedShift.id,
+          guardId,
+          status: 'present' as const
+        });
         
         setSelectedGuards({
           ...selectedGuards,
           [shiftType]: [...currentSelected, guardId]
         });
       } catch (error) {
-        console.error('Error checking guard status:', error);
-        toast.error('Failed to check guard availability');
+        console.error('Error marking attendance:', error);
+        toast.error('Failed to mark attendance');
       }
     }
   };
@@ -293,37 +323,84 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
         return;
       }
 
+      let successCount = 0;
+      let skippedCount = 0;
+
       // Mark the same guards present for today
       for (const record of siteYesterdayRecords) {
-        const shift = shifts.find(s => s.id === record.shiftId);
-        if (shift) {
+        const yesterdayShift = shifts.find(s => s.id === record.shiftId);
+        if (yesterdayShift) {
+          // Find the current shift assignment for this guard and shift type
+          const currentShift = shifts.find(s => 
+            s.type === yesterdayShift.type && 
+            s.siteId === selectedSite && 
+            s.guardId === record.guardId
+          );
+
+          if (!currentShift) {
+            console.log(`Guard ${record.guardId} not assigned to ${yesterdayShift.type} shift anymore, skipping`);
+            skippedCount++;
+            continue;
+          }
+
           // Check if guard is available today
           const isMarkedElsewhere = await isGuardMarkedPresentElsewhere(
             record.guardId, 
             formattedDate, 
-            shift.type, 
+            yesterdayShift.type, 
             selectedSite
           );
           
-          if (!isMarkedElsewhere) {
-            // Check slot limits
-            const shiftType = shift.type;
-            const maxSlots = shiftType === 'day' ? daySlots : nightSlots;
-            const currentSelected = selectedGuards[shiftType] || [];
-            
-            if (currentSelected.length < maxSlots) {
-              await markAttendanceMutation.mutateAsync({
-                date: formattedDate,
-                shiftId: shift.id,
-                guardId: record.guardId,
-                status: 'present' as const
-              });
-            }
+          if (isMarkedElsewhere) {
+            console.log(`Guard ${record.guardId} marked elsewhere, skipping`);
+            skippedCount++;
+            continue;
           }
+
+          // Check slot limits
+          const shiftType = yesterdayShift.type;
+          const maxSlots = shiftType === 'day' ? daySlots : nightSlots;
+          const currentSelected = selectedGuards[shiftType] || [];
+          
+          if (currentSelected.length >= maxSlots) {
+            console.log(`No slots available for ${shiftType} shift, skipping`);
+            skippedCount++;
+            continue;
+          }
+
+          // Check if already marked present today
+          const alreadyMarked = attendanceRecords.some(ar => 
+            ar.guardId === record.guardId && 
+            ar.status === 'present' &&
+            shifts.find(s => s.id === ar.shiftId)?.type === shiftType &&
+            shifts.find(s => s.id === ar.shiftId)?.siteId === selectedSite
+          );
+
+          if (alreadyMarked) {
+            console.log(`Guard ${record.guardId} already marked present, skipping`);
+            skippedCount++;
+            continue;
+          }
+
+          await markAttendanceMutation.mutateAsync({
+            date: formattedDate,
+            shiftId: currentShift.id,
+            guardId: record.guardId,
+            status: 'present' as const
+          });
+          successCount++;
         }
       }
       
-      toast.success('Yesterday\'s attendance copied successfully');
+      if (successCount > 0) {
+        toast.success(`Copied ${successCount} attendance records from yesterday`);
+      }
+      if (skippedCount > 0) {
+        toast.info(`Skipped ${skippedCount} guards (not assigned, unavailable, or already marked)`);
+      }
+      if (successCount === 0 && skippedCount === 0) {
+        toast.info('No attendance records could be copied');
+      }
     } catch (error) {
       console.error('Error copying yesterday\'s attendance:', error);
       toast.error('Failed to copy yesterday\'s attendance');
@@ -408,6 +485,30 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
 
   if (sitesLoading || guardsLoading) {
     return <div className="flex items-center justify-center h-64">Loading sites and guards...</div>;
+  }
+
+  if (sites.length === 0) {
+    return (
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertTitle>No sites available</AlertTitle>
+        <AlertDescription>
+          Please create sites first before marking attendance. Go to Sites page to add a new site.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (guards.length === 0) {
+    return (
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertTitle>No guards available</AlertTitle>
+        <AlertDescription>
+          Please create guards first before marking attendance. Go to Guards page to add new guards.
+        </AlertDescription>
+      </Alert>
+    );
   }
 
   return (
