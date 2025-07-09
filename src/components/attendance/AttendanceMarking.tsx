@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Calendar as CalendarIcon, Check, Copy, RefreshCw, Info } from 'lucide-react';
+import { Calendar as CalendarIcon, Check, Copy, RefreshCw, Info, FileSpreadsheet } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,6 +28,7 @@ import {
 } from '@/lib/localService';
 import { checkGuardsAttendanceForToday, deleteGuardsTodayAttendance, GuardAttendanceInfo } from './attendanceValidation';
 import UnassignGuardConfirmationDialog from './UnassignGuardConfirmationDialog';
+import AttendanceSheet from './AttendanceSheet';
 import { Site, Guard, Shift, AttendanceRecord, SiteEarnings } from '@/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -55,6 +56,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     shiftType: 'day' | 'night'; 
     selectedGuards: string[]; 
   } | null>(null);
+  const [showAttendanceSheet, setShowAttendanceSheet] = useState(false);
   
   const queryClient = useQueryClient();
   
@@ -625,11 +627,10 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             {/* Quick Actions */}
             <div className="space-y-2">
               <Label>Quick Actions</Label>
-              <div className="flex space-x-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="flex-1"
                   onClick={handleCopyYesterday}
                   disabled={markAttendanceMutation.isPending}
                 >
@@ -639,12 +640,21 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="flex-1"
                   onClick={handleReset}
                   disabled={deleteAttendanceMutation.isPending}
                 >
                   <RefreshCw className="h-3 w-3 mr-1" />
                   Reset
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="col-span-2"
+                  onClick={() => setShowAttendanceSheet(true)}
+                  disabled={!selectedSite}
+                >
+                  <FileSpreadsheet className="h-3 w-3 mr-1" />
+                  View Attendance Sheet
                 </Button>
               </div>
             </div>
@@ -725,6 +735,13 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             badgeNumber: guard?.badgeNumber || 'N/A'
           };
         })}
+      />
+
+      {/* Attendance Sheet Dialog */}
+      <AttendanceSheet
+        isOpen={showAttendanceSheet}
+        onClose={() => setShowAttendanceSheet(false)}
+        preselectedSiteId={selectedSite}
       />
     </div>
   );
