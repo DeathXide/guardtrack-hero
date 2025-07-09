@@ -809,7 +809,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                   onClick={() => setBulkTempSlotDialog(true)}
                 >
                   <UserPlus className="h-3 w-3 mr-1" />
-                  Add Bulk Temp Slots
+                  Add/Manage Temp Slots
                 </Button>
               )}
             </div>
@@ -865,7 +865,6 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             guards={guards}
             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'day')}
             onAddGuard={() => handleAddGuard('day')}
-            onAddTemporarySlot={() => handleAddTemporarySlot('day')}
             onEditTemporarySlot={handleEditTemporarySlot}
             onDeleteTemporarySlot={handleDeleteTemporarySlot}
             onAssignGuardToTempSlot={handleAssignGuardToTempSlot}
@@ -886,7 +885,6 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             guards={guards}
             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'night')}
             onAddGuard={() => handleAddGuard('night')}
-            onAddTemporarySlot={() => handleAddTemporarySlot('night')}
             onEditTemporarySlot={handleEditTemporarySlot}
             onDeleteTemporarySlot={handleDeleteTemporarySlot}
             onAssignGuardToTempSlot={handleAssignGuardToTempSlot}

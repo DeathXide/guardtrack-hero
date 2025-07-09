@@ -20,7 +20,6 @@ interface AttendanceSlotCardProps {
   guards: Guard[];
   onGuardSelect: (guardId: string) => void;
   onAddGuard: () => void;
-  onAddTemporarySlot: () => void;
   onEditTemporarySlot: (slot: Shift) => void;
   onDeleteTemporarySlot: (slotId: string) => void;
   onAssignGuardToTempSlot: (slotId: string) => void;
@@ -40,7 +39,6 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
   guards,
   onGuardSelect,
   onAddGuard,
-  onAddTemporarySlot,
   onEditTemporarySlot,
   onDeleteTemporarySlot,
   onAssignGuardToTempSlot,
@@ -119,26 +117,15 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
           {/* Header with Add Guard Button */}
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Assigned Guards ({assignedGuards.length})</span>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onAddTemporarySlot}
-                className="h-8"
-              >
-                <UserPlus className="h-3 w-3 mr-1" />
-                Add Temp Slot
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onAddGuard}
-                className="h-8"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Manage Guards
-              </Button>
-            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onAddGuard}
+              className="h-8"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Manage Guards
+            </Button>
           </div>
 
           {/* Assigned Guards List */}
