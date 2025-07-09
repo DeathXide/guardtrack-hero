@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Helmet } from "react-helmet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import AttendanceMarking from "@/components/attendance/AttendanceMarking";
+import AttendanceMarkingEnhanced from "@/components/attendance/AttendanceMarkingEnhanced";
 import ShiftAllocation from "@/components/attendance/ShiftAllocation";
 import AttendanceOverview from "@/components/attendance/AttendanceOverview";
 
@@ -35,7 +35,7 @@ export default function Attendance() {
           <AttendanceOverview onSiteSelect={handleSiteSelect} />
         </TabsContent>
         <TabsContent value="mark-attendance">
-          <AttendanceMarking preselectedSiteId={selectedSite} />
+          <AttendanceMarkingEnhanced preselectedSiteId={selectedSite} />
         </TabsContent>
         <TabsContent value="shift-allocation">
           <ShiftAllocation />
