@@ -1,24 +1,15 @@
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertCircle, Calendar as CalendarIcon, CheckCircle2, Clock, IndianRupee, Search, Filter } from "lucide-react";
+import { AlertCircle, Calendar as CalendarIcon, CheckCircle2, Clock } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AttendanceDataTable } from "./AttendanceDataTable";
 import { 
   fetchSites, 
   fetchAttendanceByDate, 
@@ -35,8 +26,6 @@ interface AttendanceOverviewProps {
 
 const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const navigate = useNavigate();
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
   const currentMonth = format(selectedDate, "yyyy-MM");
@@ -187,29 +176,6 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
     enabled: sites.length > 0
   });
 
-  // Filter and search logic
-  const filteredSites = useMemo(() => {
-    let filtered = sites;
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(site =>
-        site.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        site.location.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Apply status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(site => {
-        const { status } = getSiteAttendanceStatus(site);
-        return status === statusFilter;
-      });
-    }
-
-    return filtered;
-  }, [sites, searchQuery, statusFilter, allShifts, attendanceRecords, formattedDate]);
-
   if (sitesLoading || attendanceLoading || shiftsLoading || earningsLoading) {
     return <div className="flex items-center justify-center h-64">Loading attendance data...</div>;
   }
@@ -262,34 +228,6 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
             </div>
           </div>
 
-          {/* Search and Filter Controls */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search sites by name or location..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="fully-marked">Fully Marked</SelectItem>
-                  <SelectItem value="partially-marked">Partially Marked</SelectItem>
-                  <SelectItem value="not-marked">Not Marked</SelectItem>
-                  <SelectItem value="no-shifts">No Shifts</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
           {sites.length === 0 ? (
             <Alert>
               <AlertCircle className="h-4 w-4" />
@@ -299,70 +237,12 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
               </AlertDescription>
             </Alert>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Site Name</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Day Shift</TableHead>
-                    <TableHead>Night Shift</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Monthly Earnings</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                 <TableBody>
-                   {filteredSites.length === 0 ? (
-                     <TableRow>
-                       <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                         {searchQuery || statusFilter !== "all" 
-                           ? "No sites match your search criteria" 
-                           : "No sites available"
-                         }
-                       </TableCell>
-                     </TableRow>
-                   ) : (
-                     filteredSites.map((site) => {
-                       const { status, dayStatus, nightStatus } = getSiteAttendanceStatus(site);
-                       const earnings = siteEarningsMap[site.id] || {
-                         totalShifts: 0,
-                         allocatedAmount: 0,
-                         guardCosts: 0,
-                         netEarnings: 0
-                       };
-                       
-                       return (
-                         <TableRow key={site.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleSiteClick(site.id)}>
-                           <TableCell className="font-medium">{site.name}</TableCell>
-                           <TableCell>{site.location}</TableCell>
-                           <TableCell>{getShiftStatusBadge(dayStatus)}</TableCell>
-                           <TableCell>{getShiftStatusBadge(nightStatus)}</TableCell>
-                           <TableCell>{getStatusBadge(status)}</TableCell>
-                           <TableCell>
-                             <div className="flex items-center">
-                               <IndianRupee className="h-3 w-3 mr-1" />
-                               <span className={earnings.netEarnings > 0 ? "text-green-600" : 
-                                             earnings.netEarnings < 0 ? "text-red-600" : ""}>
-                                 {formatCurrency(earnings.netEarnings)}
-                               </span>
-                             </div>
-                           </TableCell>
-                           <TableCell className="text-right">
-                             <Button size="sm" variant="outline" onClick={(e) => {
-                               e.stopPropagation();
-                               handleSiteClick(site.id);
-                             }}>
-                               Mark Attendance
-                             </Button>
-                           </TableCell>
-                         </TableRow>
-                       );
-                     })
-                   )}
-                 </TableBody>
-              </Table>
-            </div>
+            <AttendanceDataTable
+              sites={sites}
+              siteEarningsMap={siteEarningsMap}
+              getSiteAttendanceStatus={getSiteAttendanceStatus}
+              onSiteClick={handleSiteClick}
+            />
           )}
         </div>
       </CardContent>
