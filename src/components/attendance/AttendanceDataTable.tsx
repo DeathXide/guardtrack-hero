@@ -35,13 +35,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Site, SiteEarnings } from "@/types";
 import { formatCurrency } from "@/lib/localService";
 
@@ -311,27 +304,6 @@ export function AttendanceDataTable({
           className="max-w-sm"
         />
 
-        {/* Status Filter */}
-        <Select
-          value={
-            (table.getColumn("overallStatus")?.getFilterValue() as string[])?.join(",") || ""
-          }
-          onValueChange={(value) => {
-            table
-              .getColumn("overallStatus")
-              ?.setFilterValue(value ? value.split(",") : []);
-          }}
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="fully-marked">Fully Marked</SelectItem>
-            <SelectItem value="partially-marked">Partially Marked</SelectItem>
-            <SelectItem value="not-marked">Not Marked</SelectItem>
-            <SelectItem value="no-shifts">No Shifts</SelectItem>
-          </SelectContent>
-        </Select>
 
         {/* Column visibility */}
         <DropdownMenu>
