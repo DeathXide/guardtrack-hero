@@ -104,6 +104,7 @@ export function AttendanceDataTable({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [globalFilter, setGlobalFilter] = useState("");
 
   // Transform data to include status and earnings
   const data = useMemo<SiteWithStatus[]>(() => {
@@ -278,6 +279,15 @@ export function AttendanceDataTable({
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: (row, columnId, filterValue) => {
+      const site = row.original;
+      const searchValue = filterValue.toLowerCase();
+      return (
+        site.name.toLowerCase().includes(searchValue) ||
+        (site.location || "").toLowerCase().includes(searchValue)
+      );
+    },
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -287,6 +297,7 @@ export function AttendanceDataTable({
       sorting,
       columnFilters,
       columnVisibility,
+      globalFilter,
     },
   });
 
@@ -294,30 +305,27 @@ export function AttendanceDataTable({
     <div className="w-full">
       <div className="flex items-center py-4 gap-4">
         <Input
-          placeholder="Filter sites..."
-          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("name")?.setFilterValue(event.target.value)
-          }
+          placeholder="Search by site name or location..."
+          value={globalFilter ?? ""}
+          onChange={(event) => setGlobalFilter(String(event.target.value))}
           className="max-w-sm"
         />
 
         {/* Status Filter */}
         <Select
           value={
-            (table.getColumn("overallStatus")?.getFilterValue() as string[])?.join(",") || "all"
+            (table.getColumn("overallStatus")?.getFilterValue() as string[])?.join(",") || ""
           }
           onValueChange={(value) => {
             table
               .getColumn("overallStatus")
-              ?.setFilterValue(value === "all" ? [] : value.split(","));
+              ?.setFilterValue(value ? value.split(",") : []);
           }}
         >
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="fully-marked">Fully Marked</SelectItem>
             <SelectItem value="partially-marked">Partially Marked</SelectItem>
             <SelectItem value="not-marked">Not Marked</SelectItem>
