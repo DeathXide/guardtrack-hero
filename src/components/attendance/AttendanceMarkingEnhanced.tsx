@@ -553,11 +553,12 @@ const AttendanceMarkingEnhanced: React.FC<AttendanceMarkingEnhancedProps> = ({ p
             <AttendanceSlotCard
               shiftType="day"
               title="Day Shift"
+              totalSlots={daySlots}
               assignedGuards={dayShiftGuards}
-              selectedGuards={selectedGuards.day || []}
+              presentGuards={selectedGuards.day || []}
               onGuardSelect={(guardId) => handleGuardSelect(guardId, 'day')}
               onAddGuard={() => {/* handle add guard */}}
-              onToggleExpansion={() => {
+              onToggleExpand={() => {
                 setExpandedCards({
                   ...expandedCards,
                   day: !expandedCards.day
@@ -573,11 +574,12 @@ const AttendanceMarkingEnhanced: React.FC<AttendanceMarkingEnhancedProps> = ({ p
             <AttendanceSlotCard
               shiftType="night"
               title="Night Shift"
+              totalSlots={nightSlots}
               assignedGuards={nightShiftGuards}
-              selectedGuards={selectedGuards.night || []}
+              presentGuards={selectedGuards.night || []}
               onGuardSelect={(guardId) => handleGuardSelect(guardId, 'night')}
               onAddGuard={() => {/* handle add guard */}}
-              onToggleExpansion={() => {
+              onToggleExpand={() => {
                 setExpandedCards({
                   ...expandedCards,
                   night: !expandedCards.night
