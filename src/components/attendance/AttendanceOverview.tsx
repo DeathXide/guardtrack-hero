@@ -26,7 +26,6 @@ import {
 } from "@/lib/localService";
 import { Site, AttendanceRecord, Shift, SiteEarnings } from "@/types";
 import { useNavigate } from "react-router-dom";
-import { AttendanceOverviewSkeleton } from "./LoadingStates";
 
 interface AttendanceOverviewProps {
   onSiteSelect: (siteId: string) => void;
@@ -190,7 +189,7 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
   });
 
   if (sitesLoading || attendanceLoading || shiftsLoading || earningsLoading) {
-    return <AttendanceOverviewSkeleton />;
+    return <div className="flex items-center justify-center h-64">Loading attendance data...</div>;
   }
 
   return (
@@ -250,123 +249,58 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
               </AlertDescription>
             </Alert>
           ) : (
-            <div className="space-y-4">
-              {/* Mobile view - cards for small screens */}
-              <div className="block md:hidden space-y-3">
-                {sites.map((site) => {
-                  const { status, dayStatus, nightStatus } = getSiteAttendanceStatus(site);
-                  const earnings = siteEarningsMap[site.id] || {
-                    totalShifts: 0,
-                    allocatedAmount: 0,
-                    guardCosts: 0,
-                    netEarnings: 0
-                  };
-                  
-                  return (
-                    <Card key={site.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleSiteClick(site.id)}>
-                      <CardContent className="p-4">
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-medium">{site.name}</h4>
-                              <p className="text-sm text-muted-foreground">{site.location}</p>
-                            </div>
-                            {getStatusBadge(status)}
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Site Name</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Day Shift</TableHead>
+                    <TableHead>Night Shift</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Monthly Earnings</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sites.map((site) => {
+                    const { status, dayStatus, nightStatus } = getSiteAttendanceStatus(site);
+                    const earnings = siteEarningsMap[site.id] || {
+                      totalShifts: 0,
+                      allocatedAmount: 0,
+                      guardCosts: 0,
+                      netEarnings: 0
+                    };
+                    
+                    return (
+                      <TableRow key={site.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleSiteClick(site.id)}>
+                        <TableCell className="font-medium">{site.name}</TableCell>
+                        <TableCell>{site.location}</TableCell>
+                        <TableCell>{getShiftStatusBadge(dayStatus)}</TableCell>
+                        <TableCell>{getShiftStatusBadge(nightStatus)}</TableCell>
+                        <TableCell>{getStatusBadge(status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <IndianRupee className="h-3 w-3 mr-1" />
+                            <span className={earnings.netEarnings > 0 ? "text-green-600" : 
+                                          earnings.netEarnings < 0 ? "text-red-600" : ""}>
+                              {formatCurrency(earnings.netEarnings)}
+                            </span>
                           </div>
-                          
-                          <div className="flex gap-2">
-                            <div className="flex items-center gap-1 text-xs">
-                              <span className="font-medium">Day:</span>
-                              {getShiftStatusBadge(dayStatus)}
-                            </div>
-                            <div className="flex items-center gap-1 text-xs">
-                              <span className="font-medium">Night:</span>
-                              {getShiftStatusBadge(nightStatus)}
-                            </div>
-                          </div>
-                          
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center text-sm">
-                              <IndianRupee className="h-3 w-3 mr-1" />
-                              <span className={earnings.netEarnings > 0 ? "text-green-600" : 
-                                            earnings.netEarnings < 0 ? "text-red-600" : ""}>
-                                {formatCurrency(earnings.netEarnings)}
-                              </span>
-                            </div>
-                            <Button size="sm" variant="outline" onClick={(e) => {
-                              e.stopPropagation();
-                              handleSiteClick(site.id);
-                            }}>
-                              Mark Attendance
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-              
-              {/* Desktop view - table for larger screens */}
-              <div className="hidden md:block rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Site Name</TableHead>
-                      <TableHead className="hidden lg:table-cell">Location</TableHead>
-                      <TableHead>Day Shift</TableHead>
-                      <TableHead>Night Shift</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="hidden xl:table-cell">Monthly Earnings</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sites.map((site) => {
-                      const { status, dayStatus, nightStatus } = getSiteAttendanceStatus(site);
-                      const earnings = siteEarningsMap[site.id] || {
-                        totalShifts: 0,
-                        allocatedAmount: 0,
-                        guardCosts: 0,
-                        netEarnings: 0
-                      };
-                      
-                      return (
-                        <TableRow key={site.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleSiteClick(site.id)}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{site.name}</div>
-                              <div className="lg:hidden text-sm text-muted-foreground">{site.location}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell">{site.location}</TableCell>
-                          <TableCell>{getShiftStatusBadge(dayStatus)}</TableCell>
-                          <TableCell>{getShiftStatusBadge(nightStatus)}</TableCell>
-                          <TableCell>{getStatusBadge(status)}</TableCell>
-                          <TableCell className="hidden xl:table-cell">
-                            <div className="flex items-center">
-                              <IndianRupee className="h-3 w-3 mr-1" />
-                              <span className={earnings.netEarnings > 0 ? "text-green-600" : 
-                                            earnings.netEarnings < 0 ? "text-red-600" : ""}>
-                                {formatCurrency(earnings.netEarnings)}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button size="sm" variant="outline" onClick={(e) => {
-                              e.stopPropagation();
-                              handleSiteClick(site.id);
-                            }}>
-                              <span className="hidden sm:inline">Mark Attendance</span>
-                              <span className="sm:hidden">Mark</span>
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" variant="outline" onClick={(e) => {
+                            e.stopPropagation();
+                            handleSiteClick(site.id);
+                          }}>
+                            Mark Attendance
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
           )}
         </div>
