@@ -1593,32 +1593,39 @@ export const fetchSiteMonthlyEarnings = async (siteId: string, month: string): P
     });
   }
 
-  // Get all shifts for this site
-  const siteShifts = shifts.filter(s => s.siteId === siteId);
+  // Get all shifts for this site that have guards assigned (filled shifts only)
+  const filledShifts = shifts.filter(s => s.siteId === siteId && s.guardId);
   
-  // Calculate total shifts worked in the month
+  // Calculate monthly earnings for filled shifts only
   const monthStart = new Date(month + '-01');
   const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
   const daysInMonth = monthEnd.getDate();
   
-  // For simplicity, assume each shift works every day
-  const totalShifts = siteShifts.length * daysInMonth;
-  
-  // Calculate allocated amount (site pay rate for the month)
-  const allocatedAmount = site.payRate || 0;
-  
-  // Calculate guard costs
+  let totalShifts = 0;
+  let allocatedAmount = 0;
   let guardCosts = 0;
-  siteShifts.forEach(shift => {
+  let netEarnings = 0;
+
+  // Get the staffing slot info for security guards
+  const securitySlot = site.staffingSlots.find(slot => slot.role === 'Security Guard');
+  const slotRate = securitySlot?.budgetPerSlot || 0;
+
+  filledShifts.forEach(shift => {
     if (shift.guardId) {
       const guard = guards.find(g => g.id === shift.guardId);
-      if (guard && guard.payRate) {
-        guardCosts += guard.payRate;
+      if (guard) {
+        // Calculate earnings for this shift for the entire month
+        const shiftMonthlySlotRate = slotRate * daysInMonth;
+        const shiftMonthlyGuardCost = (guard.payRate || 0);
+        const shiftMonthlyEarning = shiftMonthlySlotRate - shiftMonthlyGuardCost;
+        
+        totalShifts += daysInMonth;
+        allocatedAmount += shiftMonthlySlotRate;
+        guardCosts += shiftMonthlyGuardCost;
+        netEarnings += shiftMonthlyEarning;
       }
     }
   });
-  
-  const netEarnings = allocatedAmount - guardCosts;
   
   return Promise.resolve({
     totalShifts,

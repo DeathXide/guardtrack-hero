@@ -240,9 +240,8 @@ export function AttendanceDataTable({
         const earnings = row.original.earnings.netEarnings;
         return (
           <div className="flex items-center">
-            <IndianRupee className="h-3 w-3 mr-1" />
             <span className={earnings > 0 ? "text-green-600" : earnings < 0 ? "text-red-600" : ""}>
-              {formatCurrency(earnings)}
+              ₹{formatCurrency(earnings)}
             </span>
           </div>
         );
