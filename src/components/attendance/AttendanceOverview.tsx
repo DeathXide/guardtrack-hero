@@ -26,6 +26,7 @@ interface AttendanceOverviewProps {
 
 const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const navigate = useNavigate();
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
   const currentMonth = format(selectedDate, "yyyy-MM");
@@ -176,6 +177,23 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
     enabled: sites.length > 0
   });
 
+  const toggleFilter = (status: string) => {
+    setActiveFilters(prev => 
+      prev.includes(status) 
+        ? prev.filter(f => f !== status)
+        : [...prev, status]
+    );
+  };
+
+  const getFilteredSites = () => {
+    if (activeFilters.length === 0) return sites;
+    
+    return sites.filter(site => {
+      const siteStatus = getSiteAttendanceStatus(site);
+      return activeFilters.includes(siteStatus.status);
+    });
+  };
+
   if (sitesLoading || attendanceLoading || shiftsLoading || earningsLoading) {
     return <div className="flex items-center justify-center h-64">Loading attendance data...</div>;
   }
@@ -213,18 +231,47 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
               </Popover>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1">
+              <button
+                onClick={() => toggleFilter('fully-marked')}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${
+                  activeFilters.includes('fully-marked')
+                    ? 'bg-green-100 text-green-800 border border-green-300'
+                    : 'hover:bg-gray-100'
+                }`}
+              >
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
                 <span className="text-sm">Marked</span>
-              </div>
-              <div className="flex items-center gap-1">
+              </button>
+              <button
+                onClick={() => toggleFilter('partially-marked')}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${
+                  activeFilters.includes('partially-marked')
+                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                    : 'hover:bg-gray-100'
+                }`}
+              >
                 <Clock className="h-4 w-4 text-amber-500" />
                 <span className="text-sm">Partial</span>
-              </div>
-              <div className="flex items-center gap-1">
+              </button>
+              <button
+                onClick={() => toggleFilter('not-marked')}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${
+                  activeFilters.includes('not-marked')
+                    ? 'bg-red-100 text-red-800 border border-red-300'
+                    : 'hover:bg-gray-100'
+                }`}
+              >
                 <AlertCircle className="h-4 w-4 text-red-500" />
                 <span className="text-sm">Not Marked</span>
-              </div>
+              </button>
+              {activeFilters.length > 0 && (
+                <button
+                  onClick={() => setActiveFilters([])}
+                  className="text-xs text-muted-foreground hover:text-foreground underline"
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
           </div>
 
@@ -238,7 +285,7 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
             </Alert>
           ) : (
             <AttendanceDataTable
-              sites={sites}
+              sites={getFilteredSites()}
               siteEarningsMap={siteEarningsMap}
               getSiteAttendanceStatus={getSiteAttendanceStatus}
               onSiteClick={handleSiteClick}
