@@ -13,7 +13,6 @@ interface AttendanceSlotCardProps {
   totalSlots: number;
   assignedGuards: Guard[];
   presentGuards: string[];
-  unavailableGuards?: string[];
   payRatePerShift: number;
   onGuardSelect: (guardId: string) => void;
   onAddGuard: () => void;
@@ -27,7 +26,6 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
   totalSlots,
   assignedGuards,
   presentGuards,
-  unavailableGuards = [],
   payRatePerShift,
   onGuardSelect,
   onAddGuard,
@@ -167,46 +165,41 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
             <div className="space-y-2">
               <span className="text-sm font-medium">Assigned Guards</span>
               <div className="space-y-2">
-                  {assignedGuards.map((guard) => {
-                    const isPresent = presentGuards.includes(guard.id);
-                    const isUnavailable = unavailableGuards.includes(guard.id);
-                    return (
-                      <div 
-                        key={guard.id}
-                        className={`
-                          flex items-center justify-between p-2 rounded-lg border transition-all duration-200
-                          ${isUnavailable 
-                            ? 'bg-red-50 border-red-200 cursor-not-allowed opacity-75' 
-                            : isPresent 
-                            ? 'bg-green-50 border-green-200 cursor-pointer hover:shadow-sm' 
-                            : 'bg-muted/30 cursor-pointer hover:shadow-sm'
-                          }
-                        `}
-                        onClick={() => !isUnavailable && onGuardSelect(guard.id)}
-                      >
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={guard.avatar} alt={guard.name} />
-                            <AvatarFallback className="text-xs">
-                              {getInitials(guard.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="font-medium text-sm">{guard.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {guard.badgeNumber}
-                            </div>
+                {assignedGuards.map((guard) => {
+                  const isPresent = presentGuards.includes(guard.id);
+                  return (
+                    <div 
+                      key={guard.id}
+                      className={`
+                        flex items-center justify-between p-2 rounded-lg border cursor-pointer
+                        transition-all duration-200 hover:shadow-sm
+                        ${isPresent ? 'bg-green-50 border-green-200' : 'bg-muted/30'}
+                      `}
+                      onClick={() => onGuardSelect(guard.id)}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={guard.avatar} alt={guard.name} />
+                          <AvatarFallback className="text-xs">
+                            {getInitials(guard.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{guard.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {guard.badgeNumber}
                           </div>
                         </div>
-                        <Badge 
-                          variant={isUnavailable ? "destructive" : isPresent ? "default" : "outline"}
-                          className={isPresent && !isUnavailable ? "bg-green-500" : ""}
-                        >
-                          {isUnavailable ? 'Unavailable' : isPresent ? 'Present' : 'Absent'}
-                        </Badge>
                       </div>
-                    );
-                  })}
+                      <Badge 
+                        variant={isPresent ? "default" : "outline"}
+                        className={isPresent ? "bg-green-500" : ""}
+                      >
+                        {isPresent ? 'Present' : 'Absent'}
+                      </Badge>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
