@@ -26,6 +26,8 @@ import {
   fetchSiteMonthlyEarnings,
   formatCurrency
 } from '@/lib/localService';
+import { checkGuardsAttendanceForToday, deleteGuardsTodayAttendance, GuardAttendanceInfo } from './attendanceValidation';
+import UnassignGuardConfirmationDialog from './UnassignGuardConfirmationDialog';
 import { Site, Guard, Shift, AttendanceRecord, SiteEarnings } from '@/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -47,6 +49,12 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
   const [unavailableDayGuards, setUnavailableDayGuards] = useState<string[]>([]);
   const [unavailableNightGuards, setUnavailableNightGuards] = useState<string[]>([]);
   const [modalSelectedGuards, setModalSelectedGuards] = useState<string[]>([]);
+  const [showUnassignConfirmation, setShowUnassignConfirmation] = useState(false);
+  const [guardsToUnassign, setGuardsToUnassign] = useState<GuardAttendanceInfo[]>([]);
+  const [pendingUnassignment, setPendingUnassignment] = useState<{ 
+    shiftType: 'day' | 'night'; 
+    selectedGuards: string[]; 
+  } | null>(null);
   
   const queryClient = useQueryClient();
   
@@ -442,10 +450,60 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
   const handleGuardSelectionConfirm = async () => {
     const { shiftType } = guardSelectionModal;
     const currentlyAssigned = shiftType === 'day' ? dayShiftGuards.map(g => g.id) : nightShiftGuards.map(g => g.id);
+    const guardsToRemove = currentlyAssigned.filter(guardId => !modalSelectedGuards.includes(guardId));
+    
+    // Check if any guards being removed have today's attendance records
+    if (guardsToRemove.length > 0) {
+      const guardsWithTodayAttendance = await checkGuardsAttendanceForToday(
+        guardsToRemove,
+        selectedSite,
+        formattedDate,
+        shifts
+      );
+      
+      if (guardsWithTodayAttendance.length > 0) {
+        setGuardsToUnassign(guardsWithTodayAttendance);
+        setPendingUnassignment({ shiftType, selectedGuards: modalSelectedGuards });
+        setShowUnassignConfirmation(true);
+        return;
+      }
+    }
+    
+    await performGuardAssignmentUpdate(shiftType, modalSelectedGuards);
+  };
+
+  const handleConfirmUnassign = async () => {
+    try {
+      // Delete today's attendance records first
+      await deleteGuardsTodayAttendance(guardsToUnassign);
+      toast.success('Attendance records deleted successfully');
+      
+      // Then proceed with guard assignment update
+      if (pendingUnassignment) {
+        await performGuardAssignmentUpdate(pendingUnassignment.shiftType, pendingUnassignment.selectedGuards);
+      }
+    } catch (error) {
+      console.error('Error deleting attendance records:', error);
+      toast.error('Failed to delete attendance records');
+    } finally {
+      setShowUnassignConfirmation(false);
+      setGuardsToUnassign([]);
+      setPendingUnassignment(null);
+    }
+  };
+
+  const handleCancelUnassign = () => {
+    setShowUnassignConfirmation(false);
+    setGuardsToUnassign([]);
+    setPendingUnassignment(null);
+  };
+
+  const performGuardAssignmentUpdate = async (shiftType: 'day' | 'night', selectedGuards: string[]) => {
+    const currentlyAssigned = shiftType === 'day' ? dayShiftGuards.map(g => g.id) : nightShiftGuards.map(g => g.id);
     
     // Remove unselected guards from shift assignments
     for (const guardId of currentlyAssigned) {
-      if (!modalSelectedGuards.includes(guardId)) {
+      if (!selectedGuards.includes(guardId)) {
         const shiftToDelete = shifts.find(s => s.type === shiftType && s.guardId === guardId && s.siteId === selectedSite);
         if (shiftToDelete) {
           try {
@@ -460,7 +518,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     }
     
     // Create shift assignments for selected guards
-    for (const guardId of modalSelectedGuards) {
+    for (const guardId of selectedGuards) {
       const existingShift = shifts.find(s => s.type === shiftType && s.guardId === guardId && s.siteId === selectedSite);
       if (!existingShift) {
         try {
@@ -673,6 +731,23 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
         maxSelections={undefined} // Allow unlimited guard assignment
         title={guardSelectionModal.title}
         unavailableGuards={unavailableGuards}
+      />
+
+      {/* Unassign Confirmation Dialog */}
+      <UnassignGuardConfirmationDialog
+        isOpen={showUnassignConfirmation}
+        onConfirm={handleConfirmUnassign}
+        onCancel={handleCancelUnassign}
+        siteName={selectedSiteData?.name || 'Unknown Site'}
+        date={selectedDate}
+        guards={guardsToUnassign.map(info => {
+          const guard = guards.find(g => g.id === info.guardId);
+          return {
+            id: info.guardId,
+            name: guard?.name || 'Unknown Guard',
+            badgeNumber: guard?.badgeNumber || 'N/A'
+          };
+        })}
       />
     </div>
   );

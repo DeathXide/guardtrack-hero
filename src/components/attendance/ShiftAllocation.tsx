@@ -15,7 +15,10 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchSites, fetchGuards, fetchShiftsBySite, createShift, updateShift, deleteShift, fetchAttendanceByShift } from '@/lib/localService';
+import { fetchSites, fetchGuards, fetchShiftsBySite, createShift, updateShift, deleteShift } from '@/lib/localService';
+import { checkGuardsAttendanceForToday, deleteGuardsTodayAttendance, GuardAttendanceInfo } from './attendanceValidation';
+import UnassignGuardConfirmationDialog from './UnassignGuardConfirmationDialog';
+import { format } from 'date-fns';
 import { Site, Guard, Shift } from '@/types';
 
 const ShiftAllocation: React.FC = () => {
@@ -24,8 +27,8 @@ const ShiftAllocation: React.FC = () => {
   const [selectedShiftType, setSelectedShiftType] = useState<'day' | 'night'>('day');
   const [selectedGuards, setSelectedGuards] = useState<string[]>([]);
   const [guardSearchTerm, setGuardSearchTerm] = useState('');
-  const [showAttendanceWarning, setShowAttendanceWarning] = useState(false);
-  const [guardsWithAttendance, setGuardsWithAttendance] = useState<string[]>([]);
+  const [showUnassignConfirmation, setShowUnassignConfirmation] = useState(false);
+  const [guardsToUnassign, setGuardsToUnassign] = useState<GuardAttendanceInfo[]>([]);
   const [pendingAllocation, setPendingAllocation] = useState<string[]>([]);
   const queryClient = useQueryClient();
   
@@ -110,45 +113,67 @@ const ShiftAllocation: React.FC = () => {
     }
   };
 
-  const checkAttendanceRecords = async (shiftsToRemove: Shift[]): Promise<string[]> => {
-    const guardsWithAttendance: string[] = [];
+  const checkTodayAttendanceRecords = async (guardsToRemove: string[]): Promise<GuardAttendanceInfo[]> => {
+    if (!selectedSite) return [];
     
-    for (const shift of shiftsToRemove) {
-      if (shift.guardId) {
-        try {
-          const attendanceRecords = await fetchAttendanceByShift(shift.id);
-          if (attendanceRecords.length > 0) {
-            guardsWithAttendance.push(shift.guardId);
-          }
-        } catch (error) {
-          console.error('Error checking attendance records:', error);
-        }
-      }
+    const today = format(new Date(), 'yyyy-MM-dd');
+    
+    try {
+      const guardsWithAttendance = await checkGuardsAttendanceForToday(
+        guardsToRemove,
+        selectedSite,
+        today,
+        shifts
+      );
+      
+      return guardsWithAttendance;
+    } catch (error) {
+      console.error('Error checking today\'s attendance records:', error);
+      return [];
     }
-    
-    return [...new Set(guardsWithAttendance)]; // Remove duplicates
   };
 
   const handleSaveAllocation = async () => {
     const shiftType = selectedShiftType;
     const existingShifts = shifts.filter(shift => shift.type === shiftType);
-    const shiftsToRemove = existingShifts.filter(shift => 
-      shift.guardId && !selectedGuards.includes(shift.guardId)
-    );
+    const guardsToRemove = existingShifts
+      .filter(shift => shift.guardId && !selectedGuards.includes(shift.guardId))
+      .map(shift => shift.guardId)
+      .filter((id): id is string => id !== undefined);
     
-    // Check if any guards being removed have attendance records
-    if (shiftsToRemove.length > 0) {
-      const guardsWithAttendance = await checkAttendanceRecords(shiftsToRemove);
+    // Check if any guards being removed have today's attendance records
+    if (guardsToRemove.length > 0) {
+      const guardsWithTodayAttendance = await checkTodayAttendanceRecords(guardsToRemove);
       
-      if (guardsWithAttendance.length > 0) {
-        setGuardsWithAttendance(guardsWithAttendance);
+      if (guardsWithTodayAttendance.length > 0) {
+        setGuardsToUnassign(guardsWithTodayAttendance);
         setPendingAllocation(selectedGuards);
-        setShowAttendanceWarning(true);
+        setShowUnassignConfirmation(true);
         return;
       }
     }
     
     await performAllocation();
+  };
+
+  const handleConfirmUnassign = async () => {
+    try {
+      // Delete today's attendance records first
+      await deleteGuardsTodayAttendance(guardsToUnassign);
+      toast.success('Attendance records deleted successfully');
+      
+      // Then proceed with normal allocation
+      await performAllocation();
+    } catch (error) {
+      console.error('Error deleting attendance records:', error);
+      toast.error('Failed to delete attendance records');
+    }
+  };
+
+  const handleCancelUnassign = () => {
+    setShowUnassignConfirmation(false);
+    setGuardsToUnassign([]);
+    setPendingAllocation([]);
   };
 
   const performAllocation = async () => {
@@ -185,8 +210,8 @@ const ShiftAllocation: React.FC = () => {
     
     refetchShifts();
     setIsAllocationDialogOpen(false);
-    setShowAttendanceWarning(false);
-    setGuardsWithAttendance([]);
+    setShowUnassignConfirmation(false);
+    setGuardsToUnassign([]);
     setPendingAllocation([]);
   };
 
@@ -414,43 +439,21 @@ const ShiftAllocation: React.FC = () => {
         </DialogContent>
       </Dialog>
       
-      <AlertDialog open={showAttendanceWarning} onOpenChange={setShowAttendanceWarning}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Attendance Records Found
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              The following guards have existing attendance records and cannot be removed from their assignments:
-              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                <ul className="list-disc list-inside space-y-1">
-                  {guardsWithAttendance.map(guardId => {
-                    const guard = guards.find(g => g.id === guardId);
-                    return (
-                      <li key={guardId} className="text-sm font-medium">
-                        {guard?.name || 'Unknown Guard'} ({guard?.badgeNumber || 'N/A'})
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-              <p className="mt-2 text-sm">
-                To proceed, you must first clear their attendance records from the Mark Attendance tab.
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setShowAttendanceWarning(false);
-              setGuardsWithAttendance([]);
-              setPendingAllocation([]);
-            }}>
-              Cancel
-            </AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <UnassignGuardConfirmationDialog
+        isOpen={showUnassignConfirmation}
+        onConfirm={handleConfirmUnassign}
+        onCancel={handleCancelUnassign}
+        siteName={selectedSiteData?.name || 'Unknown Site'}
+        date={new Date()}
+        guards={guardsToUnassign.map(info => {
+          const guard = guards.find(g => g.id === info.guardId);
+          return {
+            id: info.guardId,
+            name: guard?.name || 'Unknown Guard',
+            badgeNumber: guard?.badgeNumber || 'N/A'
+          };
+        })}
+      />
     </Card>
   );
 };
