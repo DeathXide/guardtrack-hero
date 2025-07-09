@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
 import {
   ColumnDef,
@@ -98,10 +98,46 @@ export function AttendanceDataTable({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 10,
+  
+  // Load saved table state from sessionStorage
+  const [pagination, setPagination] = useState(() => {
+    const saved = sessionStorage.getItem('attendance-table-pagination');
+    return saved ? JSON.parse(saved) : { pageIndex: 0, pageSize: 10 };
   });
+
+  // Load other saved states
+  useEffect(() => {
+    const savedSorting = sessionStorage.getItem('attendance-table-sorting');
+    const savedFilters = sessionStorage.getItem('attendance-table-filters');
+    const savedGlobalFilter = sessionStorage.getItem('attendance-table-global-filter');
+    const savedVisibility = sessionStorage.getItem('attendance-table-visibility');
+
+    if (savedSorting) setSorting(JSON.parse(savedSorting));
+    if (savedFilters) setColumnFilters(JSON.parse(savedFilters));
+    if (savedGlobalFilter) setGlobalFilter(JSON.parse(savedGlobalFilter));
+    if (savedVisibility) setColumnVisibility(JSON.parse(savedVisibility));
+  }, []);
+
+  // Save table state to sessionStorage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem('attendance-table-pagination', JSON.stringify(pagination));
+  }, [pagination]);
+
+  useEffect(() => {
+    sessionStorage.setItem('attendance-table-sorting', JSON.stringify(sorting));
+  }, [sorting]);
+
+  useEffect(() => {
+    sessionStorage.setItem('attendance-table-filters', JSON.stringify(columnFilters));
+  }, [columnFilters]);
+
+  useEffect(() => {
+    sessionStorage.setItem('attendance-table-global-filter', JSON.stringify(globalFilter));
+  }, [globalFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem('attendance-table-visibility', JSON.stringify(columnVisibility));
+  }, [columnVisibility]);
 
   // Transform data to include status and earnings
   const data = useMemo<SiteWithStatus[]>(() => {
@@ -258,10 +294,12 @@ export function AttendanceDataTable({
             <Button
               size="sm"
               variant="outline"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSiteClick(site.id);
-              }}
+          onClick={(e) => {
+            e.stopPropagation();
+            // Save current table state before navigating
+            sessionStorage.setItem('attendance-table-return-flag', 'true');
+            onSiteClick(site.id);
+          }}
             >
               Mark Attendance
             </Button>
