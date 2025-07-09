@@ -126,6 +126,47 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     shifts.some(shift => shift.type === 'night' && shift.guardId === guard.id)
   );
 
+  // Get guards marked present elsewhere for each shift type
+  const [unavailableDayGuards, setUnavailableDayGuards] = useState<string[]>([]);
+  const [unavailableNightGuards, setUnavailableNightGuards] = useState<string[]>([]);
+
+  // Check for unavailable guards when site, date, or attendance changes
+  useEffect(() => {
+    const checkUnavailableGuards = async () => {
+      if (!selectedSite || !formattedDate) return;
+      
+      const dayUnavailable: string[] = [];
+      const nightUnavailable: string[] = [];
+      
+      for (const guard of [...dayShiftGuards, ...nightShiftGuards]) {
+        const isDayMarkedElsewhere = await isGuardMarkedPresentElsewhere(
+          guard.id, 
+          formattedDate, 
+          'day', 
+          selectedSite
+        );
+        const isNightMarkedElsewhere = await isGuardMarkedPresentElsewhere(
+          guard.id, 
+          formattedDate, 
+          'night', 
+          selectedSite
+        );
+        
+        if (isDayMarkedElsewhere) {
+          dayUnavailable.push(guard.id);
+        }
+        if (isNightMarkedElsewhere) {
+          nightUnavailable.push(guard.id);
+        }
+      }
+      
+      setUnavailableDayGuards(dayUnavailable);
+      setUnavailableNightGuards(nightUnavailable);
+    };
+
+    checkUnavailableGuards();
+  }, [selectedSite, formattedDate, dayShiftGuards, nightShiftGuards, attendanceRecords]);
+
   // Get present guards from attendance records
   const presentDayGuards = attendanceRecords
     .filter(record => {
@@ -398,6 +439,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             totalSlots={daySlots}
             assignedGuards={dayShiftGuards}
             presentGuards={presentDayGuards}
+            unavailableGuards={unavailableDayGuards}
             payRatePerShift={payRatePerShift}
             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'day')}
             onAddGuard={() => handleAddGuard('day')}
@@ -412,6 +454,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             totalSlots={nightSlots}
             assignedGuards={nightShiftGuards}
             presentGuards={presentNightGuards}
+            unavailableGuards={unavailableNightGuards}
             payRatePerShift={payRatePerShift}
             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'night')}
             onAddGuard={() => handleAddGuard('night')}
