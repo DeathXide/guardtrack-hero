@@ -55,6 +55,10 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     shiftType: 'day' | 'night'; 
     selectedGuards: string[]; 
   } | null>(null);
+  const [tempSlotDialog, setTempSlotDialog] = useState<{
+    isOpen: boolean;
+    shiftType: 'day' | 'night';
+  }>({ isOpen: false, shiftType: 'day' });
   
   const queryClient = useQueryClient();
   
@@ -287,6 +291,10 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
       ...expandedCards,
       [shiftType]: !expandedCards[shiftType]
     });
+  };
+
+  const handleAddTemporarySlot = (shiftType: 'day' | 'night') => {
+    setTempSlotDialog({ isOpen: true, shiftType });
   };
 
   const getUnavailableGuards = async (shiftType: 'day' | 'night') => {

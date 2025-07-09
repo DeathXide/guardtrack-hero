@@ -108,6 +108,11 @@ export interface Shift {
   assignedGuardId?: string;
   locked?: boolean;
   date?: string;
+  // Temporary slot fields
+  isTemporary?: boolean;
+  temporaryDate?: string;
+  temporaryRole?: string;
+  temporaryPayRate?: number;
   created_at?: string;
 }
 
@@ -209,6 +214,10 @@ export type ShiftDB = {
   site_id: string;
   type: 'day' | 'night';
   guard_id: string | null;
+  is_temporary: boolean | null;
+  temporary_date: string | null;
+  temporary_role: string | null;
+  temporary_pay_rate: number | null;
   created_at: string;
 }
 

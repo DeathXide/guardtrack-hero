@@ -100,13 +100,21 @@ export const convertShiftFromDB = (shift: ShiftDB): Shift => ({
   siteId: shift.site_id,
   type: shift.type,
   guardId: shift.guard_id || '',
+  isTemporary: shift.is_temporary || undefined,
+  temporaryDate: shift.temporary_date || undefined,
+  temporaryRole: shift.temporary_role || undefined,
+  temporaryPayRate: shift.temporary_pay_rate || undefined,
   created_at: shift.created_at
 });
 
 export const convertShiftToDB = (shift: Partial<Shift>): Partial<ShiftDB> => ({
   site_id: shift.siteId,
   type: shift.type as 'day' | 'night',
-  guard_id: shift.guardId || null
+  guard_id: shift.guardId || null,
+  is_temporary: shift.isTemporary || null,
+  temporary_date: shift.temporaryDate || null,
+  temporary_role: shift.temporaryRole || null,
+  temporary_pay_rate: shift.temporaryPayRate || null
 });
 
 // Attendance converters
