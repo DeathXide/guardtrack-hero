@@ -23,7 +23,6 @@ interface AttendanceSlotCardProps {
   onEditTemporarySlot: (slot: Shift) => void;
   onDeleteTemporarySlot: (slotId: string) => void;
   onAssignGuardToTempSlot: (slotId: string, guardId: string) => void;
-  onMarkGuardForTempSlot: (guardId: string, shiftType: 'day' | 'night') => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
 }
@@ -43,7 +42,6 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
   onEditTemporarySlot,
   onDeleteTemporarySlot,
   onAssignGuardToTempSlot,
-  onMarkGuardForTempSlot,
   isExpanded,
   onToggleExpand,
 }) => {
@@ -51,8 +49,6 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
   const totalSlotsWithTemp = totalSlots + temporarySlots.length;
   const filledSlots = presentGuards.length;
   const completionPercentage = totalSlotsWithTemp > 0 ? (filledSlots / totalSlotsWithTemp) * 100 : 0;
-  const regularFilledSlots = assignedGuards.filter(guard => presentGuards.includes(guard.id)).length;
-  const tempFilledSlots = temporarySlots.filter(slot => slot.guardId && presentGuards.includes(slot.guardId)).length;
 
   const getInitials = (name: string) => {
     return name
@@ -76,9 +72,6 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
     }
   };
 
-  // Check if there are available temporary slots for this shift type
-  const hasAvailableTempSlots = temporarySlots.some(slot => !slot.guardId);
-
   return (
     <Card className="transition-all duration-200 hover:shadow-md">
       <CardHeader 
@@ -96,29 +89,12 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
             </Badge>
           </div>
           <div className="flex items-center space-x-2">
-            {temporarySlots.length > 0 ? (
-              <div className="flex items-center space-x-1">
-                <Badge 
-                  variant={regularFilledSlots === totalSlots ? "default" : "secondary"}
-                  className="px-2 py-1 text-xs"
-                >
-                  {regularFilledSlots}/{totalSlots}
-                </Badge>
-                <Badge 
-                  variant="outline"
-                  className="px-2 py-1 text-xs bg-orange-100 text-orange-700 border-orange-300"
-                >
-                  {tempFilledSlots}/{temporarySlots.length}
-                </Badge>
-              </div>
-            ) : (
-              <Badge 
-                variant={completionPercentage === 100 ? "default" : "secondary"}
-                className="px-2 py-1"
-              >
-                {filledSlots}/{totalSlots}
-              </Badge>
-            )}
+            <Badge 
+              variant={completionPercentage === 100 ? "default" : "secondary"}
+              className="px-2 py-1"
+            >
+              {filledSlots}/{totalSlotsWithTemp}
+            </Badge>
           </div>
         </div>
         
@@ -172,17 +148,15 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
                   <div 
                     key={guard.id}
                     className={`
-                      flex items-center justify-between p-2 rounded-lg border
+                      flex items-center justify-between p-2 rounded-lg border cursor-pointer
                       transition-all duration-200 hover:shadow-sm
                       ${status === 'present' ? 'bg-green-50 border-green-200' : 
                         status === 'unavailable' ? 'bg-red-50 border-red-200' : 'bg-muted/30'}
-                      ${isUnavailable ? 'opacity-75' : ''}
+                      ${isUnavailable ? 'opacity-75 cursor-not-allowed' : ''}
                     `}
+                    onClick={() => !isUnavailable && onGuardSelect(guard.id)}
                   >
-                    <div 
-                      className="flex items-center space-x-3 flex-1 cursor-pointer"
-                      onClick={() => !isUnavailable && onGuardSelect(guard.id)}
-                    >
+                    <div className="flex items-center space-x-3">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={guard.avatar} alt={guard.name} />
                         <AvatarFallback className="text-xs">
@@ -196,27 +170,12 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      {hasAvailableTempSlots && !isUnavailable && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onMarkGuardForTempSlot(guard.id, shiftType)}
-                          className="h-7 px-2 text-xs bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
-                        >
-                          <UserPlus className="h-3 w-3 mr-1" />
-                          Temp
-                        </Button>
-                      )}
-                      
-                      <Badge 
-                        variant={status === 'present' ? "default" : status === 'unavailable' ? "destructive" : "outline"}
-                        className={status === 'present' ? "bg-green-500" : status === 'unavailable' ? "bg-red-500" : ""}
-                      >
-                        {status === 'unavailable' ? 'Unavailable' : status === 'present' ? 'Present' : 'Absent'}
-                      </Badge>
-                    </div>
+                    <Badge 
+                      variant={status === 'present' ? "default" : status === 'unavailable' ? "destructive" : "outline"}
+                      className={status === 'present' ? "bg-green-500" : status === 'unavailable' ? "bg-red-500" : ""}
+                    >
+                      {status === 'unavailable' ? 'Unavailable' : status === 'present' ? 'Present' : 'Absent'}
+                    </Badge>
                   </div>
                 );
               })}
@@ -228,6 +187,7 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
               <p className="text-xs">Click "Manage Guards" to assign guards</p>
             </div>
           )}
+
         </CardContent>
       )}
     </Card>
