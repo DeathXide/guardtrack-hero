@@ -108,11 +108,16 @@ export function AttendanceDataTable({
     pageSize: 10,
   });
 
+  console.log('Current pagination state:', pagination);
+  console.log('URL page param:', searchParams.get('page'));
+  console.log('Initial page:', initialPage);
+
   // Update URL when pagination changes
   useEffect(() => {
     const newSearchParams = new URLSearchParams(searchParams);
     newSearchParams.set('page', pagination.pageIndex.toString());
     setSearchParams(newSearchParams, { replace: true });
+    console.log('Updated URL with page:', pagination.pageIndex);
   }, [pagination.pageIndex, searchParams, setSearchParams]);
 
   // Transform data to include status and earnings
