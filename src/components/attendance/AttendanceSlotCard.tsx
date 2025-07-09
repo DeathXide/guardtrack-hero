@@ -206,21 +206,6 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
               <p className="text-xs">Click "Manage Guards" to assign guards</p>
             </div>
           )}
-
-          {/* Temporary Slots Section */}
-          {temporarySlots.length > 0 && (
-            <TemporarySlotManager
-              title={title}
-              shiftType={shiftType}
-              temporarySlots={temporarySlots}
-              guards={guards}
-              presentGuards={presentGuards}
-              onEditSlot={onEditTemporarySlot}
-              onDeleteSlot={onDeleteTemporarySlot}
-              onGuardSelect={onGuardSelect}
-              onGuardChange={onAssignGuardToTempSlot}
-            />
-          )}
         </CardContent>
       )}
     </Card>
