@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Calendar as CalendarIcon, Check, Copy, RefreshCw, IndianRupee, Info } from 'lucide-react';
+import { Calendar as CalendarIcon, Check, Copy, RefreshCw, Info } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -665,7 +665,6 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                   <div className="flex justify-between items-center">
                     <span>Pay rate:</span>
                     <div className="flex items-center">
-                      <IndianRupee className="h-3 w-3 mr-1" />
                       <Badge variant="outline">{formatCurrency(payRatePerShift)}</Badge>
                     </div>
                   </div>

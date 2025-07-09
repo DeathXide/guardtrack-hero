@@ -12,7 +12,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, Filter, MoreHorizontal, IndianRupee } from "lucide-react";
+import { ArrowUpDown, ChevronDown, Filter, MoreHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -241,7 +241,7 @@ export function AttendanceDataTable({
         return (
           <div className="flex items-center">
             <span className={earnings > 0 ? "text-green-600" : earnings < 0 ? "text-red-600" : ""}>
-              ₹{formatCurrency(earnings)}
+              {formatCurrency(earnings)}
             </span>
           </div>
         );

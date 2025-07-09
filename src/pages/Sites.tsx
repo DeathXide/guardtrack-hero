@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Building, Edit, Trash, User, IndianRupee } from 'lucide-react';
+import { MapPin, Building, Edit, Trash, User } from 'lucide-react';
 import { Site } from '@/types';
 import { users } from '@/lib/data';
 import { useToast } from "@/hooks/use-toast";
@@ -293,13 +293,13 @@ const Sites = () => {
                     </div>
                     
                     <div className="flex items-center text-sm mt-2">
-                      <IndianRupee className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <User className="h-4 w-4 mr-2 text-muted-foreground" />
                       <span className="text-muted-foreground">Budget:</span>
                       <span className="font-medium ml-2">{formatCurrency(site.payRate)}</span>
                     </div>
                     
                     <div className="flex items-center text-sm">
-                      <IndianRupee className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <User className="h-4 w-4 mr-2 text-muted-foreground" />
                       <span className="text-muted-foreground">Per Shift:</span>
                       <span className="font-medium ml-2">{formatCurrency(getPayRatePerShift(site))}</span>
                     </div>

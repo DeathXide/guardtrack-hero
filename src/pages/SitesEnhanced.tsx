@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Building, Edit, Trash, User, IndianRupee, Plus, X } from 'lucide-react';
+import { MapPin, Building, Edit, Trash, User, Plus, X } from 'lucide-react';
 import { Site, StaffingSlot } from '@/types';
 import { users, sites, addSite, updateSiteLocal, deleteSiteLocal, formatCurrency } from '@/lib/data';
 import { useToast } from "@/hooks/use-toast";
@@ -300,7 +300,7 @@ const SitesEnhanced = () => {
                     </Badge>
                     
                     <div className="flex items-center text-sm">
-                      <IndianRupee className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <User className="h-4 w-4 mr-2 text-muted-foreground" />
                       <span className="text-muted-foreground">Total Budget:</span>
                       <span className="font-medium ml-2">{formatCurrency(getTotalBudget(site))}</span>
                     </div>

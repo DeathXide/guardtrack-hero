@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Filter, Users, IndianRupee } from 'lucide-react';
+import { Search, Filter, Users } from 'lucide-react';
 import { Guard } from '@/types';
 import { formatCurrency } from '@/lib/localService';
 
@@ -194,7 +194,6 @@ const GuardSelectionModal: React.FC<GuardSelectionModalProps> = ({
                         Badge: {guard.badgeNumber}
                       </div>
                       <div className="flex items-center text-sm text-muted-foreground">
-                        <IndianRupee className="h-3 w-3 mr-1" />
                         {formatCurrency(guard.payRate || 0)}/month
                       </div>
                     </div>

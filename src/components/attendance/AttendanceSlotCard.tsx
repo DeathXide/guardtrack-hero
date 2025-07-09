@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Plus, Users, Clock, IndianRupee } from 'lucide-react';
+import { Plus, Users, Clock } from 'lucide-react';
 import { Guard } from '@/types';
 import { formatCurrency } from '@/lib/localService';
 
@@ -96,7 +96,6 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>{completionPercentage.toFixed(0)}% filled</span>
           <div className="flex items-center">
-            <IndianRupee className="h-3 w-3 mr-1" />
             <span>{formatCurrency(payRatePerShift)}/shift</span>
           </div>
         </div>
