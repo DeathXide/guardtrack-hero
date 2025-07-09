@@ -649,28 +649,6 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
               </div>
             </div>
 
-            {/* Site Info */}
-            {selectedSite && (
-              <div className="space-y-2">
-                <Label>Site Details</Label>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span>Day slots:</span>
-                    <Badge variant="outline">{daySlots}</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Night slots:</span>
-                    <Badge variant="outline">{nightSlots}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Pay rate:</span>
-                    <div className="flex items-center">
-                      <Badge variant="outline">{formatCurrency(payRatePerShift)}</Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
