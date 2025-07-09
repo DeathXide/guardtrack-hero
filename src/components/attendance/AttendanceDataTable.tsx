@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
+import { useSearchParams } from "react-router-dom";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -98,6 +99,21 @@ export function AttendanceDataTable({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Get initial page from URL params
+  const initialPage = parseInt(searchParams.get('page') || '0', 10);
+  const [pagination, setPagination] = useState({
+    pageIndex: initialPage,
+    pageSize: 10,
+  });
+
+  // Update URL when pagination changes
+  useEffect(() => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set('page', pagination.pageIndex.toString());
+    setSearchParams(newSearchParams, { replace: true });
+  }, [pagination.pageIndex, searchParams, setSearchParams]);
 
   // Transform data to include status and earnings
   const data = useMemo<SiteWithStatus[]>(() => {
@@ -273,6 +289,7 @@ export function AttendanceDataTable({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: setPagination,
     globalFilterFn: (row, columnId, filterValue) => {
       const site = row.original;
       const searchValue = filterValue.toLowerCase();
@@ -291,6 +308,7 @@ export function AttendanceDataTable({
       columnFilters,
       columnVisibility,
       globalFilter,
+      pagination,
     },
   });
 
@@ -387,28 +405,99 @@ export function AttendanceDataTable({
         </Table>
       </div>
 
-      <div className="flex items-center justify-end space-x-2 py-4">
+      <div className="flex items-center justify-between space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} of{" "}
           {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
+        
+        <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2">
+            <p className="text-sm font-medium">Rows per page</p>
+            <select
+              value={table.getState().pagination.pageSize}
+              onChange={(e) => {
+                table.setPageSize(Number(e.target.value));
+              }}
+              className="h-8 w-[70px] rounded border border-input bg-background px-2 py-1 text-sm"
+            >
+              {[5, 10, 20, 30, 50].map((pageSize) => (
+                <option key={pageSize} value={pageSize}>
+                  {pageSize}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+            Page {table.getState().pagination.pageIndex + 1} of{" "}
+            {table.getPageCount()}
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              className="h-8 w-8 p-0"
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+            >
+              {"<<"}
+            </Button>
+            <Button
+              variant="outline"
+              className="h-8 w-8 p-0"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              {"<"}
+            </Button>
+            
+            {/* Page Numbers */}
+            {(() => {
+              const pageCount = table.getPageCount();
+              const currentPage = table.getState().pagination.pageIndex;
+              const maxVisiblePages = 5;
+              
+              let startPage = Math.max(0, currentPage - Math.floor(maxVisiblePages / 2));
+              let endPage = Math.min(pageCount - 1, startPage + maxVisiblePages - 1);
+              
+              if (endPage - startPage < maxVisiblePages - 1) {
+                startPage = Math.max(0, endPage - maxVisiblePages + 1);
+              }
+              
+              const pages = [];
+              for (let i = startPage; i <= endPage; i++) {
+                pages.push(
+                  <Button
+                    key={i}
+                    variant={i === currentPage ? "default" : "outline"}
+                    className="h-8 w-8 p-0"
+                    onClick={() => table.setPageIndex(i)}
+                  >
+                    {i + 1}
+                  </Button>
+                );
+              }
+              return pages;
+            })()}
+            
+            <Button
+              variant="outline"
+              className="h-8 w-8 p-0"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              {">"}
+            </Button>
+            <Button
+              variant="outline"
+              className="h-8 w-8 p-0"
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+            >
+              {">>"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
