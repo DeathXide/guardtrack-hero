@@ -3,10 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Plus, Users, Clock, UserPlus } from 'lucide-react';
-import { Guard, Shift } from '@/types';
+import { Plus, Users, Clock } from 'lucide-react';
+import { Guard } from '@/types';
 import { formatCurrency } from '@/lib/localService';
-import TemporarySlotManager from './TemporarySlotManager';
 
 interface AttendanceSlotCardProps {
   title: string;
@@ -16,13 +15,8 @@ interface AttendanceSlotCardProps {
   presentGuards: string[];
   unavailableGuards?: string[];
   payRatePerShift: number;
-  temporarySlots?: Shift[];
-  guards: Guard[];
   onGuardSelect: (guardId: string) => void;
   onAddGuard: () => void;
-  onEditTemporarySlot: (slot: Shift) => void;
-  onDeleteTemporarySlot: (slotId: string) => void;
-  onAssignGuardToTempSlot: (slotId: string, guardId: string) => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
 }
@@ -35,20 +29,13 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
   presentGuards,
   unavailableGuards = [],
   payRatePerShift,
-  temporarySlots = [],
-  guards,
   onGuardSelect,
   onAddGuard,
-  onEditTemporarySlot,
-  onDeleteTemporarySlot,
-  onAssignGuardToTempSlot,
   isExpanded,
   onToggleExpand,
 }) => {
-  // Include temporary slots in total count
-  const totalSlotsWithTemp = totalSlots + temporarySlots.length;
   const filledSlots = presentGuards.length;
-  const completionPercentage = totalSlotsWithTemp > 0 ? (filledSlots / totalSlotsWithTemp) * 100 : 0;
+  const completionPercentage = totalSlots > 0 ? (filledSlots / totalSlots) * 100 : 0;
 
   const getInitials = (name: string) => {
     return name
@@ -93,7 +80,7 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
               variant={completionPercentage === 100 ? "default" : "secondary"}
               className="px-2 py-1"
             >
-              {filledSlots}/{totalSlotsWithTemp}
+              {filledSlots}/{totalSlots}
             </Badge>
           </div>
         </div>
@@ -187,22 +174,6 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
               <p className="text-xs">Click "Manage Guards" to assign guards</p>
             </div>
           )}
-
-          {/* Temporary Slots Management */}
-          {temporarySlots && temporarySlots.length > 0 && (
-            <TemporarySlotManager
-              title={`${shiftType} Shift`}
-              shiftType={shiftType}
-              temporarySlots={temporarySlots}
-              guards={guards}
-              presentGuards={presentGuards}
-              onEditSlot={onEditTemporarySlot}
-              onDeleteSlot={onDeleteTemporarySlot}
-              onGuardSelect={onGuardSelect}
-              onGuardChange={onAssignGuardToTempSlot}
-            />
-          )}
-
         </CardContent>
       )}
     </Card>

@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Calendar as CalendarIcon, Check, Copy, RefreshCw, Info, UserPlus } from 'lucide-react';
+import { Calendar as CalendarIcon, Check, Copy, RefreshCw, Info } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,14 +13,11 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import AttendanceSlotCard from './AttendanceSlotCard';
 import GuardSelectionModal from './GuardSelectionModal';
-import TemporarySlotDialog from './TemporarySlotDialog';
-import BulkTemporarySlotDialog from './BulkTemporarySlotDialog';
 import {
   fetchSites,
   fetchGuards,
   fetchShiftsBySite,
   createShift,
-  updateShift,
   createAttendanceRecord,
   fetchAttendanceByDate,
   isGuardMarkedPresentElsewhere,
@@ -58,15 +55,6 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     shiftType: 'day' | 'night'; 
     selectedGuards: string[]; 
   } | null>(null);
-  const [tempSlotDialog, setTempSlotDialog] = useState<{
-    isOpen: boolean;
-    shiftType: 'day' | 'night';
-  }>({ isOpen: false, shiftType: 'day' });
-  const [bulkTempSlotDialog, setBulkTempSlotDialog] = useState(false);
-  const [editTempSlotDialog, setEditTempSlotDialog] = useState<{
-    isOpen: boolean;
-    slot: Shift | null;
-  }>({ isOpen: false, slot: null });
   
   const queryClient = useQueryClient();
   
@@ -140,28 +128,13 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
   const totalSlots = daySlots + nightSlots;
   const payRatePerShift = totalSlots > 0 ? sitePayRate / totalSlots : 0;
 
-  // Get assigned guards for each shift type (exclude temporary slots)
+  // Get assigned guards for each shift type
   const dayShiftGuards = guards.filter(guard => 
-    shifts.some(shift => shift.type === 'day' && shift.guardId === guard.id && !shift.isTemporary)
+    shifts.some(shift => shift.type === 'day' && shift.guardId === guard.id)
   );
   
   const nightShiftGuards = guards.filter(guard => 
-    shifts.some(shift => shift.type === 'night' && shift.guardId === guard.id && !shift.isTemporary)
-  );
-
-  // Get temporary slots filtered by date
-  const dayTemporarySlots = shifts.filter(shift => 
-    shift.type === 'day' && 
-    shift.isTemporary && 
-    shift.temporaryDate === formattedDate &&
-    shift.siteId === selectedSite
-  );
-  
-  const nightTemporarySlots = shifts.filter(shift => 
-    shift.type === 'night' && 
-    shift.isTemporary && 
-    shift.temporaryDate === formattedDate &&
-    shift.siteId === selectedSite
+    shifts.some(shift => shift.type === 'night' && shift.guardId === guard.id)
   );
 
   // Get present guards from attendance records
@@ -314,138 +287,6 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
       ...expandedCards,
       [shiftType]: !expandedCards[shiftType]
     });
-  };
-
-  const handleAddTemporarySlot = (shiftType: 'day' | 'night') => {
-    setTempSlotDialog({ isOpen: true, shiftType });
-  };
-
-  const handleSaveTemporarySlot = async (data: {
-    shiftType: 'day' | 'night';
-    role: string;
-    payRate: number;
-  }) => {
-    if (!selectedSite) {
-      toast.error('Please select a site first');
-      return;
-    }
-
-    try {
-      const newShift = await createShift({
-        siteId: selectedSite,
-        type: data.shiftType,
-        guardId: '', // Temporary slots start unassigned
-        isTemporary: true,
-        temporaryDate: formattedDate,
-        temporaryRole: data.role,
-        temporaryPayRate: data.payRate
-      });
-
-      // Refresh shifts data
-      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
-      toast.success(`Temporary ${data.role} slot created for ${data.shiftType} shift`);
-      setTempSlotDialog({ isOpen: false, shiftType: 'day' });
-    } catch (error) {
-      console.error('Error creating temporary slot:', error);
-      toast.error('Failed to create temporary slot');
-    }
-  };
-
-  const handleBulkTempSlotSave = async (roleSlots: Array<{
-    id: string;
-    role: string;
-    daySlots: number;
-    nightSlots: number;
-    payRatePerSlot: number;
-  }>) => {
-    if (!selectedSite) {
-      toast.error('Please select a site first');
-      return;
-    }
-
-    try {
-      const promises = [];
-      
-      for (const roleSlot of roleSlots) {
-        // Create day slots
-        for (let i = 0; i < roleSlot.daySlots; i++) {
-          promises.push(createShift({
-            siteId: selectedSite,
-            type: 'day',
-            guardId: '',
-            isTemporary: true,
-            temporaryDate: formattedDate,
-            temporaryRole: roleSlot.role,
-            temporaryPayRate: roleSlot.payRatePerSlot
-          }));
-        }
-        
-        // Create night slots
-        for (let i = 0; i < roleSlot.nightSlots; i++) {
-          promises.push(createShift({
-            siteId: selectedSite,
-            type: 'night',
-            guardId: '',
-            isTemporary: true,
-            temporaryDate: formattedDate,
-            temporaryRole: roleSlot.role,
-            temporaryPayRate: roleSlot.payRatePerSlot
-          }));
-        }
-      }
-
-      await Promise.all(promises);
-
-      // Refresh shifts data
-      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
-      
-      const totalSlots = roleSlots.reduce((total, slot) => total + slot.daySlots + slot.nightSlots, 0);
-      toast.success(`Created ${totalSlots} temporary slots across ${roleSlots.length} roles`);
-      setBulkTempSlotDialog(false);
-    } catch (error) {
-      console.error('Error creating bulk temporary slots:', error);
-      toast.error('Failed to create temporary slots');
-    }
-  };
-
-  const handleEditTemporarySlot = (slot: Shift) => {
-    setEditTempSlotDialog({ isOpen: true, slot });
-  };
-
-  const handleDeleteTemporarySlot = async (slotId: string) => {
-    try {
-      // Check if there's an attendance record for this slot
-      const attendanceRecord = attendanceRecords.find(record => 
-        record.shiftId === slotId && record.status === 'present'
-      );
-      
-      if (attendanceRecord && attendanceRecord.id) {
-        await deleteAttendanceMutation.mutateAsync(attendanceRecord.id);
-      }
-      
-      await deleteShift(slotId);
-      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
-      toast.success('Temporary slot deleted successfully');
-    } catch (error) {
-      console.error('Error deleting temporary slot:', error);
-      toast.error('Failed to delete temporary slot');
-    }
-  };
-
-  const handleAssignGuardToTempSlot = async (slotId: string, guardId: string) => {
-    try {
-      await updateShift(slotId, { guardId });
-      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
-      
-      if (guardId) {
-        toast.success('Guard assigned to temporary slot');
-      } else {
-        toast.success('Guard unassigned from temporary slot');
-      }
-    } catch (error) {
-      console.error('Error updating temporary slot assignment:', error);
-      toast.error('Failed to update slot assignment');
-    }
   };
 
   const getUnavailableGuards = async (shiftType: 'day' | 'night') => {
@@ -729,120 +570,122 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6 space-y-8">
-        {/* Header Controls */}
-        <Card className="shadow-sm border-0 bg-card">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-2xl font-semibold text-foreground">Mark Attendance</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Select date and site, then mark guard attendance using the visual interface
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Date Selection */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium text-foreground">Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal h-10 px-3 border-input bg-background hover:bg-accent hover:text-accent-foreground"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <span className="text-foreground">{format(selectedDate, 'PPP')}</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[1000] bg-popover border border-border shadow-lg" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={(date) => date && setSelectedDate(date)}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+    <div className="space-y-6">
+      {/* Header Controls */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Mark Attendance</CardTitle>
+          <CardDescription>
+            Select date and site, then mark guard attendance using the visual interface
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Date Selection */}
+            <div className="space-y-2">
+              <Label>Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(selectedDate, 'PPP')}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
 
-              {/* Site Selection */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium text-foreground">Site</Label>
-                <Select value={selectedSite} onValueChange={setSelectedSite}>
-                  <SelectTrigger className="w-full h-10 border-input bg-background hover:bg-accent">
-                    <SelectValue placeholder="Select a site" className="text-foreground" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[1000] bg-popover border border-border shadow-lg">
-                    {sites.map(site => (
-                      <SelectItem key={site.id} value={site.id} className="hover:bg-accent hover:text-accent-foreground">
-                        {site.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Site Selection */}
+            <div className="space-y-2">
+              <Label>Site</Label>
+              <Select value={selectedSite} onValueChange={setSelectedSite}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a site" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sites.map(site => (
+                    <SelectItem key={site.id} value={site.id}>
+                      {site.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              {/* Quick Actions */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium text-foreground">Quick Actions</Label>
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1 h-9 text-xs hover:bg-accent hover:text-accent-foreground"
-                      onClick={handleCopyYesterday}
-                      disabled={markAttendanceMutation.isPending}
-                    >
-                      <Copy className="h-3 w-3 mr-1" />
-                      Copy Yesterday
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1 h-9 text-xs hover:bg-accent hover:text-accent-foreground"
-                      onClick={handleReset}
-                      disabled={deleteAttendanceMutation.isPending}
-                    >
-                      <RefreshCw className="h-3 w-3 mr-1" />
-                      Reset
-                    </Button>
+            {/* Quick Actions */}
+            <div className="space-y-2">
+              <Label>Quick Actions</Label>
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={handleCopyYesterday}
+                  disabled={markAttendanceMutation.isPending}
+                >
+                  <Copy className="h-3 w-3 mr-1" />
+                  Copy Yesterday
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={handleReset}
+                  disabled={deleteAttendanceMutation.isPending}
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Reset
+                </Button>
+              </div>
+            </div>
+
+            {/* Site Info */}
+            {selectedSite && (
+              <div className="space-y-2">
+                <Label>Site Details</Label>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Day slots:</span>
+                    <Badge variant="outline">{daySlots}</Badge>
                   </div>
-                  {selectedSite && (
-                    <Button 
-                      variant="default" 
-                      size="sm" 
-                      className="w-full h-9 text-xs bg-primary hover:bg-primary/90 text-primary-foreground"
-                      onClick={() => setBulkTempSlotDialog(true)}
-                    >
-                      <UserPlus className="h-3 w-3 mr-1" />
-                      Temp Slots
-                    </Button>
-                  )}
+                  <div className="flex justify-between">
+                    <span>Night slots:</span>
+                    <Badge variant="outline">{nightSlots}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Pay rate:</span>
+                    <div className="flex items-center">
+                      <Badge variant="outline">{formatCurrency(payRatePerShift)}</Badge>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-            </div>
-          </CardContent>
-        </Card>
-
-        {!selectedSite ? (
-          <Alert className="border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950/20">
-            <Info className="h-4 w-4 text-blue-600" />
-            <AlertTitle className="text-blue-800 dark:text-blue-200">No site selected</AlertTitle>
-            <AlertDescription className="text-blue-700 dark:text-blue-300">
-              Please select a site to view and mark attendance
-            </AlertDescription>
-          </Alert>
-        ) : shiftsLoading ? (
-          <div className="flex items-center justify-center h-64 bg-card rounded-lg border">
-            <div className="text-center space-y-2">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="text-muted-foreground">Loading shifts...</p>
-            </div>
+            )}
           </div>
-        ) : (
+        </CardContent>
+      </Card>
+
+      {!selectedSite ? (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>No site selected</AlertTitle>
+          <AlertDescription>
+            Please select a site to view and mark attendance
+          </AlertDescription>
+        </Alert>
+      ) : shiftsLoading ? (
+        <div className="flex items-center justify-center h-64">Loading shifts...</div>
+      ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Day Shift Card */}
           <AttendanceSlotCard
@@ -853,13 +696,8 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             presentGuards={presentDayGuards}
             unavailableGuards={unavailableDayGuards}
             payRatePerShift={payRatePerShift}
-            temporarySlots={dayTemporarySlots}
-            guards={guards}
             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'day')}
             onAddGuard={() => handleAddGuard('day')}
-            onEditTemporarySlot={handleEditTemporarySlot}
-            onDeleteTemporarySlot={handleDeleteTemporarySlot}
-            onAssignGuardToTempSlot={handleAssignGuardToTempSlot}
             isExpanded={expandedCards.day}
             onToggleExpand={() => handleToggleCardExpansion('day')}
           />
@@ -873,73 +711,43 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             presentGuards={presentNightGuards}
             unavailableGuards={unavailableNightGuards}
             payRatePerShift={payRatePerShift}
-            temporarySlots={nightTemporarySlots}
-            guards={guards}
             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'night')}
             onAddGuard={() => handleAddGuard('night')}
-            onEditTemporarySlot={handleEditTemporarySlot}
-            onDeleteTemporarySlot={handleDeleteTemporarySlot}
-            onAssignGuardToTempSlot={handleAssignGuardToTempSlot}
             isExpanded={expandedCards.night}
             onToggleExpand={() => handleToggleCardExpansion('night')}
           />
         </div>
-        )}
+      )}
 
-        {/* Guard Selection Modal */}
-        <GuardSelectionModal
-          isOpen={guardSelectionModal.isOpen}
-          onClose={() => setGuardSelectionModal({ isOpen: false, shiftType: 'day', title: '' })}
-          guards={guards}
-          selectedGuards={modalSelectedGuards}
-          onSelectionChange={setModalSelectedGuards}
-          onConfirm={handleGuardSelectionConfirm}
-          maxSelections={undefined} // Allow unlimited guard assignment
-          title={guardSelectionModal.title}
-          unavailableGuards={unavailableGuards}
-        />
+      {/* Guard Selection Modal */}
+      <GuardSelectionModal
+        isOpen={guardSelectionModal.isOpen}
+        onClose={() => setGuardSelectionModal({ isOpen: false, shiftType: 'day', title: '' })}
+        guards={guards}
+        selectedGuards={modalSelectedGuards}
+        onSelectionChange={setModalSelectedGuards}
+        onConfirm={handleGuardSelectionConfirm}
+        maxSelections={undefined} // Allow unlimited guard assignment
+        title={guardSelectionModal.title}
+        unavailableGuards={unavailableGuards}
+      />
 
-        {/* Unassign Confirmation Dialog */}
-        <UnassignGuardConfirmationDialog
-          isOpen={showUnassignConfirmation}
-          onConfirm={handleConfirmUnassign}
-          onCancel={handleCancelUnassign}
-          siteName={selectedSiteData?.name || 'Unknown Site'}
-          date={selectedDate}
-          guards={guardsToUnassign.map(info => {
-            const guard = guards.find(g => g.id === info.guardId);
-            return {
-              id: info.guardId,
-              name: guard?.name || 'Unknown Guard',
-              badgeNumber: guard?.badgeNumber || 'N/A'
-            };
-          })}
-        />
-
-        {/* Temporary Slot Dialog */}
-        {selectedSiteData && (
-          <TemporarySlotDialog
-            isOpen={tempSlotDialog.isOpen}
-            onClose={() => setTempSlotDialog({ isOpen: false, shiftType: 'day' })}
-            onSave={handleSaveTemporarySlot}
-            site={selectedSiteData}
-            date={selectedDate}
-            isSaving={false}
-          />
-        )}
-
-        {/* Bulk Temporary Slot Dialog */}
-        {selectedSiteData && (
-          <BulkTemporarySlotDialog
-            isOpen={bulkTempSlotDialog}
-            onClose={() => setBulkTempSlotDialog(false)}
-            onSave={handleBulkTempSlotSave}
-            site={selectedSiteData}
-            date={selectedDate}
-            isSaving={false}
-          />
-        )}
-      </div>
+      {/* Unassign Confirmation Dialog */}
+      <UnassignGuardConfirmationDialog
+        isOpen={showUnassignConfirmation}
+        onConfirm={handleConfirmUnassign}
+        onCancel={handleCancelUnassign}
+        siteName={selectedSiteData?.name || 'Unknown Site'}
+        date={selectedDate}
+        guards={guardsToUnassign.map(info => {
+          const guard = guards.find(g => g.id === info.guardId);
+          return {
+            id: info.guardId,
+            name: guard?.name || 'Unknown Guard',
+            badgeNumber: guard?.badgeNumber || 'N/A'
+          };
+        })}
+      />
     </div>
   );
 };
