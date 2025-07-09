@@ -62,11 +62,6 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
 
   const handleSiteClick = (siteId: string) => {
     onSiteSelect(siteId);
-    // Use DOM API to click the "Mark Attendance" tab
-    const tabElement = document.querySelector('[data-state="inactive"][value="mark-attendance"]') as HTMLElement;
-    if (tabElement) {
-      tabElement.click();
-    }
   };
 
   // Get attendance status for each site

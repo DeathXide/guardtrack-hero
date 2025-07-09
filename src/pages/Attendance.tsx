@@ -8,9 +8,15 @@ import AttendanceOverview from "@/components/attendance/AttendanceOverview";
 
 export default function Attendance() {
   const [selectedSite, setSelectedSite] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<string>("overview");
 
   const handleSiteSelect = (siteId: string) => {
     setSelectedSite(siteId);
+  };
+
+  const handleSiteClickAndSwitchTab = (siteId: string) => {
+    setSelectedSite(siteId);
+    setActiveTab("mark-attendance");
   };
 
   return (
@@ -25,14 +31,14 @@ export default function Attendance() {
         </p>
       </div>
 
-      <Tabs defaultValue="overview" className="mb-8">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
         <TabsList className="mb-4">
           <TabsTrigger value="overview">Attendance Overview</TabsTrigger>
           <TabsTrigger value="mark-attendance">Mark Attendance</TabsTrigger>
           <TabsTrigger value="shift-allocation">Shift Allocation</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
-          <AttendanceOverview onSiteSelect={handleSiteSelect} />
+          <AttendanceOverview onSiteSelect={handleSiteClickAndSwitchTab} />
         </TabsContent>
         <TabsContent value="mark-attendance">
           <AttendanceMarking preselectedSiteId={selectedSite} />
