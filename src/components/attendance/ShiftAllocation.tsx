@@ -5,16 +5,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, Edit, Plus, Save, Search, ShieldAlert, Trash, UserPlus, Users } from 'lucide-react';
+import { CheckCircle, Edit, Plus, Save, Search, ShieldAlert, Trash, UserPlus, Users, AlertTriangle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchSites, fetchGuards, fetchShiftsBySite, createShift, updateShift, deleteShift } from '@/lib/localService';
+import { fetchSites, fetchGuards, fetchShiftsBySite, createShift, updateShift, deleteShift, fetchAttendanceByShift } from '@/lib/localService';
 import { Site, Guard, Shift } from '@/types';
 
 const ShiftAllocation: React.FC = () => {
@@ -23,6 +24,9 @@ const ShiftAllocation: React.FC = () => {
   const [selectedShiftType, setSelectedShiftType] = useState<'day' | 'night'>('day');
   const [selectedGuards, setSelectedGuards] = useState<string[]>([]);
   const [guardSearchTerm, setGuardSearchTerm] = useState('');
+  const [showAttendanceWarning, setShowAttendanceWarning] = useState(false);
+  const [guardsWithAttendance, setGuardsWithAttendance] = useState<string[]>([]);
+  const [pendingAllocation, setPendingAllocation] = useState<string[]>([]);
   const queryClient = useQueryClient();
   
   const { data: sites = [], isLoading: sitesLoading } = useQuery({
@@ -106,7 +110,48 @@ const ShiftAllocation: React.FC = () => {
     }
   };
 
+  const checkAttendanceRecords = async (shiftsToRemove: Shift[]): Promise<string[]> => {
+    const guardsWithAttendance: string[] = [];
+    
+    for (const shift of shiftsToRemove) {
+      if (shift.guardId) {
+        try {
+          const attendanceRecords = await fetchAttendanceByShift(shift.id);
+          if (attendanceRecords.length > 0) {
+            guardsWithAttendance.push(shift.guardId);
+          }
+        } catch (error) {
+          console.error('Error checking attendance records:', error);
+        }
+      }
+    }
+    
+    return [...new Set(guardsWithAttendance)]; // Remove duplicates
+  };
+
   const handleSaveAllocation = async () => {
+    const shiftType = selectedShiftType;
+    const existingShifts = shifts.filter(shift => shift.type === shiftType);
+    const shiftsToRemove = existingShifts.filter(shift => 
+      shift.guardId && !selectedGuards.includes(shift.guardId)
+    );
+    
+    // Check if any guards being removed have attendance records
+    if (shiftsToRemove.length > 0) {
+      const guardsWithAttendance = await checkAttendanceRecords(shiftsToRemove);
+      
+      if (guardsWithAttendance.length > 0) {
+        setGuardsWithAttendance(guardsWithAttendance);
+        setPendingAllocation(selectedGuards);
+        setShowAttendanceWarning(true);
+        return;
+      }
+    }
+    
+    await performAllocation();
+  };
+
+  const performAllocation = async () => {
     const shiftType = selectedShiftType;
     const existingShifts = shifts.filter(shift => shift.type === shiftType);
     
@@ -140,6 +185,9 @@ const ShiftAllocation: React.FC = () => {
     
     refetchShifts();
     setIsAllocationDialogOpen(false);
+    setShowAttendanceWarning(false);
+    setGuardsWithAttendance([]);
+    setPendingAllocation([]);
   };
 
   const renderShiftTable = (shiftType: 'day' | 'night') => {
@@ -365,6 +413,44 @@ const ShiftAllocation: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={showAttendanceWarning} onOpenChange={setShowAttendanceWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Attendance Records Found
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The following guards have existing attendance records and cannot be removed from their assignments:
+              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <ul className="list-disc list-inside space-y-1">
+                  {guardsWithAttendance.map(guardId => {
+                    const guard = guards.find(g => g.id === guardId);
+                    return (
+                      <li key={guardId} className="text-sm font-medium">
+                        {guard?.name || 'Unknown Guard'} ({guard?.badgeNumber || 'N/A'})
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+              <p className="mt-2 text-sm">
+                To proceed, you must first clear their attendance records from the Mark Attendance tab.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowAttendanceWarning(false);
+              setGuardsWithAttendance([]);
+              setPendingAllocation([]);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
