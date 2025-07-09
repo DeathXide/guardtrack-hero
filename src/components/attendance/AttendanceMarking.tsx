@@ -706,6 +706,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             payRatePerShift={payRatePerShift}
             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'day')}
             onAddGuard={() => handleAddGuard('day')}
+            onAddTemporarySlot={() => handleAddTemporarySlot('day')}
             isExpanded={expandedCards.day}
             onToggleExpand={() => handleToggleCardExpansion('day')}
           />
@@ -721,6 +722,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             payRatePerShift={payRatePerShift}
             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'night')}
             onAddGuard={() => handleAddGuard('night')}
+            onAddTemporarySlot={() => handleAddTemporarySlot('night')}
             isExpanded={expandedCards.night}
             onToggleExpand={() => handleToggleCardExpansion('night')}
           />
