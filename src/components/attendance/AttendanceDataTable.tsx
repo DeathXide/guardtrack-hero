@@ -225,6 +225,7 @@ export function AttendanceDataTable({
     },
     {
       id: "earnings",
+      accessorFn: (row) => row.earnings.netEarnings,
       header: ({ column }) => {
         return (
           <Button
@@ -246,12 +247,7 @@ export function AttendanceDataTable({
           </div>
         );
       },
-      sortingFn: (rowA, rowB, columnId) => {
-        const aEarnings = rowA.original.earnings.netEarnings || 0;
-        const bEarnings = rowB.original.earnings.netEarnings || 0;
-        console.log('Sorting earnings:', aEarnings, 'vs', bEarnings, '=', aEarnings - bEarnings);
-        return aEarnings - bEarnings;
-      },
+      sortingFn: "basic",
     },
     {
       id: "actions",
