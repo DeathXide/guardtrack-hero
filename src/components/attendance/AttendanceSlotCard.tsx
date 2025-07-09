@@ -49,6 +49,8 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
   const totalSlotsWithTemp = totalSlots + temporarySlots.length;
   const filledSlots = presentGuards.length;
   const completionPercentage = totalSlotsWithTemp > 0 ? (filledSlots / totalSlotsWithTemp) * 100 : 0;
+  const regularFilledSlots = assignedGuards.filter(guard => presentGuards.includes(guard.id)).length;
+  const tempFilledSlots = temporarySlots.filter(slot => slot.guardId && presentGuards.includes(slot.guardId)).length;
 
   const getInitials = (name: string) => {
     return name
@@ -89,12 +91,29 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
             </Badge>
           </div>
           <div className="flex items-center space-x-2">
-            <Badge 
-              variant={completionPercentage === 100 ? "default" : "secondary"}
-              className="px-2 py-1"
-            >
-              {filledSlots}/{totalSlotsWithTemp}
-            </Badge>
+            {temporarySlots.length > 0 ? (
+              <div className="flex items-center space-x-1">
+                <Badge 
+                  variant={regularFilledSlots === totalSlots ? "default" : "secondary"}
+                  className="px-2 py-1 text-xs"
+                >
+                  Regular: {regularFilledSlots}/{totalSlots}
+                </Badge>
+                <Badge 
+                  variant="outline"
+                  className="px-2 py-1 text-xs bg-orange-100 text-orange-700 border-orange-300"
+                >
+                  Temp: {tempFilledSlots}/{temporarySlots.length}
+                </Badge>
+              </div>
+            ) : (
+              <Badge 
+                variant={completionPercentage === 100 ? "default" : "secondary"}
+                className="px-2 py-1"
+              >
+                {filledSlots}/{totalSlots}
+              </Badge>
+            )}
           </div>
         </div>
         
@@ -188,6 +207,20 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
             </div>
           )}
 
+          {/* Temporary Slots Section */}
+          {temporarySlots.length > 0 && (
+            <TemporarySlotManager
+              title={title}
+              shiftType={shiftType}
+              temporarySlots={temporarySlots}
+              guards={guards}
+              presentGuards={presentGuards}
+              onEditSlot={onEditTemporarySlot}
+              onDeleteSlot={onDeleteTemporarySlot}
+              onGuardSelect={onGuardSelect}
+              onGuardChange={onAssignGuardToTempSlot}
+            />
+          )}
         </CardContent>
       )}
     </Card>
