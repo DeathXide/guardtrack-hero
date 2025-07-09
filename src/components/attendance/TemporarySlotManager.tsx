@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2, User } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Shift, Guard } from '@/types';
 import { formatCurrency } from '@/lib/localService';
 
@@ -14,8 +15,8 @@ interface TemporarySlotManagerProps {
   presentGuards: string[];
   onEditSlot: (slot: Shift) => void;
   onDeleteSlot: (slotId: string) => void;
-  onAssignGuard: (slotId: string) => void;
   onGuardSelect: (guardId: string) => void;
+  onGuardChange: (slotId: string, guardId: string) => void;
 }
 
 export default function TemporarySlotManager({
@@ -26,8 +27,8 @@ export default function TemporarySlotManager({
   presentGuards,
   onEditSlot,
   onDeleteSlot,
-  onAssignGuard,
-  onGuardSelect
+  onGuardSelect,
+  onGuardChange
 }: TemporarySlotManagerProps) {
   if (temporarySlots.length === 0) return null;
 
@@ -69,16 +70,38 @@ export default function TemporarySlotManager({
                         {slot.temporaryRole}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {hasGuard ? getGuardName(slot.guardId) : 'Unassigned'}
+                        {formatCurrency(slot.temporaryPayRate || 0)}/slot
                       </div>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    {formatCurrency(slot.temporaryPayRate || 0)}
-                  </Badge>
                 </div>
                 
                 <div className="flex items-center space-x-2">
+                  {/* Guard Selection Dropdown */}
+                  <Select 
+                    value={slot.guardId || 'unassigned'} 
+                    onValueChange={(value) => {
+                      if (value === 'unassigned') {
+                        onGuardChange(slot.id, '');
+                      } else {
+                        onGuardChange(slot.id, value);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-7 w-32 text-xs">
+                      <SelectValue placeholder="Select guard" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {guards.map((guard) => (
+                        <SelectItem key={guard.id} value={guard.id}>
+                          {guard.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Mark Present Button */}
                   {hasGuard && (
                     <Button
                       size="sm"
@@ -89,17 +112,6 @@ export default function TemporarySlotManager({
                       onClick={() => onGuardSelect(slot.guardId)}
                     >
                       {isPresent ? 'Present' : 'Mark Present'}
-                    </Button>
-                  )}
-                  
-                  {!hasGuard && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => onAssignGuard(slot.id)}
-                    >
-                      Assign Guard
                     </Button>
                   )}
                   

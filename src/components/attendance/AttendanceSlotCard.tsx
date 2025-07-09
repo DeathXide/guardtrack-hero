@@ -22,7 +22,7 @@ interface AttendanceSlotCardProps {
   onAddGuard: () => void;
   onEditTemporarySlot: (slot: Shift) => void;
   onDeleteTemporarySlot: (slotId: string) => void;
-  onAssignGuardToTempSlot: (slotId: string) => void;
+  onAssignGuardToTempSlot: (slotId: string, guardId: string) => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
 }
@@ -195,8 +195,8 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
             presentGuards={presentGuards}
             onEditSlot={onEditTemporarySlot}
             onDeleteSlot={onDeleteTemporarySlot}
-            onAssignGuard={onAssignGuardToTempSlot}
             onGuardSelect={onGuardSelect}
+            onGuardChange={onAssignGuardToTempSlot}
           />
         </CardContent>
       )}

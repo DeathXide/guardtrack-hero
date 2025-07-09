@@ -20,6 +20,7 @@ import {
   fetchGuards,
   fetchShiftsBySite,
   createShift,
+  updateShift,
   createAttendanceRecord,
   fetchAttendanceByDate,
   isGuardMarkedPresentElsewhere,
@@ -350,12 +351,13 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     }
   };
 
-  const handleBulkTempSlotSave = async (data: {
+  const handleBulkTempSlotSave = async (roleSlots: Array<{
+    id: string;
+    role: string;
     daySlots: number;
     nightSlots: number;
-    role: string;
     payRatePerSlot: number;
-  }) => {
+  }>) => {
     if (!selectedSite) {
       toast.error('Please select a site first');
       return;
@@ -364,37 +366,41 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     try {
       const promises = [];
       
-      // Create day slots
-      for (let i = 0; i < data.daySlots; i++) {
-        promises.push(createShift({
-          siteId: selectedSite,
-          type: 'day',
-          guardId: '',
-          isTemporary: true,
-          temporaryDate: formattedDate,
-          temporaryRole: data.role,
-          temporaryPayRate: data.payRatePerSlot
-        }));
-      }
-      
-      // Create night slots
-      for (let i = 0; i < data.nightSlots; i++) {
-        promises.push(createShift({
-          siteId: selectedSite,
-          type: 'night',
-          guardId: '',
-          isTemporary: true,
-          temporaryDate: formattedDate,
-          temporaryRole: data.role,
-          temporaryPayRate: data.payRatePerSlot
-        }));
+      for (const roleSlot of roleSlots) {
+        // Create day slots
+        for (let i = 0; i < roleSlot.daySlots; i++) {
+          promises.push(createShift({
+            siteId: selectedSite,
+            type: 'day',
+            guardId: '',
+            isTemporary: true,
+            temporaryDate: formattedDate,
+            temporaryRole: roleSlot.role,
+            temporaryPayRate: roleSlot.payRatePerSlot
+          }));
+        }
+        
+        // Create night slots
+        for (let i = 0; i < roleSlot.nightSlots; i++) {
+          promises.push(createShift({
+            siteId: selectedSite,
+            type: 'night',
+            guardId: '',
+            isTemporary: true,
+            temporaryDate: formattedDate,
+            temporaryRole: roleSlot.role,
+            temporaryPayRate: roleSlot.payRatePerSlot
+          }));
+        }
       }
 
       await Promise.all(promises);
 
       // Refresh shifts data
       queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
-      toast.success(`Created ${data.daySlots} day and ${data.nightSlots} night temporary slots`);
+      
+      const totalSlots = roleSlots.reduce((total, slot) => total + slot.daySlots + slot.nightSlots, 0);
+      toast.success(`Created ${totalSlots} temporary slots across ${roleSlots.length} roles`);
       setBulkTempSlotDialog(false);
     } catch (error) {
       console.error('Error creating bulk temporary slots:', error);
@@ -426,21 +432,20 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     }
   };
 
-  const handleAssignGuardToTempSlot = async (slotId: string) => {
-    const slot = shifts.find(s => s.id === slotId);
-    if (!slot) return;
-    
-    const unavailable = await getUnavailableGuards(slot.type);
-    setUnavailableGuards(unavailable);
-    setModalSelectedGuards([]);
-    setGuardSelectionModal({
-      isOpen: true,
-      shiftType: slot.type,
-      title: `Assign Guard to ${slot.temporaryRole} (${slot.type === 'day' ? 'Day' : 'Night'} Shift)`
-    });
-    
-    // Store the slot ID for assignment
-    setEditTempSlotDialog({ isOpen: false, slot: slot });
+  const handleAssignGuardToTempSlot = async (slotId: string, guardId: string) => {
+    try {
+      await updateShift(slotId, { guardId });
+      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
+      
+      if (guardId) {
+        toast.success('Guard assigned to temporary slot');
+      } else {
+        toast.success('Guard unassigned from temporary slot');
+      }
+    } catch (error) {
+      console.error('Error updating temporary slot assignment:', error);
+      toast.error('Failed to update slot assignment');
+    }
   };
 
   const getUnavailableGuards = async (shiftType: 'day' | 'night') => {

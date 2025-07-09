@@ -5,17 +5,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Trash2, Plus } from 'lucide-react';
+
 import { Site } from '@/types';
+
+interface RoleSlot {
+  id: string;
+  role: string;
+  daySlots: number;
+  nightSlots: number;
+  payRatePerSlot: number;
+}
 
 interface BulkTemporarySlotDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: {
-    daySlots: number;
-    nightSlots: number;
-    role: string;
-    payRatePerSlot: number;
-  }) => void;
+  onSave: (data: RoleSlot[]) => void;
   site: Site;
   date: Date;
   isSaving?: boolean;
@@ -38,36 +43,63 @@ export default function BulkTemporarySlotDialog({
   date,
   isSaving = false
 }: BulkTemporarySlotDialogProps) {
-  const [daySlots, setDaySlots] = useState<number>(0);
-  const [nightSlots, setNightSlots] = useState<number>(0);
-  const [role, setRole] = useState('');
-  const [payRatePerSlot, setPayRatePerSlot] = useState<number>(site.payRate ? Math.floor(site.payRate / (site.daySlots + site.nightSlots)) : 3000);
+  const [roleSlots, setRoleSlots] = useState<RoleSlot[]>([
+    {
+      id: '1',
+      role: '',
+      daySlots: 0,
+      nightSlots: 0,
+      payRatePerSlot: site.payRate ? Math.floor(site.payRate / (site.daySlots + site.nightSlots)) : 3000
+    }
+  ]);
 
-  const totalSlots = daySlots + nightSlots;
-  const totalCost = totalSlots * payRatePerSlot;
+  const addRoleSlot = () => {
+    const newRoleSlot: RoleSlot = {
+      id: Date.now().toString(),
+      role: '',
+      daySlots: 0,
+      nightSlots: 0,
+      payRatePerSlot: site.payRate ? Math.floor(site.payRate / (site.daySlots + site.nightSlots)) : 3000
+    };
+    setRoleSlots([...roleSlots, newRoleSlot]);
+  };
+
+  const removeRoleSlot = (id: string) => {
+    if (roleSlots.length > 1) {
+      setRoleSlots(roleSlots.filter(slot => slot.id !== id));
+    }
+  };
+
+  const updateRoleSlot = (id: string, field: keyof RoleSlot, value: string | number) => {
+    setRoleSlots(roleSlots.map(slot => 
+      slot.id === id ? { ...slot, [field]: value } : slot
+    ));
+  };
+
+  const totalSlots = roleSlots.reduce((total, slot) => total + slot.daySlots + slot.nightSlots, 0);
+  const totalCost = roleSlots.reduce((total, slot) => total + (slot.daySlots + slot.nightSlots) * slot.payRatePerSlot, 0);
 
   const handleSave = () => {
-    if (!role || payRatePerSlot <= 0 || totalSlots === 0) return;
+    const validRoles = roleSlots.filter(slot => slot.role && (slot.daySlots > 0 || slot.nightSlots > 0) && slot.payRatePerSlot > 0);
+    if (validRoles.length === 0) return;
     
-    onSave({
-      daySlots,
-      nightSlots,
-      role,
-      payRatePerSlot
-    });
+    onSave(validRoles);
   };
 
   const handleClose = () => {
-    setDaySlots(0);
-    setNightSlots(0);
-    setRole('');
-    setPayRatePerSlot(site.payRate ? Math.floor(site.payRate / (site.daySlots + site.nightSlots)) : 3000);
+    setRoleSlots([{
+      id: '1',
+      role: '',
+      daySlots: 0,
+      nightSlots: 0,
+      payRatePerSlot: site.payRate ? Math.floor(site.payRate / (site.daySlots + site.nightSlots)) : 3000
+    }]);
     onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Temporary Slots</DialogTitle>
           <DialogDescription>
@@ -76,64 +108,95 @@ export default function BulkTemporarySlotDialog({
         </DialogHeader>
         
         <div className="grid gap-6 py-4">
-          {/* Role Selection */}
-          <div className="grid gap-2">
-            <Label htmlFor="role">Role</Label>
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a role" />
-              </SelectTrigger>
-              <SelectContent>
-                {predefinedRoles.map((roleOption) => (
-                  <SelectItem key={roleOption} value={roleOption}>
-                    {roleOption}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {roleSlots.map((roleSlot, index) => (
+            <Card key={roleSlot.id} className="border-dashed">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm">Role {index + 1}</CardTitle>
+                  {roleSlots.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeRoleSlot(roleSlot.id)}
+                      className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Role Selection */}
+                <div className="grid gap-2">
+                  <Label>Role</Label>
+                  <Select 
+                    value={roleSlot.role} 
+                    onValueChange={(value) => updateRoleSlot(roleSlot.id, 'role', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {predefinedRoles.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          {/* Slot Numbers */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="day-slots">Day Slots</Label>
-              <Input
-                id="day-slots"
-                type="number"
-                value={daySlots}
-                onChange={(e) => setDaySlots(Number(e.target.value))}
-                placeholder="0"
-                min="0"
-                max="10"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="night-slots">Night Slots</Label>
-              <Input
-                id="night-slots"
-                type="number"
-                value={nightSlots}
-                onChange={(e) => setNightSlots(Number(e.target.value))}
-                placeholder="0"
-                min="0"
-                max="10"
-              />
-            </div>
-          </div>
+                {/* Slot Numbers */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Day Slots</Label>
+                    <Input
+                      type="number"
+                      value={roleSlot.daySlots}
+                      onChange={(e) => updateRoleSlot(roleSlot.id, 'daySlots', Number(e.target.value))}
+                      placeholder="0"
+                      min="0"
+                      max="10"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Night Slots</Label>
+                    <Input
+                      type="number"
+                      value={roleSlot.nightSlots}
+                      onChange={(e) => updateRoleSlot(roleSlot.id, 'nightSlots', Number(e.target.value))}
+                      placeholder="0"
+                      min="0"
+                      max="10"
+                    />
+                  </div>
+                </div>
 
-          {/* Pay Rate */}
-          <div className="grid gap-2">
-            <Label htmlFor="pay-rate">Pay Rate (per slot)</Label>
-            <Input
-              id="pay-rate"
-              type="number"
-              value={payRatePerSlot}
-              onChange={(e) => setPayRatePerSlot(Number(e.target.value))}
-              placeholder="Enter pay rate per slot"
-              min="0"
-              step="100"
-            />
-          </div>
+                {/* Pay Rate */}
+                <div className="grid gap-2">
+                  <Label>Pay Rate (per slot)</Label>
+                  <Input
+                    type="number"
+                    value={roleSlot.payRatePerSlot}
+                    onChange={(e) => updateRoleSlot(roleSlot.id, 'payRatePerSlot', Number(e.target.value))}
+                    placeholder="Enter pay rate per slot"
+                    min="0"
+                    step="100"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* Add Role Button */}
+          <Button
+            variant="outline"
+            onClick={addRoleSlot}
+            className="border-dashed"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Another Role
+          </Button>
 
           {/* Summary Card */}
           {totalSlots > 0 && (
@@ -148,12 +211,8 @@ export default function BulkTemporarySlotDialog({
                     <span className="font-medium">{totalSlots}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Day Slots:</span>
-                    <span className="font-medium">{daySlots}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Night Slots:</span>
-                    <span className="font-medium">{nightSlots}</span>
+                    <span>Total Roles:</span>
+                    <span className="font-medium">{roleSlots.filter(slot => slot.role).length}</span>
                   </div>
                   <div className="flex justify-between border-t pt-2">
                     <span>Total Cost:</span>
@@ -171,7 +230,7 @@ export default function BulkTemporarySlotDialog({
           </Button>
           <Button 
             onClick={handleSave} 
-            disabled={!role || payRatePerSlot <= 0 || totalSlots === 0 || isSaving}
+            disabled={!roleSlots.some(slot => slot.role && (slot.daySlots > 0 || slot.nightSlots > 0) && slot.payRatePerSlot > 0) || isSaving}
           >
             {isSaving ? 'Creating...' : `Create ${totalSlots} Temporary Slots`}
           </Button>
