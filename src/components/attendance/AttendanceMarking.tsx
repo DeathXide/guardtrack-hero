@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import AttendanceSlotCard from './AttendanceSlotCard';
 import GuardSelectionModal from './GuardSelectionModal';
+import TemporarySlotDialog from './TemporarySlotDialog';
 import {
   fetchSites,
   fetchGuards,
@@ -295,6 +296,37 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
 
   const handleAddTemporarySlot = (shiftType: 'day' | 'night') => {
     setTempSlotDialog({ isOpen: true, shiftType });
+  };
+
+  const handleSaveTemporarySlot = async (data: {
+    shiftType: 'day' | 'night';
+    role: string;
+    payRate: number;
+  }) => {
+    if (!selectedSite) {
+      toast.error('Please select a site first');
+      return;
+    }
+
+    try {
+      const newShift = await createShift({
+        siteId: selectedSite,
+        type: data.shiftType,
+        guardId: '', // Temporary slots start unassigned
+        isTemporary: true,
+        temporaryDate: formattedDate,
+        temporaryRole: data.role,
+        temporaryPayRate: data.payRate
+      });
+
+      // Refresh shifts data
+      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
+      toast.success(`Temporary ${data.role} slot created for ${data.shiftType} shift`);
+      setTempSlotDialog({ isOpen: false, shiftType: 'day' });
+    } catch (error) {
+      console.error('Error creating temporary slot:', error);
+      toast.error('Failed to create temporary slot');
+    }
   };
 
   const getUnavailableGuards = async (shiftType: 'day' | 'night') => {
@@ -757,6 +789,16 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             badgeNumber: guard?.badgeNumber || 'N/A'
           };
         })}
+      />
+
+      {/* Temporary Slot Dialog */}
+      <TemporarySlotDialog
+        isOpen={tempSlotDialog.isOpen}
+        onClose={() => setTempSlotDialog({ isOpen: false, shiftType: 'day' })}
+        onSave={handleSaveTemporarySlot}
+        site={selectedSiteData!}
+        date={selectedDate}
+        isSaving={false}
       />
     </div>
   );
