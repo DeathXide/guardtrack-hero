@@ -78,6 +78,13 @@ const AttendanceSheet: React.FC<AttendanceSheetProps> = ({
 
   // Create attendance matrix
   const attendanceMatrix = useMemo(() => {
+    console.log('Building attendance matrix with:', {
+      siteGuards: siteGuards.length,
+      attendanceRecords: attendanceRecords.length,
+      shifts: shifts.length,
+      selectedSite
+    });
+    
     const matrix: Record<string, Record<string, { present: boolean; shiftType: string }[]>> = {};
     
     siteGuards.forEach(guard => {
@@ -89,17 +96,21 @@ const AttendanceSheet: React.FC<AttendanceSheetProps> = ({
     });
 
     attendanceRecords.forEach(record => {
+      console.log('Processing attendance record:', record);
       if (record.status === 'present') {
         const shift = shifts.find(s => s.id === record.shiftId);
+        console.log('Found shift for record:', shift);
         if (shift && matrix[record.guardId] && matrix[record.guardId][record.date]) {
           matrix[record.guardId][record.date].push({
             present: true,
             shiftType: shift.type
           });
+          console.log('Added to matrix:', record.guardId, record.date, shift.type);
         }
       }
     });
 
+    console.log('Final matrix:', matrix);
     return matrix;
   }, [siteGuards, daysInMonth, attendanceRecords, shifts]);
 
