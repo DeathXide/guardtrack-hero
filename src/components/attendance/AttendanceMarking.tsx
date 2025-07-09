@@ -22,6 +22,7 @@ import {
   fetchAttendanceByDate,
   isGuardMarkedPresentElsewhere,
   deleteAttendanceRecord,
+  deleteShift,
   fetchSiteMonthlyEarnings,
   formatCurrency
 } from '@/lib/localService';
@@ -43,6 +44,8 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     title: string;
   }>({ isOpen: false, shiftType: 'day', title: '' });
   const [unavailableGuards, setUnavailableGuards] = useState<string[]>([]);
+  const [unavailableDayGuards, setUnavailableDayGuards] = useState<string[]>([]);
+  const [unavailableNightGuards, setUnavailableNightGuards] = useState<string[]>([]);
   const [modalSelectedGuards, setModalSelectedGuards] = useState<string[]>([]);
   
   const queryClient = useQueryClient();
@@ -149,13 +152,26 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     });
   }, [attendanceRecords, shifts, selectedSite]);
 
+  // Calculate unavailable guards for each shift type
+  useEffect(() => {
+    if (selectedSite && formattedDate) {
+      const calculateUnavailable = async () => {
+        const dayUnavailable = await getUnavailableGuards('day');
+        const nightUnavailable = await getUnavailableGuards('night');
+        setUnavailableDayGuards(dayUnavailable);
+        setUnavailableNightGuards(nightUnavailable);
+      };
+      calculateUnavailable();
+    }
+  }, [guards, formattedDate, selectedSite]);
+
   const handleGuardSelect = async (guardId: string, shiftType: 'day' | 'night') => {
     const currentSelected = selectedGuards[shiftType] || [];
     const isSelected = currentSelected.includes(guardId);
     const maxSlots = shiftType === 'day' ? daySlots : nightSlots;
     
     if (isSelected) {
-      // Remove guard - also remove from attendance
+      // Remove guard - remove from attendance and unassign from site
       const record = attendanceRecords.find(record => {
         const shift = shifts.find(s => s.id === record.shiftId);
         return record.guardId === guardId && 
@@ -255,6 +271,23 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
 
   const handleGuardSelectionConfirm = async () => {
     const { shiftType } = guardSelectionModal;
+    const currentlyAssigned = shiftType === 'day' ? dayShiftGuards.map(g => g.id) : nightShiftGuards.map(g => g.id);
+    
+    // Remove unselected guards from shift assignments
+    for (const guardId of currentlyAssigned) {
+      if (!modalSelectedGuards.includes(guardId)) {
+        const shiftToDelete = shifts.find(s => s.type === shiftType && s.guardId === guardId && s.siteId === selectedSite);
+        if (shiftToDelete) {
+          try {
+            await deleteShift(shiftToDelete.id);
+            toast.success(`Guard unassigned from ${shiftType} shift`);
+          } catch (error) {
+            console.error('Error deleting shift assignment:', error);
+            toast.error(`Failed to unassign guard from ${shiftType} shift`);
+          }
+        }
+      }
+    }
     
     // Create shift assignments for selected guards
     for (const guardId of modalSelectedGuards) {
@@ -275,7 +308,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     
     // Refresh shifts data
     queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
-    toast.success('Guards assigned to shift successfully');
+    toast.success('Guard assignments updated successfully');
     setGuardSelectionModal({ isOpen: false, shiftType: 'day', title: '' });
     setModalSelectedGuards([]);
   };
@@ -398,6 +431,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             totalSlots={daySlots}
             assignedGuards={dayShiftGuards}
             presentGuards={presentDayGuards}
+            unavailableGuards={unavailableDayGuards}
             payRatePerShift={payRatePerShift}
             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'day')}
             onAddGuard={() => handleAddGuard('day')}
@@ -412,6 +446,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             totalSlots={nightSlots}
             assignedGuards={nightShiftGuards}
             presentGuards={presentNightGuards}
+            unavailableGuards={unavailableNightGuards}
             payRatePerShift={payRatePerShift}
             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'night')}
             onAddGuard={() => handleAddGuard('night')}

@@ -13,6 +13,7 @@ interface AttendanceSlotCardProps {
   totalSlots: number;
   assignedGuards: Guard[];
   presentGuards: string[];
+  unavailableGuards?: string[];
   payRatePerShift: number;
   onGuardSelect: (guardId: string) => void;
   onAddGuard: () => void;
@@ -26,6 +27,7 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
   totalSlots,
   assignedGuards,
   presentGuards,
+  unavailableGuards = [],
   payRatePerShift,
   onGuardSelect,
   onAddGuard,
@@ -102,105 +104,75 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
 
       {isExpanded && (
         <CardContent className="pt-0 space-y-4">
-          {/* Visual Slots */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Positions</span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onAddGuard}
-                className="h-8"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Add Guard
-              </Button>
-            </div>
-            
-            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-              {Array.from({ length: totalSlots }).map((_, index) => {
-                const status = getSlotStatus(index);
-                const guard = index < assignedGuards.length ? assignedGuards[index] : null;
-                const isPresent = guard ? presentGuards.includes(guard.id) : false;
+          {/* Header with Add Guard Button */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Assigned Guards ({assignedGuards.length})</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onAddGuard}
+              className="h-8"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Manage Guards
+            </Button>
+          </div>
+
+          {/* Assigned Guards List */}
+          {assignedGuards.length > 0 ? (
+            <div className="space-y-2">
+              {assignedGuards.map((guard) => {
+                const isPresent = presentGuards.includes(guard.id);
+                const isUnavailable = unavailableGuards.includes(guard.id);
+                const getStatus = () => {
+                  if (isUnavailable) return 'unavailable';
+                  if (isPresent) return 'present';
+                  return 'absent';
+                };
+                
+                const status = getStatus();
                 
                 return (
-                  <div
-                    key={index}
+                  <div 
+                    key={guard.id}
                     className={`
-                      relative aspect-square rounded-lg border-2 flex items-center justify-center
-                      cursor-pointer transition-all duration-200 hover:scale-105
-                      ${getStatusColor(status)}
-                      ${guard ? 'hover:shadow-lg' : ''}
+                      flex items-center justify-between p-2 rounded-lg border cursor-pointer
+                      transition-all duration-200 hover:shadow-sm
+                      ${status === 'present' ? 'bg-green-50 border-green-200' : 
+                        status === 'unavailable' ? 'bg-red-50 border-red-200' : 'bg-muted/30'}
+                      ${isUnavailable ? 'opacity-75 cursor-not-allowed' : ''}
                     `}
-                    onClick={() => guard && onGuardSelect(guard.id)}
+                    onClick={() => !isUnavailable && onGuardSelect(guard.id)}
                   >
-                    {guard ? (
+                    <div className="flex items-center space-x-3">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={guard.avatar} alt={guard.name} />
-                        <AvatarFallback className="text-xs bg-background/50">
+                        <AvatarFallback className="text-xs">
                           {getInitials(guard.name)}
                         </AvatarFallback>
                       </Avatar>
-                    ) : (
-                      <Users className="h-4 w-4 text-muted-foreground/50" />
-                    )}
-                    
-                    {/* Status indicator */}
-                    {guard && (
-                      <div 
-                        className={`
-                          absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-background
-                          ${isPresent ? 'bg-green-500' : 'bg-gray-400'}
-                        `}
-                      />
-                    )}
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{guard.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {guard.badgeNumber}
+                        </div>
+                      </div>
+                    </div>
+                    <Badge 
+                      variant={status === 'present' ? "default" : status === 'unavailable' ? "destructive" : "outline"}
+                      className={status === 'present' ? "bg-green-500" : status === 'unavailable' ? "bg-red-500" : ""}
+                    >
+                      {status === 'unavailable' ? 'Unavailable' : status === 'present' ? 'Present' : 'Absent'}
+                    </Badge>
                   </div>
                 );
               })}
             </div>
-          </div>
-
-          {/* Assigned Guards List */}
-          {assignedGuards.length > 0 && (
-            <div className="space-y-2">
-              <span className="text-sm font-medium">Assigned Guards</span>
-              <div className="space-y-2">
-                {assignedGuards.map((guard) => {
-                  const isPresent = presentGuards.includes(guard.id);
-                  return (
-                    <div 
-                      key={guard.id}
-                      className={`
-                        flex items-center justify-between p-2 rounded-lg border cursor-pointer
-                        transition-all duration-200 hover:shadow-sm
-                        ${isPresent ? 'bg-green-50 border-green-200' : 'bg-muted/30'}
-                      `}
-                      onClick={() => onGuardSelect(guard.id)}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={guard.avatar} alt={guard.name} />
-                          <AvatarFallback className="text-xs">
-                            {getInitials(guard.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{guard.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {guard.badgeNumber}
-                          </div>
-                        </div>
-                      </div>
-                      <Badge 
-                        variant={isPresent ? "default" : "outline"}
-                        className={isPresent ? "bg-green-500" : ""}
-                      >
-                        {isPresent ? 'Present' : 'Absent'}
-                      </Badge>
-                    </div>
-                  );
-                })}
-              </div>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground">
+              <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No guards assigned to this shift</p>
+              <p className="text-xs">Click "Manage Guards" to assign guards</p>
             </div>
           )}
         </CardContent>
