@@ -247,7 +247,10 @@ export function AttendanceDataTable({
         );
       },
       sortingFn: (rowA, rowB, columnId) => {
-        return rowA.original.earnings.netEarnings - rowB.original.earnings.netEarnings;
+        const aEarnings = rowA.original.earnings.netEarnings || 0;
+        const bEarnings = rowB.original.earnings.netEarnings || 0;
+        console.log('Sorting earnings:', aEarnings, 'vs', bEarnings, '=', aEarnings - bEarnings);
+        return aEarnings - bEarnings;
       },
     },
     {
