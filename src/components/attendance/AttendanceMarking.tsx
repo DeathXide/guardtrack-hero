@@ -448,6 +448,51 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     }
   };
 
+  const handleMarkGuardForTempSlot = async (guardId: string, shiftType: 'day' | 'night') => {
+    try {
+      // Find the first available temporary slot for this shift type
+      const temporarySlots = shiftType === 'day' ? dayTemporarySlots : nightTemporarySlots;
+      const availableSlot = temporarySlots.find(slot => !slot.guardId);
+      
+      if (!availableSlot) {
+        toast.error(`No available temporary slots for ${shiftType} shift`);
+        return;
+      }
+      
+      // Check if guard is already marked present elsewhere
+      const isMarkedElsewhere = await isGuardMarkedPresentElsewhere(
+        guardId, 
+        formattedDate, 
+        shiftType, 
+        selectedSite
+      );
+      
+      if (isMarkedElsewhere) {
+        toast.error('This guard is already marked present at another site for this shift');
+        return;
+      }
+      
+      // Assign guard to the temporary slot
+      await updateShift(availableSlot.id, { guardId });
+      
+      // Mark attendance for the temporary slot
+      await markAttendanceMutation.mutateAsync({
+        date: formattedDate,
+        shiftId: availableSlot.id,
+        guardId,
+        status: 'present' as const
+      });
+      
+      // Refresh shifts data
+      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
+      
+      toast.success(`Guard marked present for temporary ${availableSlot.temporaryRole || 'slot'}`);
+    } catch (error) {
+      console.error('Error marking guard for temporary slot:', error);
+      toast.error('Failed to mark guard for temporary slot');
+    }
+  };
+
   const getUnavailableGuards = async (shiftType: 'day' | 'night') => {
     const unavailable: string[] = [];
     
@@ -845,44 +890,46 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
         ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Day Shift Card */}
-          <AttendanceSlotCard
-            title="Day Shift"
-            shiftType="day"
-            totalSlots={daySlots}
-            assignedGuards={dayShiftGuards}
-            presentGuards={presentDayGuards}
-            unavailableGuards={unavailableDayGuards}
-            payRatePerShift={payRatePerShift}
-            temporarySlots={dayTemporarySlots}
-            guards={guards}
-            onGuardSelect={(guardId) => handleGuardSelect(guardId, 'day')}
-            onAddGuard={() => handleAddGuard('day')}
-            onEditTemporarySlot={handleEditTemporarySlot}
-            onDeleteTemporarySlot={handleDeleteTemporarySlot}
-            onAssignGuardToTempSlot={handleAssignGuardToTempSlot}
-            isExpanded={expandedCards.day}
-            onToggleExpand={() => handleToggleCardExpansion('day')}
-          />
+           <AttendanceSlotCard
+             title="Day Shift"
+             shiftType="day"
+             totalSlots={daySlots}
+             assignedGuards={dayShiftGuards}
+             presentGuards={presentDayGuards}
+             unavailableGuards={unavailableDayGuards}
+             payRatePerShift={payRatePerShift}
+             temporarySlots={dayTemporarySlots}
+             guards={guards}
+             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'day')}
+             onAddGuard={() => handleAddGuard('day')}
+             onEditTemporarySlot={handleEditTemporarySlot}
+             onDeleteTemporarySlot={handleDeleteTemporarySlot}
+             onAssignGuardToTempSlot={handleAssignGuardToTempSlot}
+             onMarkGuardForTempSlot={handleMarkGuardForTempSlot}
+             isExpanded={expandedCards.day}
+             onToggleExpand={() => handleToggleCardExpansion('day')}
+           />
 
           {/* Night Shift Card */}
-          <AttendanceSlotCard
-            title="Night Shift"
-            shiftType="night"
-            totalSlots={nightSlots}
-            assignedGuards={nightShiftGuards}
-            presentGuards={presentNightGuards}
-            unavailableGuards={unavailableNightGuards}
-            payRatePerShift={payRatePerShift}
-            temporarySlots={nightTemporarySlots}
-            guards={guards}
-            onGuardSelect={(guardId) => handleGuardSelect(guardId, 'night')}
-            onAddGuard={() => handleAddGuard('night')}
-            onEditTemporarySlot={handleEditTemporarySlot}
-            onDeleteTemporarySlot={handleDeleteTemporarySlot}
-            onAssignGuardToTempSlot={handleAssignGuardToTempSlot}
-            isExpanded={expandedCards.night}
-            onToggleExpand={() => handleToggleCardExpansion('night')}
-          />
+           <AttendanceSlotCard
+             title="Night Shift"
+             shiftType="night"
+             totalSlots={nightSlots}
+             assignedGuards={nightShiftGuards}
+             presentGuards={presentNightGuards}
+             unavailableGuards={unavailableNightGuards}
+             payRatePerShift={payRatePerShift}
+             temporarySlots={nightTemporarySlots}
+             guards={guards}
+             onGuardSelect={(guardId) => handleGuardSelect(guardId, 'night')}
+             onAddGuard={() => handleAddGuard('night')}
+             onEditTemporarySlot={handleEditTemporarySlot}
+             onDeleteTemporarySlot={handleDeleteTemporarySlot}
+             onAssignGuardToTempSlot={handleAssignGuardToTempSlot}
+             onMarkGuardForTempSlot={handleMarkGuardForTempSlot}
+             isExpanded={expandedCards.night}
+             onToggleExpand={() => handleToggleCardExpansion('night')}
+           />
         </div>
         )}
 

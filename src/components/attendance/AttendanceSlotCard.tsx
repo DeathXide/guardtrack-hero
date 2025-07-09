@@ -23,6 +23,7 @@ interface AttendanceSlotCardProps {
   onEditTemporarySlot: (slot: Shift) => void;
   onDeleteTemporarySlot: (slotId: string) => void;
   onAssignGuardToTempSlot: (slotId: string, guardId: string) => void;
+  onMarkGuardForTempSlot: (guardId: string, shiftType: 'day' | 'night') => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
 }
@@ -42,6 +43,7 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
   onEditTemporarySlot,
   onDeleteTemporarySlot,
   onAssignGuardToTempSlot,
+  onMarkGuardForTempSlot,
   isExpanded,
   onToggleExpand,
 }) => {
@@ -73,6 +75,9 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
       default: return 'bg-muted border-muted-foreground/20';
     }
   };
+
+  // Check if there are available temporary slots for this shift type
+  const hasAvailableTempSlots = temporarySlots.some(slot => !slot.guardId);
 
   return (
     <Card className="transition-all duration-200 hover:shadow-md">
@@ -167,15 +172,17 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
                   <div 
                     key={guard.id}
                     className={`
-                      flex items-center justify-between p-2 rounded-lg border cursor-pointer
+                      flex items-center justify-between p-2 rounded-lg border
                       transition-all duration-200 hover:shadow-sm
                       ${status === 'present' ? 'bg-green-50 border-green-200' : 
                         status === 'unavailable' ? 'bg-red-50 border-red-200' : 'bg-muted/30'}
-                      ${isUnavailable ? 'opacity-75 cursor-not-allowed' : ''}
+                      ${isUnavailable ? 'opacity-75' : ''}
                     `}
-                    onClick={() => !isUnavailable && onGuardSelect(guard.id)}
                   >
-                    <div className="flex items-center space-x-3">
+                    <div 
+                      className="flex items-center space-x-3 flex-1 cursor-pointer"
+                      onClick={() => !isUnavailable && onGuardSelect(guard.id)}
+                    >
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={guard.avatar} alt={guard.name} />
                         <AvatarFallback className="text-xs">
@@ -189,12 +196,27 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
                         </div>
                       </div>
                     </div>
-                    <Badge 
-                      variant={status === 'present' ? "default" : status === 'unavailable' ? "destructive" : "outline"}
-                      className={status === 'present' ? "bg-green-500" : status === 'unavailable' ? "bg-red-500" : ""}
-                    >
-                      {status === 'unavailable' ? 'Unavailable' : status === 'present' ? 'Present' : 'Absent'}
-                    </Badge>
+                    
+                    <div className="flex items-center space-x-2">
+                      {hasAvailableTempSlots && !isUnavailable && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onMarkGuardForTempSlot(guard.id, shiftType)}
+                          className="h-7 px-2 text-xs bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                        >
+                          <UserPlus className="h-3 w-3 mr-1" />
+                          Temp
+                        </Button>
+                      )}
+                      
+                      <Badge 
+                        variant={status === 'present' ? "default" : status === 'unavailable' ? "destructive" : "outline"}
+                        className={status === 'present' ? "bg-green-500" : status === 'unavailable' ? "bg-red-500" : ""}
+                      >
+                        {status === 'unavailable' ? 'Unavailable' : status === 'present' ? 'Present' : 'Absent'}
+                      </Badge>
+                    </div>
                   </div>
                 );
               })}
