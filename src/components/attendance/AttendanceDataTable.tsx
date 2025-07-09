@@ -121,6 +121,9 @@ export function AttendanceDataTable({
     if (savedVisibility) setColumnVisibility(JSON.parse(savedVisibility));
   }, []);
 
+  // Prevent pagination reset when data changes
+  const stablePagination = useMemo(() => pagination, [pagination.pageIndex, pagination.pageSize]);
+
   // Save table state to sessionStorage whenever it changes
   useEffect(() => {
     console.log('Saving pagination to sessionStorage:', pagination);
@@ -318,6 +321,8 @@ export function AttendanceDataTable({
   const table = useReactTable({
     data,
     columns,
+    manualPagination: false,
+    autoResetPageIndex: false,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
@@ -340,7 +345,7 @@ export function AttendanceDataTable({
       columnFilters,
       columnVisibility,
       globalFilter,
-      pagination,
+      pagination: stablePagination,
     },
   });
 
