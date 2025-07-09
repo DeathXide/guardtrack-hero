@@ -97,13 +97,13 @@ const AttendanceSlotCard: React.FC<AttendanceSlotCardProps> = ({
                   variant={regularFilledSlots === totalSlots ? "default" : "secondary"}
                   className="px-2 py-1 text-xs"
                 >
-                  Regular: {regularFilledSlots}/{totalSlots}
+                  {regularFilledSlots}/{totalSlots}
                 </Badge>
                 <Badge 
                   variant="outline"
                   className="px-2 py-1 text-xs bg-orange-100 text-orange-700 border-orange-300"
                 >
-                  Temp: {tempFilledSlots}/{temporarySlots.length}
+                  {tempFilledSlots}/{temporarySlots.length}
                 </Badge>
               </div>
             ) : (
