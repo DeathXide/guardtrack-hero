@@ -320,6 +320,13 @@ const Guards = () => {
     setSelectedGuardForForm(undefined);
   };
 
+  const handleAddGuard = () => {
+    // Ensure clean state for add mode
+    setSelectedGuardForForm(undefined);
+    setIsEditMode(false);
+    setIsDialogOpen(true);
+  };
+
   const handleFormSubmit = (data: any) => {
     if (isEditMode && selectedGuardForForm) {
       updateGuardMutation.mutate({ 
@@ -420,7 +427,7 @@ const Guards = () => {
           </p>
         </div>
         
-        <Button onClick={() => setIsDialogOpen(true)}>
+        <Button onClick={handleAddGuard}>
           <UserPlus className="h-4 w-4 mr-2" />
           Add Guard
         </Button>
