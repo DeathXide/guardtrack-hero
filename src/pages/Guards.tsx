@@ -15,17 +15,65 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  fetchGuards, 
-  createGuard, 
-  updateGuard, 
-  deleteGuard, 
-  fetchGuardMonthlyStats,
-  createPaymentRecord,
-  fetchPaymentsByGuard,
-  fetchPaymentsByMonth,
-  updatePaymentRecord,
-  deletePaymentRecord
-} from '@/lib/localService';
+  guardsApi, 
+  paymentsApi, 
+  guardUtils,
+  type Guard as SupabaseGuard,
+  type CreateGuardData,
+  type CreatePaymentData
+} from '@/lib/guardsApi';
+
+// Mapping functions between Supabase types and local types
+const mapSupabaseGuardToLocal = (supabaseGuard: SupabaseGuard): Guard => {
+  return {
+    id: supabaseGuard.id,
+    name: supabaseGuard.name,
+    dateOfBirth: supabaseGuard.dob,
+    gender: supabaseGuard.gender,
+    languagesSpoken: supabaseGuard.languages || [],
+    guardPhoto: supabaseGuard.guard_photo_url || '',
+    aadhaarNumber: supabaseGuard.aadhaar_number || '',
+    aadhaarCardPhoto: supabaseGuard.aadhaar_card_photo_url || '',
+    panCard: supabaseGuard.pan_card_number || '',
+    phone: supabaseGuard.phone_number,
+    alternatePhone: supabaseGuard.alternate_phone_number || '',
+    currentAddress: supabaseGuard.current_address || '',
+    permanentAddress: supabaseGuard.permanent_address || '',
+    type: supabaseGuard.guard_type,
+    status: supabaseGuard.status,
+    payRate: Number(supabaseGuard.monthly_pay_rate),
+    bankName: supabaseGuard.bank_name || '',
+    accountNumber: supabaseGuard.account_number || '',
+    ifscCode: supabaseGuard.ifsc_code || '',
+    upiId: supabaseGuard.upi_id || '',
+    badgeNumber: supabaseGuard.badge_number,
+    created_at: supabaseGuard.created_at
+  };
+};
+
+const mapLocalGuardToSupabase = (localGuard: any): CreateGuardData => {
+  return {
+    name: localGuard.name,
+    dob: localGuard.dateOfBirth,
+    gender: localGuard.gender,
+    languages: localGuard.languagesSpoken || [],
+    guard_photo_url: localGuard.guardPhoto,
+    aadhaar_number: localGuard.aadhaarNumber,
+    aadhaar_card_photo_url: localGuard.aadhaarCardPhoto,
+    pan_card_number: localGuard.panCard,
+    phone_number: localGuard.phone,
+    alternate_phone_number: localGuard.alternatePhone,
+    current_address: localGuard.currentAddress,
+    permanent_address: localGuard.permanentAddress,
+    guard_type: localGuard.type,
+    status: localGuard.status,
+    monthly_pay_rate: Number(localGuard.payRate),
+    bank_name: localGuard.bankName,
+    account_number: localGuard.accountNumber,
+    ifsc_code: localGuard.ifscCode,
+    upi_id: localGuard.upiId
+  };
+};
 import GuardForm from '@/components/forms/GuardForm';
 
 const Guards = () => {
@@ -42,7 +90,7 @@ const Guards = () => {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNote, setPaymentNote] = useState('');
   const [paymentType, setPaymentType] = useState<'bonus' | 'deduction'>('bonus');
-  const [selectedGuard, setSelectedGuard] = useState<Guard | null>(null);
+  const [selectedGuard, setSelectedGuard] = useState<SupabaseGuard | null>(null);
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM'));
   
   const [guardEarnings, setGuardEarnings] = useState<Record<string, MonthlyEarning>>({});
@@ -51,12 +99,12 @@ const Guards = () => {
 
   const { data: guardList = [], isLoading } = useQuery({
     queryKey: ['guards'],
-    queryFn: fetchGuards
+    queryFn: () => guardsApi.getAllGuards()
   });
 
   const { data: paymentHistory = [] } = useQuery({
     queryKey: ['payments', selectedGuard?.id],
-    queryFn: () => selectedGuard ? fetchPaymentsByGuard(selectedGuard.id) : Promise.resolve([]),
+    queryFn: () => selectedGuard ? paymentsApi.getPaymentsByGuardId(selectedGuard.id) : Promise.resolve([]),
     enabled: !!selectedGuard
   });
 
@@ -64,8 +112,8 @@ const Guards = () => {
 
   const createGuardMutation = useMutation({
     mutationFn: (guardData: any) => {
-      const badgeNumber = generateBadgeNumber();
-      return createGuard({ ...guardData, badgeNumber });
+      const supabaseGuardData = mapLocalGuardToSupabase(guardData);
+      return guardsApi.createGuard(supabaseGuardData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guards'] });
@@ -85,8 +133,10 @@ const Guards = () => {
   });
 
   const updateGuardMutation = useMutation({
-    mutationFn: ({ id, guard }: { id: string; guard: Partial<Guard> }) => 
-      updateGuard(id, guard),
+    mutationFn: ({ id, guard }: { id: string; guard: any }) => {
+      const supabaseGuardData = mapLocalGuardToSupabase(guard);
+      return guardsApi.updateGuard(id, supabaseGuardData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guards'] });
       toast({
@@ -105,7 +155,7 @@ const Guards = () => {
   });
 
   const deleteGuardMutation = useMutation({
-    mutationFn: deleteGuard,
+    mutationFn: (id: string) => guardsApi.deleteGuard(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guards'] });
       toast({
@@ -125,7 +175,7 @@ const Guards = () => {
   });
 
   const createPaymentMutation = useMutation({
-    mutationFn: createPaymentRecord,
+    mutationFn: (paymentData: CreatePaymentData) => paymentsApi.createPayment(paymentData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments', selectedGuard?.id] });
       queryClient.invalidateQueries({ queryKey: ['all-payments', currentMonth] });
@@ -149,8 +199,8 @@ const Guards = () => {
   });
 
   const updatePaymentMutation = useMutation({
-    mutationFn: ({ id, payment }: { id: string; payment: Partial<PaymentRecord> }) => 
-      updatePaymentRecord(id, payment),
+    mutationFn: ({ id, payment }: { id: string; payment: any }) => 
+      paymentsApi.updatePayment(id, payment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments', selectedGuard?.id] });
       queryClient.invalidateQueries({ queryKey: ['all-payments', currentMonth] });
@@ -172,7 +222,7 @@ const Guards = () => {
   });
 
   const deletePaymentMutation = useMutation({
-    mutationFn: deletePaymentRecord,
+    mutationFn: (id: string) => paymentsApi.deletePayment(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments', selectedGuard?.id] });
       queryClient.invalidateQueries({ queryKey: ['all-payments', currentMonth] });
@@ -191,12 +241,7 @@ const Guards = () => {
     }
   });
 
-  const generateBadgeNumber = (): string => {
-    const prefix = 'SG';
-    const timestamp = Date.now().toString().slice(-6);
-    const randomDigits = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `${prefix}${timestamp}${randomDigits}`;
-  };
+  // Badge numbers are now auto-generated by the database trigger
 
   const calculateShiftRate = (monthlyRate: number) => {
     const date = new Date();
@@ -206,13 +251,14 @@ const Guards = () => {
     return monthlyRate / daysInMonth;
   };
 
-  const handleEditGuard = (guard: Guard) => {
-    setSelectedGuardForForm(guard);
+  const handleEditGuard = (guard: SupabaseGuard) => {
+    const localGuard = mapSupabaseGuardToLocal(guard);
+    setSelectedGuardForForm(localGuard);
     setIsEditMode(true);
     setIsDialogOpen(true);
   };
 
-  const handlePaymentDialog = (guard: Guard) => {
+  const handlePaymentDialog = (guard: SupabaseGuard) => {
     setSelectedGuard(guard);
     setPaymentAmount('');
     setPaymentNote('');
@@ -222,11 +268,11 @@ const Guards = () => {
     setIsPaymentDialogOpen(true);
   };
 
-  const handleEditPayment = (payment: PaymentRecord) => {
+  const handleEditPayment = (payment: any) => {
     setEditingPayment(payment);
     setPaymentAmount(payment.amount.toString());
     setPaymentNote(payment.note || '');
-    setPaymentType(payment.type);
+    setPaymentType(payment.payment_type);
     setPaymentHistoryTab('new');
   };
 
@@ -240,13 +286,13 @@ const Guards = () => {
       return;
     }
 
-    const paymentData = {
-      guardId: selectedGuard.id,
+    const paymentData: CreatePaymentData = {
+      guard_id: selectedGuard.id,
       amount: parseFloat(paymentAmount),
       note: paymentNote || undefined,
-      type: paymentType,
-      date: new Date().toISOString().split('T')[0],
-      month: currentMonth
+      payment_type: paymentType,
+      payment_date: new Date().toISOString().split('T')[0],
+      payment_month: currentMonth
     };
 
     if (editingPayment) {
@@ -286,13 +332,13 @@ const Guards = () => {
 
   const filteredGuards = guardList.filter(guard => 
     (guard.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     guard.badgeNumber.includes(searchTerm)) &&
+     guard.badge_number.includes(searchTerm)) &&
     (guardType === 'permanent' ? 
-      guard.type === 'permanent' || !guard.type : 
-      guard.type === 'contract')
+      guard.guard_type === 'permanent' || !guard.guard_type : 
+      guard.guard_type === 'contract')
   );
 
-  const getCurrentMonthEarnings = (guard: Guard): MonthlyEarning => {
+  const getCurrentMonthEarnings = (guard: SupabaseGuard): MonthlyEarning => {
     return guardEarnings[guard.id] || {
       month: currentMonth,
       totalShifts: 0,
@@ -306,7 +352,7 @@ const Guards = () => {
   // Query to track payments and trigger earnings recalculation
   const { data: allPayments } = useQuery({
     queryKey: ['all-payments', currentMonth],
-    queryFn: () => fetchPaymentsByMonth(currentMonth),
+    queryFn: () => paymentsApi.getPaymentsByMonth(currentMonth),
     enabled: guardList.length > 0
   });
 
@@ -317,14 +363,14 @@ const Guards = () => {
       
       for (const guard of guardList) {
         try {
-          const result = await fetchGuardMonthlyStats(guard.id, currentMonth);
+          const result = await paymentsApi.getGuardMonthlySummary(guard.id, currentMonth);
           console.log(`Guard ${guard.name} earnings:`, result);
           earningsMap[guard.id] = {
             month: currentMonth,
-            totalShifts: result.totalShifts,
-            baseSalary: result.earnings,
-            bonuses: result.bonuses,
-            deductions: result.deductions,
+            totalShifts: 0, // This would need shift data if available
+            baseSalary: guard.monthly_pay_rate || 0,
+            bonuses: result.totalBonus,
+            deductions: result.totalDeduction,
             netAmount: result.netAmount
           };
         } catch (error) {
@@ -332,10 +378,10 @@ const Guards = () => {
           earningsMap[guard.id] = {
             month: currentMonth,
             totalShifts: 0,
-            baseSalary: 0,
+            baseSalary: guard.monthly_pay_rate || 0,
             bonuses: 0,
             deductions: 0,
-            netAmount: 0
+            netAmount: guard.monthly_pay_rate || 0
           };
         }
       }
@@ -348,14 +394,7 @@ const Guards = () => {
     }
   }, [guardList, currentMonth, allPayments]);
 
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+  const formatCurrency = guardUtils.formatCurrency;
 
   if (isLoading) {
     return (
@@ -414,7 +453,7 @@ const Guards = () => {
         ) : (
           filteredGuards.map(guard => {
             const monthlyEarnings = getCurrentMonthEarnings(guard);
-            const shiftRate = guard.payRate ? calculateShiftRate(guard.payRate) : 0;
+            const shiftRate = guard.monthly_pay_rate ? calculateShiftRate(guard.monthly_pay_rate) : 0;
             
             return (
               <Card key={guard.id} className="overflow-hidden border border-border/60">
@@ -422,10 +461,10 @@ const Guards = () => {
                   <div>
                     <CardTitle className="text-base font-medium">{guard.name}</CardTitle>
                     <Badge 
-                      variant={guard.type === 'contract' ? 'outline' : 'default'}
-                      className={`mt-1 ${guard.type === 'contract' ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500' : ''}`}
+                      variant={guard.guard_type === 'contract' ? 'outline' : 'default'}
+                      className={`mt-1 ${guard.guard_type === 'contract' ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500' : ''}`}
                     >
-                      {guard.type || 'Permanent'} Guard
+                      {guard.guard_type || 'Permanent'} Guard
                     </Badge>
                   </div>
                   <Badge 
@@ -440,19 +479,19 @@ const Guards = () => {
                     <div className="flex items-center text-sm">
                       <Shield className="h-4 w-4 mr-2 text-muted-foreground" />
                       <span className="text-muted-foreground">Badge:</span>
-                      <span className="font-medium ml-2">{guard.badgeNumber}</span>
+                      <span className="font-medium ml-2">{guard.badge_number}</span>
                     </div>
                     
                     <div className="flex items-center text-sm">
                       <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{guard.phone}</span>
+                      <span>{guard.phone_number}</span>
                     </div>
                     
                     
                     <div className="flex items-center text-sm">
                       <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
                       <span className="text-muted-foreground">Monthly Rate:</span>
-                      <span className="font-medium ml-2">{formatCurrency(guard.payRate || 0)}</span>
+                      <span className="font-medium ml-2">{formatCurrency(guard.monthly_pay_rate || 0)}</span>
                     </div>
                     
                     <div className="flex items-center text-sm">
@@ -677,15 +716,15 @@ const Guards = () => {
                         {paymentHistory.map((payment) => (
                           <TableRow key={payment.id}>
                             <TableCell className="font-medium">
-                              {format(new Date(payment.date), 'MMM dd, yyyy')}
+                              {format(new Date(payment.payment_date), 'MMM dd, yyyy')}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={payment.type === 'bonus' ? 'default' : 'destructive'}>
-                                {payment.type === 'bonus' ? 'Bonus' : 'Deduction'}
+                              <Badge variant={payment.payment_type === 'bonus' ? 'default' : 'destructive'}>
+                                {payment.payment_type === 'bonus' ? 'Bonus' : 'Deduction'}
                               </Badge>
                             </TableCell>
-                            <TableCell className={payment.type === 'bonus' ? 'text-green-500' : 'text-red-500'}>
-                              {payment.type === 'bonus' ? '+' : '-'}{formatCurrency(payment.amount)}
+                            <TableCell className={payment.payment_type === 'bonus' ? 'text-green-500' : 'text-red-500'}>
+                              {payment.payment_type === 'bonus' ? '+' : '-'}{formatCurrency(payment.amount)}
                             </TableCell>
                             <TableCell className="max-w-32 truncate">
                               {payment.note || '-'}
