@@ -10,23 +10,20 @@ import { users } from '@/lib/data';
 import { PageLoader } from '@/components/ui/loader';
 
 const Index = () => {
+  // All hooks must be called at the top level, before any conditional logic
   const [isLoading, setIsLoading] = useState(true);
-
-  // Simulate loading delay
-  React.useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (isLoading) {
-    return <PageLoader text="Loading dashboard..." />;
-  }
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Simulate loading delay
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
   
   // Redirect if already logged in
   React.useEffect(() => {
@@ -34,6 +31,11 @@ const Index = () => {
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
+
+  // Early return after all hooks are called
+  if (isLoading) {
+    return <PageLoader text="Loading dashboard..." />;
+  }
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
