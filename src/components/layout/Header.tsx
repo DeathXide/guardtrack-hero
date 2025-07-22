@@ -6,8 +6,10 @@ import {
   Bell, 
   Moon, 
   Sun, 
-  User
+  User,
+  Menu
 } from 'lucide-react';
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,7 +42,8 @@ const Header: React.FC = () => {
   
   return (
     <header className="h-16 border-b bg-background/80 backdrop-blur-md flex items-center justify-between px-4">
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
+        <SidebarTrigger />
         <Link to="/dashboard" className="flex items-center">
           <div className="rounded-md bg-primary p-1.5 mr-3">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

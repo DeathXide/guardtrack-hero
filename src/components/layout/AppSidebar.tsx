@@ -78,9 +78,6 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r">
       <SidebarContent>
-        <div className="p-2 border-b">
-          <SidebarTrigger />
-        </div>
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
