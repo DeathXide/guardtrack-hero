@@ -1,7 +1,21 @@
 import { useState, useEffect } from 'react';
-import { notificationService, Notification, NotificationPreferences } from '@/lib/supabase/notificationService';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  read: boolean;
+  createdAt: Date;
+}
+
+interface NotificationPreferences {
+  pushNotifications: boolean;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+}
 
 export const useNotifications = () => {
   const { user } = useAuth();
@@ -9,133 +23,75 @@ export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
+  const [preferences, setPreferences] = useState<NotificationPreferences>({
+    pushNotifications: true,
+    emailNotifications: true,
+    smsNotifications: false,
+  });
 
-  // Load notifications
-  const loadNotifications = async (unreadOnly = false) => {
-    if (!user?.id) return;
-
-    setLoading(true);
-    try {
-      const data = await notificationService.getUserNotifications(user.id, 50, unreadOnly);
-      setNotifications(data);
-      setUnreadCount(data.filter(n => !n.read).length);
-    } catch (error) {
-      console.error('Error loading notifications:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load notification preferences
-  const loadPreferences = async () => {
-    if (!user?.id) return;
-
-    try {
-      const prefs = await notificationService.getNotificationPreferences(user.id);
-      setPreferences(prefs);
-    } catch (error) {
-      console.error('Error loading notification preferences:', error);
-    }
-  };
-
-  // Mark notification as read
-  const markAsRead = async (notificationId: string) => {
-    try {
-      await notificationService.markAsRead(notificationId);
-      setNotifications(prev =>
-        prev.map(n =>
-          n.id === notificationId ? { ...n, read: true } : n
-        )
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
-  };
-
-  // Mark all as read
-  const markAllAsRead = async () => {
-    if (!user?.id) return;
-
-    try {
-      await notificationService.markAllAsRead(user.id);
-      setNotifications(prev =>
-        prev.map(n => ({ ...n, read: true }))
-      );
-      setUnreadCount(0);
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
-    }
-  };
-
-  // Delete notification
-  const deleteNotification = async (notificationId: string) => {
-    try {
-      await notificationService.deleteNotification(notificationId);
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      
-      const deletedNotification = notifications.find(n => n.id === notificationId);
-      if (deletedNotification && !deletedNotification.read) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
-    } catch (error) {
-      console.error('Error deleting notification:', error);
-    }
-  };
-
-  // Update preferences
-  const updatePreferences = async (newPreferences: Partial<NotificationPreferences>) => {
-    if (!user?.id) return;
-
-    try {
-      const updated = await notificationService.updateNotificationPreferences(user.id, newPreferences);
-      setPreferences(updated);
-      toast({
-        title: 'Preferences updated',
-        description: 'Your notification preferences have been saved.',
-      });
-    } catch (error) {
-      console.error('Error updating notification preferences:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update notification preferences.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Handle real-time notification
-  const handleNewNotification = (notification: Notification) => {
-    setNotifications(prev => [notification, ...prev]);
-    setUnreadCount(prev => prev + 1);
-
-    // Show toast for new notification
-    if (preferences?.pushNotifications) {
-      toast({
-        title: notification.title,
-        description: notification.message,
-        variant: notification.type === 'error' ? 'destructive' : 'default',
-      });
-    }
-  };
-
-  // Subscribe to real-time notifications
+  // Mock data for demo
   useEffect(() => {
-    if (!user?.id) return;
+    if (user) {
+      const mockNotifications: Notification[] = [
+        {
+          id: '1',
+          title: 'Guard Absent',
+          message: 'Mike Johnson is absent for Downtown Office day shift.',
+          type: 'warning',
+          read: false,
+          createdAt: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
+        },
+        {
+          id: '2',
+          title: 'Shift Replacement',
+          message: 'Lisa Chen was assigned as replacement at Tech Park.',
+          type: 'success',
+          read: false,
+          createdAt: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
+        },
+      ];
+      setNotifications(mockNotifications);
+      setUnreadCount(mockNotifications.filter(n => !n.read).length);
+    }
+  }, [user]);
 
-    loadNotifications();
-    loadPreferences();
+  const loadNotifications = async (unreadOnly = false) => {
+    // Mock implementation
+    setLoading(false);
+  };
 
-    const subscription = notificationService.subscribeToNotifications(
-      user.id,
-      handleNewNotification
+  const markAsRead = async (notificationId: string) => {
+    setNotifications(prev =>
+      prev.map(n =>
+        n.id === notificationId ? { ...n, read: true } : n
+      )
     );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
 
-    return () => {
-      notificationService.unsubscribeFromNotifications(user.id);
-    };
-  }, [user?.id]);
+  const markAllAsRead = async () => {
+    setNotifications(prev =>
+      prev.map(n => ({ ...n, read: true }))
+    );
+    setUnreadCount(0);
+  };
+
+  const deleteNotification = async (notificationId: string) => {
+    const deletedNotification = notifications.find(n => n.id === notificationId);
+    setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    
+    if (deletedNotification && !deletedNotification.read) {
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    }
+  };
+
+  const updatePreferences = async (newPreferences: Partial<NotificationPreferences>) => {
+    setPreferences(prev => ({ ...prev, ...newPreferences }));
+    toast({
+      title: 'Preferences updated',
+      description: 'Your notification preferences have been saved.',
+    });
+  };
 
   return {
     notifications,
