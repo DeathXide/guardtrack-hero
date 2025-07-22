@@ -394,18 +394,22 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                         <div 
                           key={guard.id} 
                           className={`flex items-center justify-between p-3 border rounded-lg transition-all duration-300 ${
-                            isPresent ? 'bg-green-50 border-green-200 animate-fade-in' : 'bg-background hover:bg-muted/50'
+                            isPresent ? 'bg-green-50 border-green-300 shadow-sm' : 'bg-background hover:bg-muted/50'
                           }`}
                         >
                           <div className="flex items-center gap-3">
                             {isPresent && (
-                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                              <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                              </div>
                             )}
                             <div>
-                              <div className={`font-medium transition-colors ${isPresent ? 'text-green-800' : ''}`}>
+                              <div className={`font-medium transition-colors ${isPresent ? 'text-green-700' : ''}`}>
                                 {guard.name}
                               </div>
-                              <div className="text-sm text-muted-foreground">{guard.badge_number}</div>
+                              <div className={`text-sm transition-colors ${isPresent ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                {guard.badge_number} {isPresent && '• Present'}
+                              </div>
                             </div>
                           </div>
                           <Button
@@ -413,8 +417,8 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                             variant={isPresent ? "default" : "outline"}
                             onClick={() => handleGuardToggle(guard.id, 'day')}
                             disabled={isLoading}
-                            className={`transition-all duration-200 ${
-                              isPresent ? 'bg-green-600 hover:bg-green-700 text-white' : ''
+                            className={`transition-all duration-200 min-w-[100px] ${
+                              isPresent ? 'bg-green-600 hover:bg-green-700 text-white shadow-sm' : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
                             }`}
                           >
                             {isLoading ? 'Loading...' : isPresent ? '✓ Present' : 'Mark Present'}
@@ -478,18 +482,22 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                         <div 
                           key={guard.id} 
                           className={`flex items-center justify-between p-3 border rounded-lg transition-all duration-300 ${
-                            isPresent ? 'bg-blue-50 border-blue-200 animate-fade-in' : 'bg-background hover:bg-muted/50'
+                            isPresent ? 'bg-green-50 border-green-300 shadow-sm' : 'bg-background hover:bg-muted/50'
                           }`}
                         >
                           <div className="flex items-center gap-3">
                             {isPresent && (
-                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                              <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                              </div>
                             )}
                             <div>
-                              <div className={`font-medium transition-colors ${isPresent ? 'text-blue-800' : ''}`}>
+                              <div className={`font-medium transition-colors ${isPresent ? 'text-green-700' : ''}`}>
                                 {guard.name}
                               </div>
-                              <div className="text-sm text-muted-foreground">{guard.badge_number}</div>
+                              <div className={`text-sm transition-colors ${isPresent ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                {guard.badge_number} {isPresent && '• Present'}
+                              </div>
                             </div>
                           </div>
                           <Button
@@ -497,8 +505,8 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                             variant={isPresent ? "default" : "outline"}
                             onClick={() => handleGuardToggle(guard.id, 'night')}
                             disabled={isLoading}
-                            className={`transition-all duration-200 ${
-                              isPresent ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
+                            className={`transition-all duration-200 min-w-[100px] ${
+                              isPresent ? 'bg-green-600 hover:bg-green-700 text-white shadow-sm' : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
                             }`}
                           >
                             {isLoading ? 'Loading...' : isPresent ? '✓ Present' : 'Mark Present'}
