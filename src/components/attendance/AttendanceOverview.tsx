@@ -10,13 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AlertCircle, Calendar as CalendarIcon, CheckCircle2, Clock } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AttendanceDataTable } from "./AttendanceDataTable";
-import { 
-  fetchAttendanceByDate, 
-  fetchSiteMonthlyEarnings,
-  formatCurrency
-} from "@/lib/localService";
 import { sitesApi } from "@/lib/sitesApi";
 import { shiftsApi } from "@/lib/shiftsApi";
+import { attendanceApi } from "@/lib/attendanceApi";
 import { Site, AttendanceRecord, Shift, SiteEarnings } from "@/types";
 import { useNavigate } from "react-router-dom";
 
@@ -58,7 +54,7 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
 
   const { data: attendanceRecords = [], isLoading: attendanceLoading } = useQuery({
     queryKey: ["attendance", formattedDate],
-    queryFn: () => fetchAttendanceByDate(formattedDate)
+    queryFn: () => attendanceApi.getAttendanceByDate(formattedDate)
   });
 
   const { data: allShifts = [], isLoading: shiftsLoading } = useQuery({
@@ -91,21 +87,18 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
     const dayShifts = siteShifts.filter(shift => shift.type === "day" && shift.guardId);
     const nightShifts = siteShifts.filter(shift => shift.type === "night" && shift.guardId);
     
-    // Get attendance records for this site's shifts
-    const siteShiftIds = siteShifts.map(shift => shift.id);
+    // Get attendance records for this site
     const siteAttendance = attendanceRecords.filter(
-      record => siteShiftIds.includes(record.shiftId) && record.date === formattedDate
+      record => record.site_id === site.id && record.attendance_date === formattedDate
     );
 
-    const dayAttendance = siteAttendance.filter(record => {
-      const shift = allShifts.find(s => s.id === record.shiftId);
-      return shift && shift.type === "day";
-    });
+    const dayAttendance = siteAttendance.filter(record => 
+      record.shift_type === "day" && record.status === "present"
+    );
     
-    const nightAttendance = siteAttendance.filter(record => {
-      const shift = allShifts.find(s => s.id === record.shiftId);
-      return shift && shift.type === "night";
-    });
+    const nightAttendance = siteAttendance.filter(record => 
+      record.shift_type === "night" && record.status === "present"
+    );
 
     const getDayStatus = () => {
       if (dayShifts.length === 0) return "no-shifts";
@@ -174,24 +167,19 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
     }
   };
 
-  // Fetch site earnings data
+  // For now, create mock earnings data since the earnings API isn't implemented yet
   const { data: siteEarningsMap = {}, isLoading: earningsLoading } = useQuery({
     queryKey: ["site-earnings", currentMonth],
     queryFn: async () => {
       const earningsMap: Record<string, SiteEarnings> = {};
       for (const site of sites) {
-        try {
-          const earnings = await fetchSiteMonthlyEarnings(site.id, currentMonth);
-          earningsMap[site.id] = earnings;
-        } catch (error) {
-          console.error(`Error fetching earnings for site ${site.id}:`, error);
-          earningsMap[site.id] = {
-            totalShifts: 0,
-            allocatedAmount: 0,
-            guardCosts: 0,
-            netEarnings: 0
-          };
-        }
+        // Mock earnings data - replace with actual earnings API later
+        earningsMap[site.id] = {
+          totalShifts: site.staffingSlots.reduce((sum, slot) => sum + slot.daySlots + slot.nightSlots, 0),
+          allocatedAmount: site.staffingSlots.reduce((sum, slot) => sum + (slot.budgetPerSlot * (slot.daySlots + slot.nightSlots)), 0),
+          guardCosts: 0, // Calculate based on actual attendance later
+          netEarnings: 0 // Calculate based on actual costs later
+        };
       }
       return earningsMap;
     },

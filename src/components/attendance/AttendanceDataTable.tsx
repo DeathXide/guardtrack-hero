@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Site, SiteEarnings } from "@/types";
-import { formatCurrency } from "@/lib/localService";
+import { guardUtils } from "@/lib/guardsApi";
 
 interface AttendanceDataTableProps {
   sites: Site[];
@@ -283,7 +283,7 @@ export function AttendanceDataTable({
         return (
           <div className="flex items-center">
             <span className={earnings > 0 ? "text-green-600" : earnings < 0 ? "text-red-600" : ""}>
-              {formatCurrency(earnings)}
+              {guardUtils.formatCurrency(earnings)}
             </span>
           </div>
         );

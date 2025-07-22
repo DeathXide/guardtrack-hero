@@ -1,36 +1,19 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format, subDays } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Calendar as CalendarIcon, Check, Copy, RefreshCw, Info, FileSpreadsheet } from 'lucide-react';
+import { Calendar as CalendarIcon, Info, Copy, RefreshCw } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import AttendanceSlotCard from './AttendanceSlotCard';
-import GuardSelectionModal from './GuardSelectionModal';
-import {
-  fetchSites,
-  fetchGuards,
-  fetchShiftsBySite,
-  createShift,
-  createAttendanceRecord,
-  fetchAttendanceByDate,
-  isGuardMarkedPresentElsewhere,
-  deleteAttendanceRecord,
-  deleteShift,
-  fetchSiteMonthlyEarnings,
-  formatCurrency
-} from '@/lib/localService';
-import { checkGuardsAttendanceForToday, deleteGuardsTodayAttendance, GuardAttendanceInfo } from './attendanceValidation';
-import UnassignGuardConfirmationDialog from './UnassignGuardConfirmationDialog';
-import AttendanceSheet from './AttendanceSheet';
-import { Site, Guard, Shift, AttendanceRecord, SiteEarnings } from '@/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { sitesApi } from '@/lib/sitesApi';
+import { guardsApi } from '@/lib/guardsApi';
+import { shiftsApi } from '@/lib/shiftsApi';
+import { attendanceApi } from '@/lib/attendanceApi';
 
 interface AttendanceMarkingProps {
   preselectedSiteId?: string;
@@ -39,29 +22,9 @@ interface AttendanceMarkingProps {
 const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedSite, setSelectedSite] = useState<string>('');
-  const [selectedGuards, setSelectedGuards] = useState<Record<string, string[]>>({});
-  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({ day: true, night: true });
-  const [guardSelectionModal, setGuardSelectionModal] = useState<{
-    isOpen: boolean;
-    shiftType: 'day' | 'night';
-    title: string;
-  }>({ isOpen: false, shiftType: 'day', title: '' });
-  const [unavailableGuards, setUnavailableGuards] = useState<string[]>([]);
-  const [unavailableDayGuards, setUnavailableDayGuards] = useState<string[]>([]);
-  const [unavailableNightGuards, setUnavailableNightGuards] = useState<string[]>([]);
-  const [modalSelectedGuards, setModalSelectedGuards] = useState<string[]>([]);
-  const [showUnassignConfirmation, setShowUnassignConfirmation] = useState(false);
-  const [guardsToUnassign, setGuardsToUnassign] = useState<GuardAttendanceInfo[]>([]);
-  const [pendingUnassignment, setPendingUnassignment] = useState<{ 
-    shiftType: 'day' | 'night'; 
-    selectedGuards: string[]; 
-  } | null>(null);
-  const [showAttendanceSheet, setShowAttendanceSheet] = useState(false);
-  
   const queryClient = useQueryClient();
-  
+
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-  const currentMonth = format(selectedDate, 'yyyy-MM');
 
   useEffect(() => {
     if (preselectedSiteId) {
@@ -69,244 +32,168 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     }
   }, [preselectedSiteId]);
 
+  // Fetch data using the new APIs
   const { data: sites = [], isLoading: sitesLoading } = useQuery({
     queryKey: ['sites'],
-    queryFn: fetchSites
+    queryFn: () => sitesApi.getAllSites()
   });
 
   const { data: guards = [], isLoading: guardsLoading } = useQuery({
     queryKey: ['guards'],
-    queryFn: fetchGuards
+    queryFn: () => guardsApi.getAllGuards()
   });
 
   const { data: shifts = [], isLoading: shiftsLoading } = useQuery({
     queryKey: ['shifts', selectedSite],
-    queryFn: () => selectedSite ? fetchShiftsBySite(selectedSite) : Promise.resolve([]),
+    queryFn: () => selectedSite ? shiftsApi.getShiftsBySite(selectedSite) : Promise.resolve([]),
     enabled: !!selectedSite
   });
 
   const { data: attendanceRecords = [], refetch: refetchAttendance } = useQuery({
     queryKey: ['attendance', formattedDate],
-    queryFn: () => fetchAttendanceByDate(formattedDate),
+    queryFn: () => attendanceApi.getAttendanceByDate(formattedDate),
     enabled: !!formattedDate
   });
 
-  const { data: siteEarnings, isLoading: earningsLoading } = useQuery({
-    queryKey: ['site-earnings', selectedSite, currentMonth],
-    queryFn: () => fetchSiteMonthlyEarnings(selectedSite, currentMonth),
-    enabled: !!selectedSite && !!currentMonth
-  });
+  // Get selected site data
+  const selectedSiteData = sites.find(site => site.id === selectedSite);
 
+  // Calculate day and night slots from staffing requirements
+  const daySlots = selectedSiteData?.staffing_requirements?.reduce((sum, req) => sum + req.day_slots, 0) || 0;
+  const nightSlots = selectedSiteData?.staffing_requirements?.reduce((sum, req) => sum + req.night_slots, 0) || 0;
+
+  // Get assigned guards for each shift type (memoized to prevent re-calculation)
+  const { dayShiftGuards, nightShiftGuards } = useMemo(() => {
+    const dayGuards = guards.filter(guard => 
+      shifts.some(shift => shift.type === 'day' && shift.guard_id === guard.id)
+    );
+    
+    const nightGuards = guards.filter(guard => 
+      shifts.some(shift => shift.type === 'night' && shift.guard_id === guard.id)
+    );
+
+    return { dayShiftGuards: dayGuards, nightShiftGuards: nightGuards };
+  }, [guards, shifts]);
+
+  // Get present guards from attendance records (memoized)
+  const { presentDayGuards, presentNightGuards } = useMemo(() => {
+    const dayPresent = attendanceRecords
+      .filter(record => {
+        return record.status === 'present' && 
+               record.shift_type === 'day' && 
+               record.site_id === selectedSite;
+      })
+      .map(record => record.employee_id);
+
+    const nightPresent = attendanceRecords
+      .filter(record => {
+        return record.status === 'present' && 
+               record.shift_type === 'night' && 
+               record.site_id === selectedSite;
+      })
+      .map(record => record.employee_id);
+
+    return { presentDayGuards: dayPresent, presentNightGuards: nightPresent };
+  }, [attendanceRecords, selectedSite]);
+
+  // Mark attendance mutation
   const markAttendanceMutation = useMutation({
-    mutationFn: createAttendanceRecord,
+    mutationFn: async ({ guardId, shiftType }: { guardId: string; shiftType: 'day' | 'night' }) => {
+      // Check if guard is already marked elsewhere
+      const isMarkedElsewhere = await attendanceApi.isGuardMarkedElsewhere(
+        guardId,
+        formattedDate,
+        shiftType,
+        selectedSite
+      );
+
+      if (isMarkedElsewhere) {
+        throw new Error('Guard is already marked present at another site for this shift');
+      }
+
+      // Create attendance record
+      return attendanceApi.createAttendanceRecord({
+        employee_id: guardId,
+        site_id: selectedSite,
+        attendance_date: formattedDate,
+        shift_type: shiftType,
+        employee_type: 'guard',
+        status: 'present',
+        scheduled_start_time: shiftType === 'day' ? `${formattedDate}T08:00:00` : `${formattedDate}T20:00:00`,
+        scheduled_end_time: shiftType === 'day' ? `${formattedDate}T20:00:00` : `${format(subDays(new Date(formattedDate), -1), 'yyyy-MM-dd')}T08:00:00`,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance', formattedDate] });
-      queryClient.invalidateQueries({ queryKey: ['site-earnings', selectedSite, currentMonth] });
       toast.success('Attendance marked successfully');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error marking attendance:', error);
-      toast.error('Failed to mark attendance');
+      toast.error(error.message || 'Failed to mark attendance');
     }
   });
 
-  const deleteAttendanceMutation = useMutation({
-    mutationFn: deleteAttendanceRecord,
+  // Unmark attendance mutation
+  const unmarkAttendanceMutation = useMutation({
+    mutationFn: async ({ guardId, shiftType }: { guardId: string; shiftType: 'day' | 'night' }) => {
+      const record = attendanceRecords.find(record => 
+        record.employee_id === guardId && 
+        record.shift_type === shiftType &&
+        record.site_id === selectedSite &&
+        record.status === 'present'
+      );
+      
+      if (!record) {
+        throw new Error('Attendance record not found');
+      }
+
+      return attendanceApi.deleteAttendanceRecord(record.id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance', formattedDate] });
-      queryClient.invalidateQueries({ queryKey: ['site-earnings', selectedSite, currentMonth] });
-      toast.success('Attendance record removed successfully');
+      toast.success('Attendance unmarked successfully');
     },
-    onError: (error) => {
-      console.error('Error removing attendance record:', error);
-      toast.error('Failed to remove attendance record');
+    onError: (error: any) => {
+      console.error('Error unmarking attendance:', error);
+      toast.error('Failed to unmark attendance');
     }
   });
 
-  const selectedSiteData = sites.find(site => site.id === selectedSite);
-  const daySlots = selectedSiteData?.daySlots || 0;
-  const nightSlots = selectedSiteData?.nightSlots || 0;
-  const sitePayRate = selectedSiteData?.payRate || 0;
-  const totalSlots = daySlots + nightSlots;
-  const payRatePerShift = totalSlots > 0 ? sitePayRate / totalSlots : 0;
-
-  // Get assigned guards for each shift type
-  const dayShiftGuards = guards.filter(guard => 
-    shifts.some(shift => shift.type === 'day' && shift.guardId === guard.id)
-  );
-  
-  const nightShiftGuards = guards.filter(guard => 
-    shifts.some(shift => shift.type === 'night' && shift.guardId === guard.id)
-  );
-
-  // Get present guards from attendance records
-  const presentDayGuards = attendanceRecords
-    .filter(record => {
-      const shift = shifts.find(s => s.id === record.shiftId);
-      return record.status === 'present' && shift?.type === 'day' && shift?.siteId === selectedSite;
-    })
-    .map(record => record.guardId);
-
-  const presentNightGuards = attendanceRecords
-    .filter(record => {
-      const shift = shifts.find(s => s.id === record.shiftId);
-      return record.status === 'present' && shift?.type === 'night' && shift?.siteId === selectedSite;
-    })
-    .map(record => record.guardId);
-
-  // Initialize selected guards based on attendance records
-  useEffect(() => {
-    setSelectedGuards({
-      day: presentDayGuards,
-      night: presentNightGuards
-    });
-  }, [attendanceRecords, shifts, selectedSite]);
-
-  // Calculate unavailable guards for each shift type
-  useEffect(() => {
-    if (selectedSite && formattedDate) {
-      const calculateUnavailable = async () => {
-        const dayUnavailable = await getUnavailableGuards('day');
-        const nightUnavailable = await getUnavailableGuards('night');
-        setUnavailableDayGuards(dayUnavailable);
-        setUnavailableNightGuards(nightUnavailable);
-      };
-      calculateUnavailable();
-    }
-  }, [guards, formattedDate, selectedSite]);
-
-  const handleGuardSelect = async (guardId: string, shiftType: 'day' | 'night') => {
-    const currentSelected = selectedGuards[shiftType] || [];
-    const isSelected = currentSelected.includes(guardId);
-    const maxSlots = shiftType === 'day' ? daySlots : nightSlots;
-    
-    // Validate inputs
+  const handleGuardToggle = async (guardId: string, shiftType: 'day' | 'night') => {
     if (!selectedSite) {
       toast.error('Please select a site first');
       return;
     }
-    
-    if (maxSlots === 0) {
-      toast.error(`No ${shiftType} slots available for this site`);
+
+    const maxSlots = shiftType === 'day' ? daySlots : nightSlots;
+    const presentGuards = shiftType === 'day' ? presentDayGuards : presentNightGuards;
+    const isPresent = presentGuards.includes(guardId);
+
+    // Check if guard is assigned to this shift
+    const isAssigned = shifts.some(shift => 
+      shift.guard_id === guardId && 
+      shift.type === shiftType && 
+      shift.site_id === selectedSite
+    );
+
+    if (!isAssigned) {
+      toast.error(`Guard is not assigned to ${shiftType} shift at this site. Please assign them first in the Guard Allocation tab.`);
       return;
     }
-    
-    if (isSelected) {
-      // Remove guard - remove from attendance only (keep shift assignment)
-      const record = attendanceRecords.find(record => {
-        const shift = shifts.find(s => s.id === record.shiftId);
-        return record.guardId === guardId && 
-               record.status === 'present' && 
-               shift?.type === shiftType &&
-               shift?.siteId === selectedSite;
-      });
-      
-      if (record && record.id) {
-        try {
-          await deleteAttendanceMutation.mutateAsync(record.id);
-          setSelectedGuards({
-            ...selectedGuards,
-            [shiftType]: currentSelected.filter(id => id !== guardId)
-          });
-        } catch (error) {
-          console.error('Error removing attendance:', error);
-          toast.error('Failed to remove attendance');
-        }
-      } else {
-        // If no attendance record found, just update local state
-        setSelectedGuards({
-          ...selectedGuards,
-          [shiftType]: currentSelected.filter(id => id !== guardId)
-        });
-      }
+
+    if (isPresent) {
+      // Unmark attendance
+      await unmarkAttendanceMutation.mutateAsync({ guardId, shiftType });
     } else {
-      // Check slot limit first
-      if (currentSelected.length >= maxSlots) {
+      // Check slot limit
+      if (presentGuards.length >= maxSlots) {
         toast.error(`Cannot mark more than ${maxSlots} guards present for ${shiftType} shift`);
         return;
       }
-      
-      // Check if guard is assigned to this shift
-      const assignedShift = shifts.find(s => 
-        s.type === shiftType && 
-        s.siteId === selectedSite && 
-        s.guardId === guardId
-      );
-      
-      if (!assignedShift) {
-        toast.error(`Guard is not assigned to ${shiftType} shift at this site. Please assign them first.`);
-        return;
-      }
-      
-      // Add guard - check availability first
-      try {
-        const isMarkedElsewhere = await isGuardMarkedPresentElsewhere(
-          guardId, 
-          formattedDate, 
-          shiftType, 
-          selectedSite
-        );
-        
-        if (isMarkedElsewhere) {
-          toast.error('This guard is already marked present at another site for this shift');
-          return;
-        }
-        
-        // Mark attendance
-        await markAttendanceMutation.mutateAsync({
-          date: formattedDate,
-          shiftId: assignedShift.id,
-          guardId,
-          status: 'present' as const
-        });
-        
-        setSelectedGuards({
-          ...selectedGuards,
-          [shiftType]: [...currentSelected, guardId]
-        });
-      } catch (error) {
-        console.error('Error marking attendance:', error);
-        toast.error('Failed to mark attendance');
-      }
+
+      // Mark attendance
+      await markAttendanceMutation.mutateAsync({ guardId, shiftType });
     }
-  };
-
-  const handleAddGuard = async (shiftType: 'day' | 'night') => {
-    const unavailable = await getUnavailableGuards(shiftType);
-    setUnavailableGuards(unavailable);
-    // Reset modal selection and set currently assigned guards as selected
-    const currentlyAssigned = shiftType === 'day' ? dayShiftGuards.map(g => g.id) : nightShiftGuards.map(g => g.id);
-    setModalSelectedGuards(currentlyAssigned);
-    setGuardSelectionModal({
-      isOpen: true,
-      shiftType,
-      title: `Add Guards to ${shiftType === 'day' ? 'Day' : 'Night'} Shift`
-    });
-  };
-
-  const handleToggleCardExpansion = (shiftType: 'day' | 'night') => {
-    setExpandedCards({
-      ...expandedCards,
-      [shiftType]: !expandedCards[shiftType]
-    });
-  };
-
-  const getUnavailableGuards = async (shiftType: 'day' | 'night') => {
-    const unavailable: string[] = [];
-    
-    for (const guard of guards) {
-      const isMarkedElsewhere = await isGuardMarkedPresentElsewhere(
-        guard.id, 
-        formattedDate, 
-        shiftType, 
-        selectedSite
-      );
-      if (isMarkedElsewhere) {
-        unavailable.push(guard.id);
-      }
-    }
-    
-    return unavailable;
   };
 
   const handleCopyYesterday = async () => {
@@ -315,101 +202,15 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
       return;
     }
 
-    const yesterday = subDays(selectedDate, 1);
-    const yesterdayFormatted = format(yesterday, 'yyyy-MM-dd');
+    const yesterday = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
     
     try {
-      // Get yesterday's attendance records
-      const yesterdayRecords = await fetchAttendanceByDate(yesterdayFormatted);
-      
-      // Filter records for the selected site
-      const siteYesterdayRecords = yesterdayRecords.filter(record => {
-        const shift = shifts.find(s => s.id === record.shiftId);
-        return shift?.siteId === selectedSite && record.status === 'present';
-      });
-
-      if (siteYesterdayRecords.length === 0) {
+      const result = await attendanceApi.copyAttendanceFromDate(yesterday, formattedDate, selectedSite);
+      if (result.copied > 0) {
+        toast.success(`Copied ${result.copied} attendance records from yesterday`);
+        refetchAttendance();
+      } else {
         toast.info('No attendance records found for yesterday at this site');
-        return;
-      }
-
-      let successCount = 0;
-      let skippedCount = 0;
-
-      // Mark the same guards present for today
-      for (const record of siteYesterdayRecords) {
-        const yesterdayShift = shifts.find(s => s.id === record.shiftId);
-        if (yesterdayShift) {
-          // Find the current shift assignment for this guard and shift type
-          const currentShift = shifts.find(s => 
-            s.type === yesterdayShift.type && 
-            s.siteId === selectedSite && 
-            s.guardId === record.guardId
-          );
-
-          if (!currentShift) {
-            console.log(`Guard ${record.guardId} not assigned to ${yesterdayShift.type} shift anymore, skipping`);
-            skippedCount++;
-            continue;
-          }
-
-          // Check if guard is available today
-          const isMarkedElsewhere = await isGuardMarkedPresentElsewhere(
-            record.guardId, 
-            formattedDate, 
-            yesterdayShift.type, 
-            selectedSite
-          );
-          
-          if (isMarkedElsewhere) {
-            console.log(`Guard ${record.guardId} marked elsewhere, skipping`);
-            skippedCount++;
-            continue;
-          }
-
-          // Check slot limits
-          const shiftType = yesterdayShift.type;
-          const maxSlots = shiftType === 'day' ? daySlots : nightSlots;
-          const currentSelected = selectedGuards[shiftType] || [];
-          
-          if (currentSelected.length >= maxSlots) {
-            console.log(`No slots available for ${shiftType} shift, skipping`);
-            skippedCount++;
-            continue;
-          }
-
-          // Check if already marked present today
-          const alreadyMarked = attendanceRecords.some(ar => 
-            ar.guardId === record.guardId && 
-            ar.status === 'present' &&
-            shifts.find(s => s.id === ar.shiftId)?.type === shiftType &&
-            shifts.find(s => s.id === ar.shiftId)?.siteId === selectedSite
-          );
-
-          if (alreadyMarked) {
-            console.log(`Guard ${record.guardId} already marked present, skipping`);
-            skippedCount++;
-            continue;
-          }
-
-          await markAttendanceMutation.mutateAsync({
-            date: formattedDate,
-            shiftId: currentShift.id,
-            guardId: record.guardId,
-            status: 'present' as const
-          });
-          successCount++;
-        }
-      }
-      
-      if (successCount > 0) {
-        toast.success(`Copied ${successCount} attendance records from yesterday`);
-      }
-      if (skippedCount > 0) {
-        toast.info(`Skipped ${skippedCount} guards (not assigned, unavailable, or already marked)`);
-      }
-      if (successCount === 0 && skippedCount === 0) {
-        toast.info('No attendance records could be copied');
       }
     } catch (error) {
       console.error('Error copying yesterday\'s attendance:', error);
@@ -417,134 +218,8 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     }
   };
 
-  const handleReset = async () => {
-    if (!selectedSite) {
-      toast.error('Please select a site first');
-      return;
-    }
-
-    try {
-      // Get today's attendance records for this site
-      const todayRecords = attendanceRecords.filter(record => {
-        const shift = shifts.find(s => s.id === record.shiftId);
-        return shift?.siteId === selectedSite && record.status === 'present';
-      });
-
-      if (todayRecords.length === 0) {
-        toast.info('No attendance records to clear for today');
-        return;
-      }
-
-      // Delete all attendance records for today at this site
-      for (const record of todayRecords) {
-        if (record.id) {
-          await deleteAttendanceMutation.mutateAsync(record.id);
-        }
-      }
-      
-      toast.success('All attendance records cleared for today');
-    } catch (error) {
-      console.error('Error resetting attendance:', error);
-      toast.error('Failed to reset attendance');
-    }
-  };
-
-  const handleGuardSelectionConfirm = async () => {
-    const { shiftType } = guardSelectionModal;
-    const currentlyAssigned = shiftType === 'day' ? dayShiftGuards.map(g => g.id) : nightShiftGuards.map(g => g.id);
-    const guardsToRemove = currentlyAssigned.filter(guardId => !modalSelectedGuards.includes(guardId));
-    
-    // Check if any guards being removed have today's attendance records
-    if (guardsToRemove.length > 0) {
-      const guardsWithTodayAttendance = await checkGuardsAttendanceForToday(
-        guardsToRemove,
-        selectedSite,
-        formattedDate,
-        shifts
-      );
-      
-      if (guardsWithTodayAttendance.length > 0) {
-        setGuardsToUnassign(guardsWithTodayAttendance);
-        setPendingUnassignment({ shiftType, selectedGuards: modalSelectedGuards });
-        setShowUnassignConfirmation(true);
-        return;
-      }
-    }
-    
-    await performGuardAssignmentUpdate(shiftType, modalSelectedGuards);
-  };
-
-  const handleConfirmUnassign = async () => {
-    try {
-      // Delete today's attendance records first
-      await deleteGuardsTodayAttendance(guardsToUnassign);
-      toast.success('Attendance records deleted successfully');
-      
-      // Then proceed with guard assignment update
-      if (pendingUnassignment) {
-        await performGuardAssignmentUpdate(pendingUnassignment.shiftType, pendingUnassignment.selectedGuards);
-      }
-    } catch (error) {
-      console.error('Error deleting attendance records:', error);
-      toast.error('Failed to delete attendance records');
-    } finally {
-      setShowUnassignConfirmation(false);
-      setGuardsToUnassign([]);
-      setPendingUnassignment(null);
-    }
-  };
-
-  const handleCancelUnassign = () => {
-    setShowUnassignConfirmation(false);
-    setGuardsToUnassign([]);
-    setPendingUnassignment(null);
-  };
-
-  const performGuardAssignmentUpdate = async (shiftType: 'day' | 'night', selectedGuards: string[]) => {
-    const currentlyAssigned = shiftType === 'day' ? dayShiftGuards.map(g => g.id) : nightShiftGuards.map(g => g.id);
-    
-    // Remove unselected guards from shift assignments
-    for (const guardId of currentlyAssigned) {
-      if (!selectedGuards.includes(guardId)) {
-        const shiftToDelete = shifts.find(s => s.type === shiftType && s.guardId === guardId && s.siteId === selectedSite);
-        if (shiftToDelete) {
-          try {
-            await deleteShift(shiftToDelete.id);
-            toast.success(`Guard unassigned from ${shiftType} shift`);
-          } catch (error) {
-            console.error('Error deleting shift assignment:', error);
-            toast.error(`Failed to unassign guard from ${shiftType} shift`);
-          }
-        }
-      }
-    }
-    
-    // Create shift assignments for selected guards
-    for (const guardId of selectedGuards) {
-      const existingShift = shifts.find(s => s.type === shiftType && s.guardId === guardId && s.siteId === selectedSite);
-      if (!existingShift) {
-        try {
-          await createShift({
-            siteId: selectedSite,
-            guardId: guardId,
-            type: shiftType
-          });
-        } catch (error) {
-          console.error('Error creating shift assignment:', error);
-          toast.error(`Failed to assign guard to ${shiftType} shift`);
-        }
-      }
-    }
-    
-    // Refresh shifts data
-    queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
-    toast.success('Guard assignments updated successfully');
-    setGuardSelectionModal({ isOpen: false, shiftType: 'day', title: '' });
-    setModalSelectedGuards([]);
-  };
-
   if (sitesLoading || guardsLoading) {
-    return <div className="flex items-center justify-center h-64">Loading sites and guards...</div>;
+    return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
 
   if (sites.length === 0) {
@@ -578,11 +253,11 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
         <CardHeader>
           <CardTitle>Mark Attendance</CardTitle>
           <CardDescription>
-            Select date and site, then mark guard attendance using the visual interface
+            Select date and site, then mark guard attendance
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Date Selection */}
             <div className="space-y-2">
               <Label>Date</Label>
@@ -617,7 +292,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                 <SelectContent>
                   {sites.map(site => (
                     <SelectItem key={site.id} value={site.id}>
-                      {site.name}
+                      {site.site_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -627,38 +302,18 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             {/* Quick Actions */}
             <div className="space-y-2">
               <Label>Quick Actions</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex gap-2">
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={handleCopyYesterday}
-                  disabled={markAttendanceMutation.isPending}
+                  disabled={!selectedSite}
                 >
                   <Copy className="h-3 w-3 mr-1" />
                   Copy Yesterday
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleReset}
-                  disabled={deleteAttendanceMutation.isPending}
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Reset
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="col-span-2"
-                  onClick={() => setShowAttendanceSheet(true)}
-                  disabled={!selectedSite}
-                >
-                  <FileSpreadsheet className="h-3 w-3 mr-1" />
-                  View Attendance Sheet
-                </Button>
               </div>
             </div>
-
           </div>
         </CardContent>
       </Card>
@@ -676,73 +331,90 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Day Shift Card */}
-          <AttendanceSlotCard
-            title="Day Shift"
-            shiftType="day"
-            totalSlots={daySlots}
-            assignedGuards={dayShiftGuards}
-            presentGuards={presentDayGuards}
-            unavailableGuards={unavailableDayGuards}
-            payRatePerShift={payRatePerShift}
-            onGuardSelect={(guardId) => handleGuardSelect(guardId, 'day')}
-            onAddGuard={() => handleAddGuard('day')}
-            isExpanded={expandedCards.day}
-            onToggleExpand={() => handleToggleCardExpansion('day')}
-          />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                Day Shift
+                <div className="text-sm text-muted-foreground">
+                  {presentDayGuards.length} / {daySlots} present
+                </div>
+              </CardTitle>
+              <CardDescription>8:00 AM - 8:00 PM</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {dayShiftGuards.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  No guards assigned to day shift. Go to Guard Allocation tab to assign guards.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {dayShiftGuards.map(guard => {
+                    const isPresent = presentDayGuards.includes(guard.id);
+                    return (
+                      <div key={guard.id} className="flex items-center justify-between p-2 border rounded">
+                        <div>
+                          <div className="font-medium">{guard.name}</div>
+                          <div className="text-sm text-muted-foreground">{guard.badge_number}</div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant={isPresent ? "default" : "outline"}
+                          onClick={() => handleGuardToggle(guard.id, 'day')}
+                          disabled={markAttendanceMutation.isPending || unmarkAttendanceMutation.isPending}
+                        >
+                          {isPresent ? 'Present' : 'Mark Present'}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Night Shift Card */}
-          <AttendanceSlotCard
-            title="Night Shift"
-            shiftType="night"
-            totalSlots={nightSlots}
-            assignedGuards={nightShiftGuards}
-            presentGuards={presentNightGuards}
-            unavailableGuards={unavailableNightGuards}
-            payRatePerShift={payRatePerShift}
-            onGuardSelect={(guardId) => handleGuardSelect(guardId, 'night')}
-            onAddGuard={() => handleAddGuard('night')}
-            isExpanded={expandedCards.night}
-            onToggleExpand={() => handleToggleCardExpansion('night')}
-          />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                Night Shift
+                <div className="text-sm text-muted-foreground">
+                  {presentNightGuards.length} / {nightSlots} present
+                </div>
+              </CardTitle>
+              <CardDescription>8:00 PM - 8:00 AM</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {nightShiftGuards.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  No guards assigned to night shift. Go to Guard Allocation tab to assign guards.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {nightShiftGuards.map(guard => {
+                    const isPresent = presentNightGuards.includes(guard.id);
+                    return (
+                      <div key={guard.id} className="flex items-center justify-between p-2 border rounded">
+                        <div>
+                          <div className="font-medium">{guard.name}</div>
+                          <div className="text-sm text-muted-foreground">{guard.badge_number}</div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant={isPresent ? "default" : "outline"}
+                          onClick={() => handleGuardToggle(guard.id, 'night')}
+                          disabled={markAttendanceMutation.isPending || unmarkAttendanceMutation.isPending}
+                        >
+                          {isPresent ? 'Present' : 'Mark Present'}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
-
-      {/* Guard Selection Modal */}
-      <GuardSelectionModal
-        isOpen={guardSelectionModal.isOpen}
-        onClose={() => setGuardSelectionModal({ isOpen: false, shiftType: 'day', title: '' })}
-        guards={guards}
-        selectedGuards={modalSelectedGuards}
-        onSelectionChange={setModalSelectedGuards}
-        onConfirm={handleGuardSelectionConfirm}
-        maxSelections={undefined} // Allow unlimited guard assignment
-        title={guardSelectionModal.title}
-        unavailableGuards={unavailableGuards}
-      />
-
-      {/* Unassign Confirmation Dialog */}
-      <UnassignGuardConfirmationDialog
-        isOpen={showUnassignConfirmation}
-        onConfirm={handleConfirmUnassign}
-        onCancel={handleCancelUnassign}
-        siteName={selectedSiteData?.name || 'Unknown Site'}
-        date={selectedDate}
-        guards={guardsToUnassign.map(info => {
-          const guard = guards.find(g => g.id === info.guardId);
-          return {
-            id: info.guardId,
-            name: guard?.name || 'Unknown Guard',
-            badgeNumber: guard?.badgeNumber || 'N/A'
-          };
-        })}
-      />
-
-      {/* Attendance Sheet Dialog */}
-      <AttendanceSheet
-        isOpen={showAttendanceSheet}
-        onClose={() => setShowAttendanceSheet(false)}
-        preselectedSiteId={selectedSite}
-      />
     </div>
   );
 };
