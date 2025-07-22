@@ -173,7 +173,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     setAllocationModal({ isOpen: true, shiftType });
   };
 
-  const handleGuardToggle = async (guardId: string, shiftType: 'day' | 'night') => {
+  const handleMarkPresent = async (guardId: string, shiftType: 'day' | 'night') => {
     if (!selectedSite) {
       toast.error('Please select a site first');
       return;
@@ -195,19 +195,24 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
       return;
     }
 
-    if (isPresent) {
-      // Unmark attendance
-      await unmarkAttendanceMutation.mutateAsync({ guardId, shiftType });
-    } else {
-      // Check slot limit only when marking present
-      if (presentGuards.length >= maxSlots) {
-        toast.error(`Cannot mark more than ${maxSlots} guards present for ${shiftType} shift`);
-        return;
-      }
-
-      // Mark attendance (now idempotent)
-      await markAttendanceMutation.mutateAsync({ guardId, shiftType });
+    // Check slot limit only when not already present
+    if (!isPresent && presentGuards.length >= maxSlots) {
+      toast.error(`Cannot mark more than ${maxSlots} guards present for ${shiftType} shift`);
+      return;
     }
+
+    // Always try to mark present (idempotent - safe to call multiple times)
+    await markAttendanceMutation.mutateAsync({ guardId, shiftType });
+  };
+
+  const handleMarkAbsent = async (guardId: string, shiftType: 'day' | 'night') => {
+    if (!selectedSite) {
+      toast.error('Please select a site first');
+      return;
+    }
+
+    // Unmark attendance
+    await unmarkAttendanceMutation.mutateAsync({ guardId, shiftType });
   };
 
   const handleCopyYesterday = async () => {
@@ -416,23 +421,37 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                              <Button
                                size="sm"
                                variant={isPresent ? "default" : "outline"}
-                               onClick={() => handleGuardToggle(guard.id, 'day')}
-                               disabled={isLoading}
-                               className={`transition-all duration-200 min-w-[100px] ${
-                                 isPresent ? 'bg-green-600 hover:bg-green-700 text-white shadow-sm' : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
+                               onClick={() => handleMarkPresent(guard.id, 'day')}
+                               disabled={isLoading || isPresent}
+                               className={`transition-all duration-300 min-w-[110px] ${
+                                 isPresent 
+                                   ? 'bg-green-600 text-white shadow-sm cursor-default opacity-90' 
+                                   : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
                                }`}
                              >
-                               {isLoading ? 'Loading...' : 'Present'}
+                               {isLoading ? (
+                                 <div className="flex items-center gap-2">
+                                   <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
+                                   Loading...
+                                 </div>
+                               ) : isPresent ? (
+                                 <div className="flex items-center gap-2">
+                                   <span className="text-white">✓</span>
+                                   Present
+                                 </div>
+                               ) : (
+                                 'Mark Present'
+                               )}
                              </Button>
                              {isPresent && (
                                <Button
                                  size="sm"
                                  variant="outline"
-                                 onClick={() => handleGuardToggle(guard.id, 'day')}
+                                 onClick={() => handleMarkAbsent(guard.id, 'day')}
                                  disabled={isLoading}
-                                 className="text-red-600 hover:text-red-700 hover:border-red-300"
+                                 className="text-red-600 hover:text-red-700 hover:border-red-300 hover:bg-red-50 transition-colors duration-200"
                                >
-                                 Absent
+                                 Mark Absent
                                </Button>
                              )}
                            </div>
@@ -517,23 +536,37 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                              <Button
                                size="sm"
                                variant={isPresent ? "default" : "outline"}
-                               onClick={() => handleGuardToggle(guard.id, 'night')}
-                               disabled={isLoading}
-                               className={`transition-all duration-200 min-w-[100px] ${
-                                 isPresent ? 'bg-green-600 hover:bg-green-700 text-white shadow-sm' : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
+                               onClick={() => handleMarkPresent(guard.id, 'night')}
+                               disabled={isLoading || isPresent}
+                               className={`transition-all duration-300 min-w-[110px] ${
+                                 isPresent 
+                                   ? 'bg-green-600 text-white shadow-sm cursor-default opacity-90' 
+                                   : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
                                }`}
                              >
-                               {isLoading ? 'Loading...' : 'Present'}
+                               {isLoading ? (
+                                 <div className="flex items-center gap-2">
+                                   <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
+                                   Loading...
+                                 </div>
+                               ) : isPresent ? (
+                                 <div className="flex items-center gap-2">
+                                   <span className="text-white">✓</span>
+                                   Present
+                                 </div>
+                               ) : (
+                                 'Mark Present'
+                               )}
                              </Button>
                              {isPresent && (
                                <Button
                                  size="sm"
                                  variant="outline"
-                                 onClick={() => handleGuardToggle(guard.id, 'night')}
+                                 onClick={() => handleMarkAbsent(guard.id, 'night')}
                                  disabled={isLoading}
-                                 className="text-red-600 hover:text-red-700 hover:border-red-300"
+                                 className="text-red-600 hover:text-red-700 hover:border-red-300 hover:bg-red-50 transition-colors duration-200"
                                >
-                                 Absent
+                                 Mark Absent
                                </Button>
                              )}
                            </div>

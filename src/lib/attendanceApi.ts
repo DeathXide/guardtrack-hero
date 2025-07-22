@@ -104,12 +104,18 @@ export const attendanceApi = {
       .single();
 
     if (existingRecord) {
-      // Update existing record to present status
+      // If already marked present and trying to mark present again, just return the existing record (no-op)
+      if (existingRecord.status === 'present' && recordData.status === 'present') {
+        return existingRecord;
+      }
+      
+      // Update existing record to new status
       const { data, error } = await supabase
         .from('attendance_records')
         .update({ 
           status: recordData.status,
-          actual_start_time: recordData.actual_start_time,
+          actual_start_time: recordData.status === 'present' ? new Date().toISOString() : existingRecord.actual_start_time,
+          actual_end_time: recordData.status === 'absent' ? new Date().toISOString() : existingRecord.actual_end_time,
           updated_at: new Date().toISOString()
         })
         .eq('id', existingRecord.id)
@@ -122,7 +128,10 @@ export const attendanceApi = {
       // Create new record
       const { data, error } = await supabase
         .from('attendance_records')
-        .insert(recordData)
+        .insert({
+          ...recordData,
+          actual_start_time: recordData.status === 'present' ? new Date().toISOString() : undefined
+        })
         .select()
         .single();
 
