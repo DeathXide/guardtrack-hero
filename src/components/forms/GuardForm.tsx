@@ -130,14 +130,10 @@ const GuardForm: React.FC<GuardFormProps> = ({
   return (
     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
       <Tabs defaultValue="essential" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="essential" className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
             Essential Info
-          </TabsTrigger>
-          <TabsTrigger value="contact" className="flex items-center gap-2">
-            <Phone className="h-4 w-4" />
-            Contact & Address
           </TabsTrigger>
           <TabsTrigger value="compensation" className="flex items-center gap-2">
             <Banknote className="h-4 w-4" />
@@ -262,6 +258,38 @@ const GuardForm: React.FC<GuardFormProps> = ({
             </CardContent>
           </Card>
 
+          {/* Addresses */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <MapPin className="h-5 w-5" />
+                Address Details
+                <Badge variant="outline" className="ml-auto text-xs">Optional</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="currentAddress">Current Address</Label>
+                <Textarea
+                  id="currentAddress"
+                  {...form.register('currentAddress')}
+                  placeholder="Enter current address"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="permanentAddress">Permanent Address</Label>
+                <Textarea
+                  id="permanentAddress"
+                  {...form.register('permanentAddress')}
+                  placeholder="Enter permanent address"
+                  rows={2}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Employment Status */}
           <Card>
             <CardHeader className="pb-3">
@@ -338,42 +366,6 @@ const GuardForm: React.FC<GuardFormProps> = ({
                     <p className="text-sm text-destructive">{form.formState.errors.payRate.message}</p>
                   )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Contact & Address Tab */}
-        <TabsContent value="contact" className="space-y-6">
-
-          {/* Addresses */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <MapPin className="h-5 w-5" />
-                Addresses
-                <Badge variant="outline" className="ml-auto text-xs">Optional</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentAddress">Current Address</Label>
-                <Textarea
-                  id="currentAddress"
-                  {...form.register('currentAddress')}
-                  placeholder="Enter current address"
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="permanentAddress">Permanent Address</Label>
-                <Textarea
-                  id="permanentAddress"
-                  {...form.register('permanentAddress')}
-                  placeholder="Enter permanent address"
-                  rows={2}
-                />
               </div>
             </CardContent>
           </Card>
