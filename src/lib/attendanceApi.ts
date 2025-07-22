@@ -1,20 +1,138 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 
-// Use the database types for better type safety
-export type AttendanceRecord = Database['public']['Tables']['attendance_records']['Row'];
-export type CreateAttendanceData = Omit<Database['public']['Tables']['attendance_records']['Insert'], 'id' | 'created_at' | 'updated_at'>;
-export type UpdateAttendanceData = Database['public']['Tables']['attendance_records']['Update'];
+// Define our own types for attendance tables since they're not in the generated types yet
+export interface AttendanceRecord {
+  id: string;
+  employee_id: string;
+  site_id: string;
+  attendance_date: string;
+  shift_type: string;
+  employee_type: string;
+  status: string;
+  scheduled_start_time: string;
+  scheduled_end_time: string;
+  actual_start_time?: string;
+  actual_end_time?: string;
+  break_duration?: number;
+  overtime_hours?: number;
+  check_in_location?: any;
+  check_out_location?: any;
+  check_in_photo_url?: string;
+  check_out_photo_url?: string;
+  notes?: string;
+  is_correction?: boolean;
+  original_record_id?: string;
+  correction_reason?: string;
+  approved_by?: string;
+  approved_at?: string;
+  created_at: string;
+  updated_at: string;
+}
 
-export type AttendanceSettings = Database['public']['Tables']['attendance_settings']['Row'];
-export type CreateAttendanceSettingsData = Omit<Database['public']['Tables']['attendance_settings']['Insert'], 'id' | 'created_at' | 'updated_at'>;
-export type UpdateAttendanceSettingsData = Database['public']['Tables']['attendance_settings']['Update'];
+export interface CreateAttendanceData {
+  employee_id: string;
+  site_id: string;
+  attendance_date: string;
+  shift_type: string;
+  employee_type: string;
+  status: string;
+  scheduled_start_time: string;
+  scheduled_end_time: string;
+  actual_start_time?: string;
+  actual_end_time?: string;
+  break_duration?: number;
+  overtime_hours?: number;
+  check_in_location?: any;
+  check_out_location?: any;
+  check_in_photo_url?: string;
+  check_out_photo_url?: string;
+  notes?: string;
+  is_correction?: boolean;
+  original_record_id?: string;
+  correction_reason?: string;
+}
+
+export interface UpdateAttendanceData {
+  employee_id?: string;
+  site_id?: string;
+  attendance_date?: string;
+  shift_type?: string;
+  employee_type?: string;
+  status?: string;
+  scheduled_start_time?: string;
+  scheduled_end_time?: string;
+  actual_start_time?: string;
+  actual_end_time?: string;
+  break_duration?: number;
+  overtime_hours?: number;
+  check_in_location?: any;
+  check_out_location?: any;
+  check_in_photo_url?: string;
+  check_out_photo_url?: string;
+  notes?: string;
+  is_correction?: boolean;
+  original_record_id?: string;
+  correction_reason?: string;
+  approved_by?: string;
+  approved_at?: string;
+}
+
+export interface AttendanceSettings {
+  id: string;
+  site_id: string;
+  day_shift_start?: string;
+  day_shift_end?: string;
+  night_shift_start?: string;
+  night_shift_end?: string;
+  late_grace_period?: number;
+  early_departure_grace_period?: number;
+  require_check_in_photo?: boolean;
+  require_check_out_photo?: boolean;
+  location_radius?: number;
+  site_latitude?: number;
+  site_longitude?: number;
+  allowed_break_duration?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateAttendanceSettingsData {
+  site_id: string;
+  day_shift_start?: string;
+  day_shift_end?: string;
+  night_shift_start?: string;
+  night_shift_end?: string;
+  late_grace_period?: number;
+  early_departure_grace_period?: number;
+  require_check_in_photo?: boolean;
+  require_check_out_photo?: boolean;
+  location_radius?: number;
+  site_latitude?: number;
+  site_longitude?: number;
+  allowed_break_duration?: number;
+}
+
+export interface UpdateAttendanceSettingsData {
+  site_id?: string;
+  day_shift_start?: string;
+  day_shift_end?: string;
+  night_shift_start?: string;
+  night_shift_end?: string;
+  late_grace_period?: number;
+  early_departure_grace_period?: number;
+  require_check_in_photo?: boolean;
+  require_check_out_photo?: boolean;
+  location_radius?: number;
+  site_latitude?: number;
+  site_longitude?: number;
+  allowed_break_duration?: number;
+}
 
 // Attendance Records API
 export const attendanceApi = {
   // Create a new attendance record
   async createAttendanceRecord(recordData: CreateAttendanceData) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('attendance_records')
       .insert(recordData)
       .select()
@@ -26,7 +144,7 @@ export const attendanceApi = {
 
   // Get attendance records by date
   async getAttendanceByDate(date: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('attendance_records')
       .select(`
         *,
@@ -45,7 +163,7 @@ export const attendanceApi = {
 
   // Get attendance records by site and date
   async getAttendanceBySiteAndDate(siteId: string, date: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('attendance_records')
       .select(`
         *,
@@ -66,7 +184,7 @@ export const attendanceApi = {
 
   // Get attendance records by guard and date range
   async getAttendanceByGuardAndDateRange(guardId: string, startDate: string, endDate: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('attendance_records')
       .select(`
         *,
@@ -86,7 +204,7 @@ export const attendanceApi = {
 
   // Update attendance record
   async updateAttendanceRecord(id: string, recordData: UpdateAttendanceData) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('attendance_records')
       .update(recordData)
       .eq('id', id)
@@ -99,7 +217,7 @@ export const attendanceApi = {
 
   // Delete attendance record
   async deleteAttendanceRecord(id: string) {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('attendance_records')
       .delete()
       .eq('id', id);
@@ -110,7 +228,7 @@ export const attendanceApi = {
 
   // Check if guard is marked present elsewhere on the same date and shift type
   async isGuardMarkedElsewhere(guardId: string, date: string, shiftType: string, excludeSiteId?: string) {
-    let query = supabase
+    let query = (supabase as any)
       .from('attendance_records')
       .select('id, site_id')
       .eq('employee_id', guardId)
@@ -130,7 +248,7 @@ export const attendanceApi = {
 
   // Get attendance summary for a site and date
   async getAttendanceSummary(siteId: string, date: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('attendance_records')
       .select('shift_type, status')
       .eq('site_id', siteId)
@@ -166,7 +284,7 @@ export const attendanceApi = {
 
   // Mark multiple guards present for a specific shift
   async markMultipleGuardsPresent(recordsData: CreateAttendanceData[]) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('attendance_records')
       .insert(recordsData)
       .select();
@@ -178,7 +296,7 @@ export const attendanceApi = {
   // Copy attendance from one date to another
   async copyAttendanceFromDate(fromDate: string, toDate: string, siteId: string) {
     // First get the attendance records from the source date
-    const { data: sourceRecords, error: fetchError } = await supabase
+    const { data: sourceRecords, error: fetchError } = await (supabase as any)
       .from('attendance_records')
       .select('employee_id, site_id, shift_type, employee_type')
       .eq('attendance_date', fromDate)
@@ -203,7 +321,7 @@ export const attendanceApi = {
       scheduled_end_time: new Date().toISOString()
     }));
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('attendance_records')
       .insert(newRecords)
       .select();
@@ -214,7 +332,7 @@ export const attendanceApi = {
 
   // Get attendance statistics for a guard over a period
   async getGuardAttendanceStats(guardId: string, startDate: string, endDate: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('attendance_records')
       .select('status, attendance_date, overtime_hours')
       .eq('employee_id', guardId)
@@ -243,7 +361,7 @@ export const attendanceApi = {
 export const attendanceSettingsApi = {
   // Create attendance settings for a site
   async createAttendanceSettings(settingsData: CreateAttendanceSettingsData) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('attendance_settings')
       .insert(settingsData)
       .select()
@@ -255,7 +373,7 @@ export const attendanceSettingsApi = {
 
   // Get attendance settings by site ID
   async getAttendanceSettings(siteId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('attendance_settings')
       .select('*')
       .eq('site_id', siteId)
@@ -270,7 +388,7 @@ export const attendanceSettingsApi = {
 
   // Update attendance settings
   async updateAttendanceSettings(siteId: string, settingsData: UpdateAttendanceSettingsData) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('attendance_settings')
       .update(settingsData)
       .eq('site_id', siteId)
@@ -311,7 +429,7 @@ export const attendanceSettingsApi = {
 
   // Delete attendance settings
   async deleteAttendanceSettings(siteId: string) {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('attendance_settings')
       .delete()
       .eq('site_id', siteId);
