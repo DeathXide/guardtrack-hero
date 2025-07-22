@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -7,13 +7,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Calendar as CalendarIcon, CheckCircle2, Clock } from "lucide-react";
+import { AlertCircle, Calendar as CalendarIcon, CheckCircle2, Clock, Building, Users } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AttendanceDataTable } from "./AttendanceDataTable";
-import { sitesApi } from "@/lib/sitesApi";
-import { shiftsApi } from "@/lib/shiftsApi";
-import { attendanceApi } from "@/lib/attendanceApi";
-import { Site, AttendanceRecord, Shift, SiteEarnings } from "@/types";
+import { getAttendanceOverview } from "@/lib/attendanceOverviewApi";
+import { PageLoader } from "@/components/ui/loader";
 import { useNavigate } from "react-router-dom";
 
 interface AttendanceOverviewProps {
@@ -23,14 +20,33 @@ interface AttendanceOverviewProps {
 const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
-  const navigate = useNavigate();
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
-  const currentMonth = format(selectedDate, "yyyy-MM");
 
-  const { data: sitesData = [], isLoading: sitesLoading } = useQuery({
-    queryKey: ["sites"],
-    queryFn: sitesApi.getAllSites
+  // Single optimized query instead of 3 separate ones
+  const { data: overviewData, isLoading } = useQuery({
+    queryKey: ["attendance-overview", formattedDate],
+    queryFn: () => getAttendanceOverview(formattedDate),
+    staleTime: 30000, // Cache for 30 seconds
   });
+
+  // Memoized filtered sites to prevent unnecessary re-calculations
+  const filteredSites = useMemo(() => {
+    if (!overviewData?.sites) return [];
+    if (activeFilters.length === 0) return overviewData.sites;
+    return overviewData.sites.filter(site => activeFilters.includes(site.status));
+  }, [overviewData?.sites, activeFilters]);
+
+  const toggleFilter = (status: string) => {
+    setActiveFilters(prev => 
+      prev.includes(status) 
+        ? prev.filter(f => f !== status)
+        : [...prev, status]
+    );
+  };
+
+  if (isLoading) {
+    return <PageLoader text="Loading attendance overview..." />;
+  }
 
   // Transform Supabase site data to match the expected Site interface
   const sites = sitesData.map(site => ({
