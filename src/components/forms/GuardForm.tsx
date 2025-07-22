@@ -242,13 +242,24 @@ const GuardForm: React.FC<GuardFormProps> = ({
     }
   };
 
-  const calculateShiftRate = (monthlyRate: number) => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    return Math.round(monthlyRate / daysInMonth);
-  };
+const calculateShiftRate = (monthlyRate) => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  if (
+    !monthlyRate || // catches null, undefined, 0, "", NaN
+    typeof monthlyRate !== "number" ||
+    isNaN(monthlyRate) ||
+    !daysInMonth // sanity-check for 0 days (which never happens, but just in case)
+  ) {
+    return 0;
+  }
+
+  return Math.round(monthlyRate / daysInMonth);
+};
+
 
   const formatCurrency = (amount: number): string =>
     new Intl.NumberFormat("en-IN", {
@@ -548,32 +559,31 @@ const GuardForm: React.FC<GuardFormProps> = ({
                     <Banknote className="h-5 w-5" /> Pay Rate
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <Label htmlFor="payRate">
-                      Monthly Pay Rate (INR) <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="payRate"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      {...form.register("payRate", { valueAsNumber: true })}
-                      placeholder="Enter monthly pay rate in INR"
-                      onInput={() => form.clearErrors("payRate")}
-                    />
-                    {payRateValue && (
-                      <div className="text-xs text-muted-foreground">
-                        Per shift rate: {formatCurrency(calculateShiftRate(payRateValue))}
-                      </div>
-                    )}
-                    {form.formState.errors.payRate && (
-                      <p className="text-sm text-destructive">
-                        {form.formState.errors.payRate.message}
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
+             <CardContent>
+  <div className="space-y-2">
+    <Label htmlFor="payRate">
+      Monthly Pay Rate (INR) <span className="text-destructive">*</span>
+    </Label>
+    <Input
+      id="payRate"
+      type="number"
+      min="0"
+      step="0.01"
+      {...form.register("payRate", { valueAsNumber: true })}
+      placeholder="Enter monthly pay rate in INR"
+      onInput={() => form.clearErrors("payRate")}
+    />
+    <div className="text-xs text-muted-foreground">
+      Per shift rate: {formatCurrency(calculateShiftRate(payRateValue))}
+    </div>
+    {form.formState.errors.payRate && (
+      <p className="text-sm text-destructive">
+        {form.formState.errors.payRate.message}
+      </p>
+    )}
+  </div>
+</CardContent>
+
               </Card>
               <Card>
                 <CardHeader className="pb-3">
