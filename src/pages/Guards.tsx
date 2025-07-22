@@ -368,10 +368,10 @@ const Guards = () => {
           earningsMap[guard.id] = {
             month: currentMonth,
             totalShifts: 0, // This would need shift data if available
-            baseSalary: guard.monthly_pay_rate || 0,
+            baseSalary: result.baseSalary,
             bonuses: result.totalBonus,
             deductions: result.totalDeduction,
-            netAmount: result.netAmount
+            netAmount: result.netAmount // Now includes base salary + bonuses - deductions
           };
         } catch (error) {
           console.error('Error fetching monthly earnings for guard:', error);
@@ -381,7 +381,7 @@ const Guards = () => {
             baseSalary: guard.monthly_pay_rate || 0,
             bonuses: 0,
             deductions: 0,
-            netAmount: guard.monthly_pay_rate || 0
+            netAmount: guard.monthly_pay_rate || 0 // Base salary when no payments
           };
         }
       }

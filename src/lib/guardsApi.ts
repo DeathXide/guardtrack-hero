@@ -175,23 +175,33 @@ export const paymentsApi = {
     return true;
   },
 
-  // Get payment summary for a guard in a specific month
+  // Get payment summary for a guard in a specific month with base salary
   async getGuardMonthlySummary(guardId: string, month: string) {
-    const { data, error } = await supabase
-      .from('payments')
-      .select('payment_type, amount')
-      .eq('guard_id', guardId)
-      .eq('payment_month', month);
+    // Get both payments and guard's base salary
+    const [paymentsResult, guardResult] = await Promise.all([
+      supabase
+        .from('payments')
+        .select('payment_type, amount')
+        .eq('guard_id', guardId)
+        .eq('payment_month', month),
+      supabase
+        .from('guards')
+        .select('monthly_pay_rate')
+        .eq('id', guardId)
+        .single()
+    ]);
 
-    if (error) throw error;
+    if (paymentsResult.error) throw paymentsResult.error;
+    if (guardResult.error) throw guardResult.error;
 
     const summary = {
       totalBonus: 0,
       totalDeduction: 0,
+      baseSalary: Number(guardResult.data?.monthly_pay_rate || 0),
       netAmount: 0
     };
 
-    data.forEach(payment => {
+    paymentsResult.data.forEach(payment => {
       if (payment.payment_type === 'bonus') {
         summary.totalBonus += Number(payment.amount);
       } else {
@@ -199,7 +209,8 @@ export const paymentsApi = {
       }
     });
 
-    summary.netAmount = summary.totalBonus - summary.totalDeduction;
+    // Calculate net amount: base salary + bonuses - deductions
+    summary.netAmount = summary.baseSalary + summary.totalBonus - summary.totalDeduction;
     return summary;
   }
 };
