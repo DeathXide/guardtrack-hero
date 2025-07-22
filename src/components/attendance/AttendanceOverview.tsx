@@ -6,7 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Calendar as CalendarIcon, CheckCircle2, Clock, Building, Users } from "lucide-react";
+import { AlertCircle, Calendar as CalendarIcon, CheckCircle2, Clock, Building, Users, Table as TableIcon, LayoutGrid as GridIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getAttendanceOverview } from "@/lib/attendanceOverviewApi";
 import { PageLoader } from "@/components/ui/loader";
@@ -18,6 +18,7 @@ interface AttendanceOverviewProps {
 const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
 
   // Single optimized query instead of 3 separate ones
@@ -77,13 +78,14 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Attendance Overview</CardTitle>
+          <CardTitle>Attendance </CardTitle>
           <CardDescription>
             View attendance status across all sites for the selected date
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4 mb-6">
+          {/* Top Controls: Calendar, Filters, view toggle */}
+          <div className="flex flex-wrap items-center gap-4 mb-6">
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -104,7 +106,8 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
               </PopoverContent>
             </Popover>
 
-            <div className="flex items-center gap-4">
+            {/* Filter buttons */}
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => toggleFilter('fully-marked')}
                 className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${
@@ -141,78 +144,144 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
               {activeFilters.length > 0 && (
                 <button
                   onClick={() => setActiveFilters([])}
-                  className="text-xs text-muted-foreground hover:text-foreground underline"
+                  className="text-xs text-muted-foreground hover:text-foreground underline ml-2"
                 >
                   Clear filters
                 </button>
               )}
             </div>
+
+            {/* VIEW MODE TOGGLE */}
+            <div className="flex items-center gap-2 ml-auto">
+              <Button
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className="gap-1"
+                title="Grid view"
+              >
+                <GridIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">Grid</span>
+              </Button>
+              <Button
+                variant={viewMode === "table" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("table")}
+                className="gap-1"
+                title="Table view"
+              >
+                <TableIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">Table</span>
+              </Button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredSites.map((site) => (
-              <Card key={site.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{site.site_name}</CardTitle>
-                      <CardDescription>{site.address}</CardDescription>
-                    </div>
-                    {getStatusBadge(site.status)}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                        <span>Capacity:</span>
+          {/* Main Content: Grid or Table */}
+          {viewMode === "grid" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredSites.map((site) => (
+                <Card key={site.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-lg">{site.site_name}</CardTitle>
+                        <CardDescription>{site.address}</CardDescription>
                       </div>
-                      <span className="font-medium">{site.daySlots + site.nightSlots} slots</span>
+                      {getStatusBadge(site.status)}
                     </div>
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span>Assigned:</span>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4 text-muted-foreground" />
+                          <span>Capacity:</span>
+                        </div>
+                        <span className="font-medium">{site.daySlots + site.nightSlots} slots</span>
                       </div>
-                      <span className="font-medium">{site.dayAssigned + site.nightAssigned} guards</span>
-                    </div>
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <span>Assigned:</span>
+                        </div>
+                        <span className="font-medium">{site.dayAssigned + site.nightAssigned} guards</span>
+                      </div>
 
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Present:</span>
-                      <span className="font-medium text-green-600">
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Present:</span>
+                        <span className="font-medium text-green-600">
+                          {site.dayPresent + site.nightPresent} / {site.dayAssigned + site.nightAssigned}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-2">
+                        <div className="text-center p-2 bg-amber-50 rounded">
+                          <div className="text-xs text-amber-700">Day Shift</div>
+                          <div className="font-medium text-amber-800">
+                            {site.dayPresent} / {site.dayAssigned}
+                          </div>
+                        </div>
+                        <div className="text-center p-2 bg-blue-50 rounded">
+                          <div className="text-xs text-blue-700">Night Shift</div>
+                          <div className="font-medium text-blue-800">
+                            {site.nightPresent} / {site.nightAssigned}
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button 
+                        className="w-full mt-4" 
+                        size="sm"
+                        onClick={() => onSiteSelect(site.id)}
+                      >
+                        Mark Attendance
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border border-gray-200 bg-white rounded-md">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-2 text-left font-medium">Site Name</th>
+                    <th className="p-2 text-left font-medium">Address</th>
+                    <th className="p-2 font-medium">Status</th>
+                    <th className="p-2 font-medium">Capacity</th>
+                    <th className="p-2 font-medium">Assigned</th>
+                    <th className="p-2 font-medium">Present</th>
+                    <th className="p-2 font-medium">Day Shift</th>
+                    <th className="p-2 font-medium">Night Shift</th>
+                    <th className="p-2 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSites.map(site => (
+                    <tr key={site.id} className="border-t hover:bg-gray-50">
+                      <td className="p-2 font-medium">{site.site_name}</td>
+                      <td className="p-2">{site.address}</td>
+                      <td className="p-2">{getStatusBadge(site.status)}</td>
+                      <td className="p-2">{site.daySlots + site.nightSlots} slots</td>
+                      <td className="p-2">{site.dayAssigned + site.nightAssigned} guards</td>
+                      <td className="p-2 text-green-700 font-bold">
                         {site.dayPresent + site.nightPresent} / {site.dayAssigned + site.nightAssigned}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-2">
-                      <div className="text-center p-2 bg-amber-50 rounded">
-                        <div className="text-xs text-amber-700">Day Shift</div>
-                        <div className="font-medium text-amber-800">
-                          {site.dayPresent} / {site.dayAssigned}
-                        </div>
-                      </div>
-                      <div className="text-center p-2 bg-blue-50 rounded">
-                        <div className="text-xs text-blue-700">Night Shift</div>
-                        <div className="font-medium text-blue-800">
-                          {site.nightPresent} / {site.nightAssigned}
-                        </div>
-                      </div>
-                    </div>
-
-                    <Button 
-                      className="w-full mt-4" 
-                      size="sm"
-                      onClick={() => onSiteSelect(site.id)}
-                    >
-                      Mark Attendance
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                      </td>
+                      <td className="p-2 text-amber-800">{site.dayPresent} / {site.dayAssigned}</td>
+                      <td className="p-2 text-blue-800">{site.nightPresent} / {site.nightAssigned}</td>
+                      <td className="p-2">
+                        <Button size="sm" onClick={() => onSiteSelect(site.id)}>
+                          Mark Attendance
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
