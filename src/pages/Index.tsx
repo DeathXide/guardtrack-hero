@@ -7,8 +7,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { users } from '@/lib/data';
+import { PageLoader } from '@/components/ui/loader';
 
 const Index = () => {
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate loading delay
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoading) {
+    return <PageLoader text="Loading dashboard..." />;
+  }
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
   const [email, setEmail] = useState('');

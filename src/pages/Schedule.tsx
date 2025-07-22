@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PageLoader, CardLoader } from '@/components/ui/loader';
 import { 
   CalendarDays,
   Clock,
@@ -82,7 +83,18 @@ const Schedule = () => {
   const [selectedGuardId, setSelectedGuardId] = useState<string>('');
   const [selectedAssignment, setSelectedAssignment] = useState<ScheduleAssignment | null>(null);
   const [selectedTargetSite, setSelectedTargetSite] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  
+  // Simulate loading delay
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
+  
+  if (isLoading) {
+    return <PageLoader text="Loading schedule..." />;
+  }
   
   const dateString = selectedDate 
     ? selectedDate.toISOString().split('T')[0] 

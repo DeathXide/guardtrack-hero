@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchSites, createSite, updateSite, deleteSite, formatCurrency } from '@/lib/supabaseService';
+import { PageLoader } from '@/components/ui/loader';
 
 const Sites = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -207,16 +208,7 @@ const Sites = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Sites</h2>
-            <p className="text-muted-foreground">Loading sites...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <PageLoader text="Loading sites..." />;
   }
 
   return (

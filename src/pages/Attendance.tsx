@@ -5,10 +5,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AttendanceMarking from "@/components/attendance/AttendanceMarking";
 import ShiftAllocation from "@/components/attendance/ShiftAllocation";
 import AttendanceOverview from "@/components/attendance/AttendanceOverview";
+import { PageLoader } from "@/components/ui/loader";
 
 export default function Attendance() {
   const [selectedSite, setSelectedSite] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("overview");
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate loading delay
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 700);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoading) {
+    return <PageLoader text="Loading attendance..." />;
+  }
 
   const handleSiteSelect = (siteId: string) => {
     setSelectedSite(siteId);

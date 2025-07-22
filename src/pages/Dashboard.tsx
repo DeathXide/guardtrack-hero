@@ -12,6 +12,7 @@ import {
   getGuardById, 
   getSiteById 
 } from '@/lib/data';
+import { PageLoader } from '@/components/ui/loader';
 
 // Import refactored components
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -24,6 +25,17 @@ import QuickActions from '@/components/dashboard/QuickActions';
 const Dashboard = () => {
   const { user } = useAuth();
   const [selectedDay, setSelectedDay] = useState<'today' | 'yesterday'>('today');
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Simulate loading delay
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
+  
+  if (isLoading) {
+    return <PageLoader text="Loading dashboard..." />;
+  }
   
   // Get today and yesterday dates
   const today = new Date().toISOString().split('T')[0];

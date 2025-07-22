@@ -8,9 +8,21 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { DownloadCloud, FileText, User, Calendar, Building, RefreshCw } from 'lucide-react';
 import { attendanceRecords, guards, sites } from '@/lib/data';
 import { AttendanceReport, SiteReport } from '@/types';
+import { PageLoader, CardLoader } from '@/components/ui/loader';
 
 const Reports = () => {
   const [activeTab, setActiveTab] = useState('attendance');
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Simulate loading delay
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
+  
+  if (isLoading) {
+    return <PageLoader text="Loading reports..." />;
+  }
   
   // Generate attendance report data
   const attendanceReportData: AttendanceReport[] = guards.map(guard => {
