@@ -4,7 +4,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Calendar as CalendarIcon, Info, Copy, RefreshCw } from 'lucide-react';
+import { Calendar as CalendarIcon, Info, Copy, Settings, UserPlus } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,7 @@ import { sitesApi } from '@/lib/sitesApi';
 import { guardsApi } from '@/lib/guardsApi';
 import { shiftsApi } from '@/lib/shiftsApi';
 import { attendanceApi } from '@/lib/attendanceApi';
+import GuardAllocationModal from './GuardAllocationModal';
 
 interface AttendanceMarkingProps {
   preselectedSiteId?: string;
@@ -22,6 +23,10 @@ interface AttendanceMarkingProps {
 const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedSite, setSelectedSite] = useState<string>('');
+  const [allocationModal, setAllocationModal] = useState<{
+    isOpen: boolean;
+    shiftType: 'day' | 'night';
+  }>({ isOpen: false, shiftType: 'day' });
   const queryClient = useQueryClient();
 
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
@@ -159,6 +164,15 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     }
   });
 
+  const handleOpenAllocation = async (shiftType: 'day' | 'night') => {
+    if (!selectedSite) {
+      toast.error('Please select a site first');
+      return;
+    }
+    
+    setAllocationModal({ isOpen: true, shiftType });
+  };
+
   const handleGuardToggle = async (guardId: string, shiftType: 'day' | 'night') => {
     if (!selectedSite) {
       toast.error('Please select a site first');
@@ -177,7 +191,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
     );
 
     if (!isAssigned) {
-      toast.error(`Guard is not assigned to ${shiftType} shift at this site. Please assign them first in the Guard Allocation tab.`);
+      toast.error(`Guard is not assigned to ${shiftType} shift at this site. Please assign them first using the allocation feature.`);
       return;
     }
 
@@ -253,7 +267,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
         <CardHeader>
           <CardTitle>Mark Attendance</CardTitle>
           <CardDescription>
-            Select date and site, then mark guard attendance
+            Select date and site, then allocate guards and mark attendance
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -343,47 +357,72 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             </CardHeader>
             <CardContent>
               {dayShiftGuards.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  No guards assigned to day shift. Go to Guard Allocation tab to assign guards.
+                <div className="text-center py-6 text-muted-foreground space-y-3">
+                  <div>No guards assigned to day shift</div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleOpenAllocation('day')}
+                    className="flex items-center gap-2"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Allocate Guards
+                  </Button>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {dayShiftGuards.map(guard => {
-                    const isPresent = presentDayGuards.includes(guard.id);
-                    const isLoading = (markAttendanceMutation.isPending || unmarkAttendanceMutation.isPending);
-                    
-                    return (
-                      <div 
-                        key={guard.id} 
-                        className={`flex items-center justify-between p-3 border rounded-lg transition-all duration-300 ${
-                          isPresent ? 'bg-green-50 border-green-200 animate-fade-in' : 'bg-background hover:bg-muted/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {isPresent && (
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                          )}
-                          <div>
-                            <div className={`font-medium transition-colors ${isPresent ? 'text-green-800' : ''}`}>
-                              {guard.name}
-                            </div>
-                            <div className="text-sm text-muted-foreground">{guard.badge_number}</div>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant={isPresent ? "default" : "outline"}
-                          onClick={() => handleGuardToggle(guard.id, 'day')}
-                          disabled={isLoading}
-                          className={`transition-all duration-200 ${
-                            isPresent ? 'bg-green-600 hover:bg-green-700 text-white' : ''
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      {dayShiftGuards.length} guards assigned
+                    </span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleOpenAllocation('day')}
+                      className="flex items-center gap-1 text-xs"
+                    >
+                      <Settings className="h-3 w-3" />
+                      Manage
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {dayShiftGuards.map(guard => {
+                      const isPresent = presentDayGuards.includes(guard.id);
+                      const isLoading = (markAttendanceMutation.isPending || unmarkAttendanceMutation.isPending);
+                      
+                      return (
+                        <div 
+                          key={guard.id} 
+                          className={`flex items-center justify-between p-3 border rounded-lg transition-all duration-300 ${
+                            isPresent ? 'bg-green-50 border-green-200 animate-fade-in' : 'bg-background hover:bg-muted/50'
                           }`}
                         >
-                          {isLoading ? 'Loading...' : isPresent ? '✓ Present' : 'Mark Present'}
-                        </Button>
-                      </div>
-                    );
-                  })}
+                          <div className="flex items-center gap-3">
+                            {isPresent && (
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            )}
+                            <div>
+                              <div className={`font-medium transition-colors ${isPresent ? 'text-green-800' : ''}`}>
+                                {guard.name}
+                              </div>
+                              <div className="text-sm text-muted-foreground">{guard.badge_number}</div>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant={isPresent ? "default" : "outline"}
+                            onClick={() => handleGuardToggle(guard.id, 'day')}
+                            disabled={isLoading}
+                            className={`transition-all duration-200 ${
+                              isPresent ? 'bg-green-600 hover:bg-green-700 text-white' : ''
+                            }`}
+                          >
+                            {isLoading ? 'Loading...' : isPresent ? '✓ Present' : 'Mark Present'}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -402,53 +441,90 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
             </CardHeader>
             <CardContent>
               {nightShiftGuards.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  No guards assigned to night shift. Go to Guard Allocation tab to assign guards.
+                <div className="text-center py-6 text-muted-foreground space-y-3">
+                  <div>No guards assigned to night shift</div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleOpenAllocation('night')}
+                    className="flex items-center gap-2"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Allocate Guards
+                  </Button>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {nightShiftGuards.map(guard => {
-                    const isPresent = presentNightGuards.includes(guard.id);
-                    const isLoading = (markAttendanceMutation.isPending || unmarkAttendanceMutation.isPending);
-                    
-                    return (
-                      <div 
-                        key={guard.id} 
-                        className={`flex items-center justify-between p-3 border rounded-lg transition-all duration-300 ${
-                          isPresent ? 'bg-blue-50 border-blue-200 animate-fade-in' : 'bg-background hover:bg-muted/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {isPresent && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                          )}
-                          <div>
-                            <div className={`font-medium transition-colors ${isPresent ? 'text-blue-800' : ''}`}>
-                              {guard.name}
-                            </div>
-                            <div className="text-sm text-muted-foreground">{guard.badge_number}</div>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant={isPresent ? "default" : "outline"}
-                          onClick={() => handleGuardToggle(guard.id, 'night')}
-                          disabled={isLoading}
-                          className={`transition-all duration-200 ${
-                            isPresent ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      {nightShiftGuards.length} guards assigned
+                    </span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleOpenAllocation('night')}
+                      className="flex items-center gap-1 text-xs"
+                    >
+                      <Settings className="h-3 w-3" />
+                      Manage
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {nightShiftGuards.map(guard => {
+                      const isPresent = presentNightGuards.includes(guard.id);
+                      const isLoading = (markAttendanceMutation.isPending || unmarkAttendanceMutation.isPending);
+                      
+                      return (
+                        <div 
+                          key={guard.id} 
+                          className={`flex items-center justify-between p-3 border rounded-lg transition-all duration-300 ${
+                            isPresent ? 'bg-blue-50 border-blue-200 animate-fade-in' : 'bg-background hover:bg-muted/50'
                           }`}
                         >
-                          {isLoading ? 'Loading...' : isPresent ? '✓ Present' : 'Mark Present'}
-                        </Button>
-                      </div>
-                    );
-                  })}
+                          <div className="flex items-center gap-3">
+                            {isPresent && (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                            )}
+                            <div>
+                              <div className={`font-medium transition-colors ${isPresent ? 'text-blue-800' : ''}`}>
+                                {guard.name}
+                              </div>
+                              <div className="text-sm text-muted-foreground">{guard.badge_number}</div>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant={isPresent ? "default" : "outline"}
+                            onClick={() => handleGuardToggle(guard.id, 'night')}
+                            disabled={isLoading}
+                            className={`transition-all duration-200 ${
+                              isPresent ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
+                            }`}
+                          >
+                            {isLoading ? 'Loading...' : isPresent ? '✓ Present' : 'Mark Present'}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
       )}
+
+      {/* Guard Allocation Modal */}
+      <GuardAllocationModal
+        isOpen={allocationModal.isOpen}
+        onClose={() => setAllocationModal({ ...allocationModal, isOpen: false })}
+        siteId={selectedSite}
+        shiftType={allocationModal.shiftType}
+        maxSlots={allocationModal.shiftType === 'day' ? daySlots : nightSlots}
+        currentlyAssigned={allocationModal.shiftType === 'day' ? dayShiftGuards : nightShiftGuards}
+        availableGuards={guards}
+        existingConflicts={[]}
+      />
     </div>
   );
 };
