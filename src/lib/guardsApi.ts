@@ -1,0 +1,291 @@
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+// Use the database types for better type safety
+export type Guard = Database['public']['Tables']['guards']['Row'];
+export type CreateGuardData = Omit<Database['public']['Tables']['guards']['Insert'], 'badge_number' | 'id' | 'created_at' | 'updated_at'>;
+export type UpdateGuardData = Database['public']['Tables']['guards']['Update'];
+export type Payment = Database['public']['Tables']['payments']['Row'];
+export type CreatePaymentData = Omit<Database['public']['Tables']['payments']['Insert'], 'id' | 'created_at' | 'updated_at'>;
+export type UpdatePaymentData = Database['public']['Tables']['payments']['Update'];
+
+// Guard CRUD Operations
+export const guardsApi = {
+  // Create a new guard
+  async createGuard(guardData: CreateGuardData) {
+    // Add a temporary badge number that will be replaced by the trigger
+    const guardWithBadge = {
+      ...guardData,
+      badge_number: 'TEMP' // This will be replaced by the trigger
+    };
+
+    const { data, error } = await supabase
+      .from('guards')
+      .insert(guardWithBadge)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Get all guards
+  async getAllGuards() {
+    const { data, error } = await supabase
+      .from('guards')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Get guard by ID
+  async getGuardById(id: string) {
+    const { data, error } = await supabase
+      .from('guards')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Update guard
+  async updateGuard(id: string, guardData: UpdateGuardData) {
+    const { data, error } = await supabase
+      .from('guards')
+      .update(guardData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Delete guard
+  async deleteGuard(id: string) {
+    const { error } = await supabase
+      .from('guards')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
+  },
+
+  // Get guards by status
+  async getGuardsByStatus(status: 'active' | 'inactive') {
+    const { data, error } = await supabase
+      .from('guards')
+      .select('*')
+      .eq('status', status)
+      .order('name');
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Search guards by name or badge number
+  async searchGuards(searchTerm: string) {
+    const { data, error } = await supabase
+      .from('guards')
+      .select('*')
+      .or(`name.ilike.%${searchTerm}%,badge_number.ilike.%${searchTerm}%`)
+      .order('name');
+
+    if (error) throw error;
+    return data;
+  }
+};
+
+// Payment Operations
+export const paymentsApi = {
+  // Create a new payment record
+  async createPayment(paymentData: CreatePaymentData) {
+    const { data, error } = await supabase
+      .from('payments')
+      .insert(paymentData)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Get all payments for a guard
+  async getPaymentsByGuardId(guardId: string) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select(`
+        *,
+        guards (
+          name,
+          badge_number
+        )
+      `)
+      .eq('guard_id', guardId)
+      .order('payment_date', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Get payments by month
+  async getPaymentsByMonth(month: string) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select(`
+        *,
+        guards (
+          name,
+          badge_number
+        )
+      `)
+      .eq('payment_month', month)
+      .order('payment_date', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Update payment
+  async updatePayment(id: string, paymentData: UpdatePaymentData) {
+    const { data, error } = await supabase
+      .from('payments')
+      .update(paymentData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Delete payment
+  async deletePayment(id: string) {
+    const { error } = await supabase
+      .from('payments')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
+  },
+
+  // Get payment summary for a guard in a specific month
+  async getGuardMonthlySummary(guardId: string, month: string) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('payment_type, amount')
+      .eq('guard_id', guardId)
+      .eq('payment_month', month);
+
+    if (error) throw error;
+
+    const summary = {
+      totalBonus: 0,
+      totalDeduction: 0,
+      netAmount: 0
+    };
+
+    data.forEach(payment => {
+      if (payment.payment_type === 'bonus') {
+        summary.totalBonus += Number(payment.amount);
+      } else {
+        summary.totalDeduction += Number(payment.amount);
+      }
+    });
+
+    summary.netAmount = summary.totalBonus - summary.totalDeduction;
+    return summary;
+  }
+};
+
+// Utility functions
+export const guardUtils = {
+  // Generate payment month string from date
+  getPaymentMonth(date: Date): string {
+    return date.toISOString().slice(0, 7); // Returns YYYY-MM format
+  },
+
+  // Format currency
+  formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR'
+    }).format(amount);
+  },
+
+  // Calculate age from date of birth
+  calculateAge(dob: string): number {
+    const today = new Date();
+    const birthDate = new Date(dob);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age;
+  }
+};
+
+// Example usage functions
+export const exampleUsage = {
+  // Example: Create a new guard
+  async createExampleGuard() {
+    const newGuard: CreateGuardData = {
+      name: "John Doe",
+      dob: "1990-01-15",
+      gender: "male",
+      languages: ["English", "Hindi"],
+      phone_number: "+91-9876543210",
+      alternate_phone_number: "+91-8765432109",
+      current_address: "123 Main Street, Mumbai, Maharashtra 400001",
+      permanent_address: "456 Home Street, Pune, Maharashtra 411001",
+      guard_type: "permanent",
+      status: "active",
+      monthly_pay_rate: 25000,
+      bank_name: "State Bank of India",
+      account_number: "1234567890",
+      ifsc_code: "SBIN0001234",
+      upi_id: "john.doe@paytm",
+      aadhaar_number: "1234-5678-9012",
+      pan_card_number: "ABCDE1234F"
+    };
+
+    return await guardsApi.createGuard(newGuard);
+  },
+
+  // Example: Record a bonus payment
+  async recordBonusPayment(guardId: string) {
+    const bonusPayment: CreatePaymentData = {
+      guard_id: guardId,
+      payment_type: "bonus",
+      amount: 5000,
+      note: "Festival bonus for Diwali",
+      payment_date: new Date().toISOString().split('T')[0],
+      payment_month: guardUtils.getPaymentMonth(new Date())
+    };
+
+    return await paymentsApi.createPayment(bonusPayment);
+  },
+
+  // Example: Record a deduction
+  async recordDeduction(guardId: string) {
+    const deduction: CreatePaymentData = {
+      guard_id: guardId,
+      payment_type: "deduction",
+      amount: 1000,
+      note: "Late arrival penalty",
+      payment_date: new Date().toISOString().split('T')[0],
+      payment_month: guardUtils.getPaymentMonth(new Date())
+    };
+
+    return await paymentsApi.createPayment(deduction);
+  }
+};

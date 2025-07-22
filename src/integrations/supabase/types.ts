@@ -14,16 +14,143 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      guards: {
+        Row: {
+          aadhaar_card_photo_url: string | null
+          aadhaar_number: string | null
+          account_number: string
+          alternate_phone_number: string | null
+          badge_number: string
+          bank_name: string
+          created_at: string
+          current_address: string
+          dob: string
+          gender: Database["public"]["Enums"]["gender_type"]
+          guard_photo_url: string | null
+          guard_type: Database["public"]["Enums"]["guard_type"]
+          id: string
+          ifsc_code: string | null
+          languages: string[]
+          monthly_pay_rate: number
+          name: string
+          pan_card_number: string | null
+          permanent_address: string | null
+          phone_number: string
+          status: Database["public"]["Enums"]["guard_status"]
+          updated_at: string
+          upi_id: string | null
+        }
+        Insert: {
+          aadhaar_card_photo_url?: string | null
+          aadhaar_number?: string | null
+          account_number: string
+          alternate_phone_number?: string | null
+          badge_number: string
+          bank_name: string
+          created_at?: string
+          current_address: string
+          dob: string
+          gender: Database["public"]["Enums"]["gender_type"]
+          guard_photo_url?: string | null
+          guard_type: Database["public"]["Enums"]["guard_type"]
+          id?: string
+          ifsc_code?: string | null
+          languages?: string[]
+          monthly_pay_rate: number
+          name: string
+          pan_card_number?: string | null
+          permanent_address?: string | null
+          phone_number: string
+          status?: Database["public"]["Enums"]["guard_status"]
+          updated_at?: string
+          upi_id?: string | null
+        }
+        Update: {
+          aadhaar_card_photo_url?: string | null
+          aadhaar_number?: string | null
+          account_number?: string
+          alternate_phone_number?: string | null
+          badge_number?: string
+          bank_name?: string
+          created_at?: string
+          current_address?: string
+          dob?: string
+          gender?: Database["public"]["Enums"]["gender_type"]
+          guard_photo_url?: string | null
+          guard_type?: Database["public"]["Enums"]["guard_type"]
+          id?: string
+          ifsc_code?: string | null
+          languages?: string[]
+          monthly_pay_rate?: number
+          name?: string
+          pan_card_number?: string | null
+          permanent_address?: string | null
+          phone_number?: string
+          status?: Database["public"]["Enums"]["guard_status"]
+          updated_at?: string
+          upi_id?: string | null
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          guard_id: string
+          id: string
+          note: string | null
+          payment_date: string
+          payment_month: string
+          payment_type: Database["public"]["Enums"]["payment_type"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          guard_id: string
+          id?: string
+          note?: string | null
+          payment_date?: string
+          payment_month: string
+          payment_type: Database["public"]["Enums"]["payment_type"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          guard_id?: string
+          id?: string
+          note?: string | null
+          payment_date?: string
+          payment_month?: string
+          payment_type?: Database["public"]["Enums"]["payment_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_guard_id_fkey"
+            columns: ["guard_id"]
+            isOneToOne: false
+            referencedRelation: "guards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_badge_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
-      [_ in never]: never
+      gender_type: "male" | "female" | "other"
+      guard_status: "active" | "inactive"
+      guard_type: "permanent" | "contract"
+      payment_type: "bonus" | "deduction"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +277,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      gender_type: ["male", "female", "other"],
+      guard_status: ["active", "inactive"],
+      guard_type: ["permanent", "contract"],
+      payment_type: ["bonus", "deduction"],
+    },
   },
 } as const
