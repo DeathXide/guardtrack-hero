@@ -136,6 +136,83 @@ export type Database = {
           },
         ]
       }
+      sites: {
+        Row: {
+          address: string
+          created_at: string
+          gst_number: string
+          gst_type: string
+          id: string
+          organization_name: string
+          site_category: string
+          site_name: string
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          gst_number: string
+          gst_type: string
+          id?: string
+          organization_name: string
+          site_category: string
+          site_name: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          gst_number?: string
+          gst_type?: string
+          id?: string
+          organization_name?: string
+          site_category?: string
+          site_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      staffing_requirements: {
+        Row: {
+          budget_per_slot: number
+          created_at: string
+          day_slots: number
+          id: string
+          night_slots: number
+          role_type: string
+          site_id: string
+          updated_at: string
+        }
+        Insert: {
+          budget_per_slot: number
+          created_at?: string
+          day_slots?: number
+          id?: string
+          night_slots?: number
+          role_type: string
+          site_id: string
+          updated_at?: string
+        }
+        Update: {
+          budget_per_slot?: number
+          created_at?: string
+          day_slots?: number
+          id?: string
+          night_slots?: number
+          role_type?: string
+          site_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staffing_requirements_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
