@@ -13,10 +13,14 @@ import { MultiSelect } from '@/components/ui/multi-select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Guard } from '@/types';
 import { User, Phone, MapPin, Banknote, CreditCard, FileText, CheckCircle, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const guardSchema = z.object({
   // Personal Details - Required
-  name: z.string().min(1, 'Full name is required'),
+  name: z.string()
+    .min(1, 'Full name is required')
+    .regex(/^[A-Za-z\s]+$/, 'Name should only contain letters and spaces')
+    .max(50, 'Name should not exceed 50 characters'),
   gender: z.enum(['male', 'female', 'other'], { required_error: 'Gender is required' }),
   languagesSpoken: z.array(z.string()).min(1, 'At least one language is required'),
   
@@ -30,10 +34,17 @@ const guardSchema = z.object({
   panCard: z.string().optional(),
   
   // Contact Information - Required
-  phone: z.string().min(1, 'Primary phone number is required'),
+  phone: z.string()
+    .min(1, 'Primary phone number is required')
+    .regex(/^\d{10}$/, 'Phone number must be exactly 10 digits')
+    .length(10, 'Phone number must be exactly 10 digits'),
   
   // Contact Information - Optional
-  alternatePhone: z.string().optional(),
+  alternatePhone: z.string()
+    .optional()
+    .refine((val) => !val || /^\d{10}$/.test(val), {
+      message: 'Alternate phone number must be exactly 10 digits if provided'
+    }),
   
   // Addresses - Optional
   currentAddress: z.string().optional(),
@@ -44,7 +55,7 @@ const guardSchema = z.object({
   status: z.enum(['active', 'inactive'], { required_error: 'Status is required' }),
   
   // Compensation - Required
-  payRate: z.number().min(0, 'Monthly pay rate must be positive'),
+  payRate: z.number().min(1, 'Monthly pay rate must be greater than 0'),
   
   // Banking & Payments - Optional
   bankName: z.string().optional(),
@@ -78,6 +89,7 @@ const GuardForm: React.FC<GuardFormProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<GuardFormData>({
     resolver: zodResolver(guardSchema),
@@ -122,20 +134,66 @@ const GuardForm: React.FC<GuardFormProps> = ({
 
   const validateCurrentStep = async () => {
     const fieldsToValidate: (keyof GuardFormData)[] = [];
+    let stepName = '';
     
     switch (currentStep) {
       case 1:
-        fieldsToValidate.push('name', 'gender', 'languagesSpoken', 'phone');
+        fieldsToValidate.push('name', 'gender', 'languagesSpoken', 'phone', 'type', 'status');
+        stepName = 'Essential Info';
         break;
       case 2:
         fieldsToValidate.push('payRate');
+        stepName = 'Compensation';
         break;
       case 3:
         // No required fields in step 3
-        break;
+        return true;
     }
 
     const isValid = await form.trigger(fieldsToValidate);
+    
+    if (!isValid) {
+      // Show toast with specific missing fields
+      const errors = form.formState.errors;
+      const missingFields: string[] = [];
+      
+      fieldsToValidate.forEach(field => {
+        if (errors[field]) {
+          switch (field) {
+            case 'name':
+              missingFields.push('Full Name');
+              break;
+            case 'gender':
+              missingFields.push('Gender');
+              break;
+            case 'languagesSpoken':
+              missingFields.push('Languages Spoken');
+              break;
+            case 'phone':
+              missingFields.push('Primary Phone Number');
+              break;
+            case 'type':
+              missingFields.push('Guard Type');
+              break;
+            case 'status':
+              missingFields.push('Status');
+              break;
+            case 'payRate':
+              missingFields.push('Monthly Pay Rate');
+              break;
+          }
+        }
+      });
+
+      if (missingFields.length > 0) {
+        toast({
+          title: `${stepName} - Missing Required Information`,
+          description: `Please fill in: ${missingFields.join(', ')}`,
+          variant: "destructive"
+        });
+      }
+    }
+    
     return isValid;
   };
 
@@ -202,7 +260,11 @@ const GuardForm: React.FC<GuardFormProps> = ({
                   <Input
                     id="name"
                     {...form.register('name')}
-                    placeholder="Enter full name"
+                    placeholder="Enter full name (letters only)"
+                    onInput={(e) => {
+                      const target = e.target as HTMLInputElement;
+                      target.value = target.value.replace(/[^A-Za-z\s]/g, '');
+                    }}
                   />
                   {form.formState.errors.name && (
                     <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
@@ -255,27 +317,40 @@ const GuardForm: React.FC<GuardFormProps> = ({
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">
-                    Primary Phone Number <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="phone"
-                    {...form.register('phone')}
-                    placeholder="Enter primary phone number"
-                  />
-                  {form.formState.errors.phone && (
-                    <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
-                  )}
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">
+                      Primary Phone Number <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="phone"
+                      {...form.register('phone')}
+                      placeholder="Enter 10-digit phone number"
+                      maxLength={10}
+                      onInput={(e) => {
+                        const target = e.target as HTMLInputElement;
+                        target.value = target.value.replace(/[^0-9]/g, '');
+                      }}
+                    />
+                    {form.formState.errors.phone && (
+                      <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
+                    )}
+                  </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="alternatePhone">Alternate Phone Number</Label>
                   <Input
                     id="alternatePhone"
                     {...form.register('alternatePhone')}
-                    placeholder="Enter alternate phone number"
+                    placeholder="Enter 10-digit phone number"
+                    maxLength={10}
+                    onInput={(e) => {
+                      const target = e.target as HTMLInputElement;
+                      target.value = target.value.replace(/[^0-9]/g, '');
+                    }}
                   />
+                  {form.formState.errors.alternatePhone && (
+                    <p className="text-sm text-destructive">{form.formState.errors.alternatePhone.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -510,7 +585,11 @@ const GuardForm: React.FC<GuardFormProps> = ({
                       <Input
                         id="name"
                         {...form.register('name')}
-                        placeholder="Enter full name"
+                        placeholder="Enter full name (letters only)"
+                        onInput={(e) => {
+                          const target = e.target as HTMLInputElement;
+                          target.value = target.value.replace(/[^A-Za-z\s]/g, '');
+                        }}
                       />
                       {form.formState.errors.name && (
                         <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
@@ -584,7 +663,12 @@ const GuardForm: React.FC<GuardFormProps> = ({
                       <Input
                         id="phone"
                         {...form.register('phone')}
-                        placeholder="Enter primary phone number"
+                        placeholder="Enter 10-digit phone number"
+                        maxLength={10}
+                        onInput={(e) => {
+                          const target = e.target as HTMLInputElement;
+                          target.value = target.value.replace(/[^0-9]/g, '');
+                        }}
                       />
                       {form.formState.errors.phone && (
                         <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
@@ -596,8 +680,16 @@ const GuardForm: React.FC<GuardFormProps> = ({
                       <Input
                         id="alternatePhone"
                         {...form.register('alternatePhone')}
-                        placeholder="Enter alternate phone number"
+                        placeholder="Enter 10-digit phone number"
+                        maxLength={10}
+                        onInput={(e) => {
+                          const target = e.target as HTMLInputElement;
+                          target.value = target.value.replace(/[^0-9]/g, '');
+                        }}
                       />
+                      {form.formState.errors.alternatePhone && (
+                        <p className="text-sm text-destructive">{form.formState.errors.alternatePhone.message}</p>
+                      )}
                     </div>
                   </div>
                 </CardContent>
