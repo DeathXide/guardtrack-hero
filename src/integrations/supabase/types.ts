@@ -111,6 +111,13 @@ export type Database = {
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_attendance_records_guard_id"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "guards"
+            referencedColumns: ["id"]
+          },
         ]
       }
       attendance_settings: {
