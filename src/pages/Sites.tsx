@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Building, Edit, Trash, User, Users } from 'lucide-react';
+import { MapPin, Building, Edit, Trash, User } from 'lucide-react';
 import { Site } from '@/types';
 import { users } from '@/lib/data';
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,6 @@ const Sites = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
-  const [staffAllocationOpen, setStaffAllocationOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -145,12 +144,6 @@ const Sites = () => {
     if (selectedSiteId) {
       deleteSiteMutation.mutate(selectedSiteId);
     }
-  };
-
-  // Handle staff allocation
-  const handleStaffAllocation = (siteId: string) => {
-    setSelectedSiteId(siteId);
-    setStaffAllocationOpen(true);
   };
 
   // Handle dialog close
@@ -312,19 +305,6 @@ const Sites = () => {
                       <span className="font-medium ml-2">{formatCurrency(getPayRatePerShift(site))}</span>
                     </div>
                   </div>
-                  
-                  {/* Staff Allocation Button */}
-                  <div className="pt-3 border-t border-border/50 mt-3">
-                    <Button 
-                      variant="default" 
-                      size="sm"
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                      onClick={() => handleStaffAllocation(site.id)}
-                    >
-                      <Users className="h-4 w-4 mr-2" />
-                      Staff Allocation
-                    </Button>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -422,30 +402,6 @@ const Sites = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Staff Allocation Dialog */}
-      <Dialog open={staffAllocationOpen} onOpenChange={setStaffAllocationOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Staff Allocation</DialogTitle>
-            <DialogDescription>
-              Assign guards, caretakers, and other staff to this site
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="text-center text-muted-foreground">
-              Staff allocation interface will open here.
-              <br />
-              This will show the ShiftAllocation component for the selected site.
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setStaffAllocationOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
