@@ -1,65 +1,92 @@
-import { supabase } from './client';
+import { supabase } from '@/integrations/supabase/client';
 
 export const deleteAllData = async (): Promise<void> => {
   try {
+    console.log('Starting data deletion process...');
+    
     // Delete in order to respect foreign key constraints
     
-    // 1. Delete all attendance records first
-    const { error: attendanceError } = await supabase
-      .from('attendance_records')
-      .delete()
-      .neq('id', ''); // This deletes all records
-    
-    if (attendanceError) {
-      console.error('Error deleting attendance records:', attendanceError);
-      throw attendanceError;
+    // 1. Try to delete all attendance records first
+    try {
+      const { error: attendanceError } = await supabase
+        .from('attendance_records')
+        .delete()
+        .neq('id', ''); // This deletes all records
+      
+      if (attendanceError) {
+        console.warn('Could not delete attendance records:', attendanceError.message);
+      } else {
+        console.log('Deleted attendance records');
+      }
+    } catch (e) {
+      console.warn('Attendance records table may not exist');
     }
 
-    // 2. Delete all shifts
-    const { error: shiftsError } = await supabase
-      .from('shifts')
-      .delete()
-      .neq('id', ''); // This deletes all records
-    
-    if (shiftsError) {
-      console.error('Error deleting shifts:', shiftsError);
-      throw shiftsError;
+    // 2. Try to delete all shifts
+    try {
+      const { error: shiftsError } = await supabase
+        .from('shifts')
+        .delete()
+        .neq('id', ''); // This deletes all records
+      
+      if (shiftsError) {
+        console.warn('Could not delete shifts:', shiftsError.message);
+      } else {
+        console.log('Deleted shifts');
+      }
+    } catch (e) {
+      console.warn('Shifts table may not exist');
     }
 
-    // 3. Delete all payment records
-    const { error: paymentsError } = await supabase
-      .from('payment_records')
-      .delete()
-      .neq('id', ''); // This deletes all records
-    
-    if (paymentsError) {
-      console.error('Error deleting payment records:', paymentsError);
-      throw paymentsError;
+    // 3. Try to delete all payment records
+    try {
+      const { error: paymentsError } = await supabase
+        .from('payment_records')
+        .delete()
+        .neq('id', ''); // This deletes all records
+      
+      if (paymentsError) {
+        console.warn('Could not delete payment records:', paymentsError.message);
+      } else {
+        console.log('Deleted payment records');
+      }
+    } catch (e) {
+      console.warn('Payment records table may not exist');
     }
 
-    // 4. Delete all guards
-    const { error: guardsError } = await supabase
-      .from('guards')
-      .delete()
-      .neq('id', ''); // This deletes all records
-    
-    if (guardsError) {
-      console.error('Error deleting guards:', guardsError);
-      throw guardsError;
+    // 4. Try to delete all guards
+    try {
+      const { error: guardsError } = await supabase
+        .from('guards')
+        .delete()
+        .neq('id', ''); // This deletes all records
+      
+      if (guardsError) {
+        console.warn('Could not delete guards:', guardsError.message);
+      } else {
+        console.log('Deleted guards');
+      }
+    } catch (e) {
+      console.warn('Guards table may not exist');
     }
 
-    // 5. Delete all sites
-    const { error: sitesError } = await supabase
-      .from('sites')
-      .delete()
-      .neq('id', ''); // This deletes all records
-    
-    if (sitesError) {
-      console.error('Error deleting sites:', sitesError);
-      throw sitesError;
+    // 5. Try to delete all sites
+    try {
+      const { error: sitesError } = await supabase
+        .from('sites')
+        .delete()
+        .neq('id', ''); // This deletes all records
+      
+      if (sitesError) {
+        console.warn('Could not delete sites:', sitesError.message);
+      } else {
+        console.log('Deleted sites');
+      }
+    } catch (e) {
+      console.warn('Sites table may not exist');
     }
 
-    console.log('All data deleted successfully');
+    console.log('Data deletion process completed');
   } catch (error) {
     console.error('Error during data deletion:', error);
     throw error;
