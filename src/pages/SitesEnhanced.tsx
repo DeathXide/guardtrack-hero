@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MapPin, Building, Edit, Trash, User, Plus, X } from 'lucide-react';
 import { Site, StaffingSlot } from '@/types';
 import { users, sites, addSite, updateSiteLocal, deleteSiteLocal, formatCurrency } from '@/lib/data';
+import { deleteAllData } from '@/lib/supabase/dataResetService';
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
@@ -135,6 +136,24 @@ const SitesEnhanced = () => {
     }
   };
 
+  // Handle delete all data
+  const handleDeleteAllData = async () => {
+    try {
+      await deleteAllData();
+      setSiteList([]);
+      toast({
+        title: "All Data Deleted",
+        description: "All sites, guards, and attendance records have been permanently deleted",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: `Failed to delete all data: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  };
+
   // Handle dialog close
   const handleDialogClose = () => {
     setIsDialogOpen(false);
@@ -234,10 +253,19 @@ const SitesEnhanced = () => {
           </p>
         </div>
         
-        <Button onClick={() => setIsDialogOpen(true)}>
-          <Building className="h-4 w-4 mr-2" />
-          Add Site
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="destructive" 
+            onClick={handleDeleteAllData}
+          >
+            <Trash className="h-4 w-4 mr-2" />
+            Delete All Data
+          </Button>
+          <Button onClick={() => setIsDialogOpen(true)}>
+            <Building className="h-4 w-4 mr-2" />
+            Add Site
+          </Button>
+        </div>
       </div>
       
       <div className="flex items-center gap-4">
