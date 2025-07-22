@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { MapPin, Users, Clock, Calendar as CalendarIcon, CheckCircle2, AlertCircle, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
-import { fetchSites, fetchAttendanceByDate, fetchShiftsBySite, formatCurrency } from "@/lib/supabaseService";
+import { supabase } from "@/integrations/supabase/client";
 import AttendanceMarking from "@/components/attendance/AttendanceMarking";
 import ShiftAllocation from "@/components/attendance/ShiftAllocation";
 import AttendanceOverview from "@/components/attendance/AttendanceOverview";
@@ -27,12 +27,28 @@ export default function Attendance() {
 
   const { data: sites = [], isLoading: sitesLoading } = useQuery({
     queryKey: ["sites"],
-    queryFn: fetchSites
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sites")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    }
   });
 
   const { data: attendanceRecords = [] } = useQuery({
     queryKey: ["attendance", formattedDate],
-    queryFn: () => fetchAttendanceByDate(formattedDate)
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("*")
+        .eq("attendance_date", formattedDate);
+      
+      if (error) throw error;
+      return data || [];
+    }
   });
 
   const handleSiteSelect = (siteId: string) => {
@@ -51,12 +67,9 @@ export default function Attendance() {
 
   // Get attendance status for a site
   const getSiteAttendanceStatus = (siteId: string) => {
-    // This is a simplified version - you can enhance this based on your needs
-    const siteAttendance = attendanceRecords.filter(record => {
-      // For local data, we need to find the shift first to get the site
-      const shift = record.shiftId; // This would need proper shift lookup
-      return record.date === formattedDate;
-    });
+    const siteAttendance = attendanceRecords.filter(record => 
+      record.site_id === siteId && record.attendance_date === formattedDate
+    );
     
     if (siteAttendance.length === 0) return "not-marked";
     
@@ -144,10 +157,10 @@ export default function Attendance() {
                       <CardHeader className="pb-2">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <CardTitle className="text-lg">{site.name}</CardTitle>
+                            <CardTitle className="text-lg">{site.site_name}</CardTitle>
                             <CardDescription className="flex items-center mt-1">
                               <MapPin className="h-3 w-3 mr-1" />
-                              {site.location || site.addressLine1}
+                              {site.address}
                             </CardDescription>
                           </div>
                           {getStatusBadge(status)}
@@ -157,12 +170,12 @@ export default function Attendance() {
                         <div className="space-y-4">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">Organization:</span>
-                            <span className="font-medium">{site.organizationName}</span>
+                            <span className="font-medium">{site.organization_name}</span>
                           </div>
                           
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Type:</span>
-                            <span className="font-medium">{site.siteType || 'General'}</span>
+                            <span className="text-muted-foreground">Category:</span>
+                            <span className="font-medium">{site.site_category || 'General'}</span>
                           </div>
 
                           {/* Action Buttons */}
