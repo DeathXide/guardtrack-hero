@@ -314,11 +314,11 @@ const Sites = () => {
                   </div>
                   
                   {/* Staff Allocation Button */}
-                  <div className="pt-2">
+                  <div className="pt-3 border-t border-border/50 mt-3">
                     <Button 
-                      variant="outline" 
+                      variant="default" 
                       size="sm"
-                      className="w-full"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                       onClick={() => handleStaffAllocation(site.id)}
                     >
                       <Users className="h-4 w-4 mr-2" />
