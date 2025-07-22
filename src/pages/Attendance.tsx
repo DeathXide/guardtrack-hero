@@ -35,7 +35,7 @@ export default function Attendance() {
         <TabsList className="mb-4">
           <TabsTrigger value="overview">Attendance Overview</TabsTrigger>
           <TabsTrigger value="mark-attendance">Mark Attendance</TabsTrigger>
-          <TabsTrigger value="shift-allocation">Shift Allocation</TabsTrigger>
+          <TabsTrigger value="shift-allocation">Guard Allocation</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
           <AttendanceOverview onSiteSelect={handleSiteClickAndSwitchTab} />

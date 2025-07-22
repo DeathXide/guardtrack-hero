@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { fetchSites, fetchGuards, fetchShiftsBySite, createShift, updateShift, deleteShift } from '@/lib/localService';
+import { sitesApi } from '@/lib/sitesApi';
+import { guardsApi } from '@/lib/guardsApi';
+import { shiftsApi } from '@/lib/shiftsApi';
 import { checkGuardsAttendanceForToday, deleteGuardsTodayAttendance, GuardAttendanceInfo } from '@/components/attendance/attendanceValidation';
 
 export const useShiftAllocation = () => {
@@ -17,24 +19,72 @@ export const useShiftAllocation = () => {
   
   const queryClient = useQueryClient();
   
-  const { data: sites = [], isLoading: sitesLoading } = useQuery({
+  // Fetch sites from Supabase
+  const { data: sitesData = [], isLoading: sitesLoading } = useQuery({
     queryKey: ['sites'],
-    queryFn: fetchSites
+    queryFn: sitesApi.getAllSites
   });
 
-  const { data: guards = [], isLoading: guardsLoading } = useQuery({
+  // Transform Supabase site data to match expected interface
+  const sites = sitesData.map(site => ({
+    id: site.id,
+    name: site.site_name,
+    organizationName: site.organization_name,
+    gstNumber: site.gst_number,
+    addressLine1: site.address,
+    addressLine2: "",
+    addressLine3: "",
+    gstType: site.gst_type as 'GST' | 'NGST' | 'RCM' | 'PERSONAL',
+    siteType: site.site_category,
+    staffingSlots: site.staffing_requirements?.map(req => ({
+      id: req.id,
+      role: req.role_type as 'Security Guard' | 'Supervisor' | 'Housekeeping',
+      budgetPerSlot: req.budget_per_slot,
+      daySlots: req.day_slots,
+      nightSlots: req.night_slots
+    })) || []
+  }));
+
+  // Fetch guards from Supabase
+  const { data: guardsData = [], isLoading: guardsLoading } = useQuery({
     queryKey: ['guards'],
-    queryFn: fetchGuards
+    queryFn: guardsApi.getAllGuards
   });
 
-  const { data: shifts = [], isLoading: shiftsLoading, refetch: refetchShifts } = useQuery({
+  // Transform Supabase guard data to match expected interface
+  const guards = guardsData.map(guard => ({
+    id: guard.id,
+    name: guard.name,
+    badgeNumber: guard.badge_number,
+    status: guard.status as 'active' | 'inactive',
+    // Map other fields as needed
+    dateOfBirth: guard.dob,
+    gender: guard.gender as 'male' | 'female' | 'other',
+    languagesSpoken: guard.languages,
+    phone: guard.phone_number,
+    alternatePhone: guard.alternate_phone_number,
+    currentAddress: guard.current_address,
+    type: guard.guard_type as 'permanent' | 'contract',
+    payRate: guard.monthly_pay_rate
+  }));
+
+  // Fetch shifts from Supabase
+  const { data: shiftsData = [], isLoading: shiftsLoading, refetch: refetchShifts } = useQuery({
     queryKey: ['shifts', selectedSite],
-    queryFn: () => selectedSite ? fetchShiftsBySite(selectedSite) : Promise.resolve([]),
+    queryFn: () => selectedSite ? shiftsApi.getShiftsBySite(selectedSite) : Promise.resolve([]),
     enabled: !!selectedSite
   });
 
+  // Transform Supabase shift data to match expected interface
+  const shifts = shiftsData.map(shift => ({
+    id: shift.id,
+    siteId: shift.site_id,
+    type: shift.type as 'day' | 'night',
+    guardId: shift.guard_id
+  }));
+
   const createShiftMutation = useMutation({
-    mutationFn: createShift,
+    mutationFn: shiftsApi.createShift,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
       toast.success('Shift created successfully');
@@ -45,8 +95,8 @@ export const useShiftAllocation = () => {
   });
 
   const updateShiftMutation = useMutation({
-    mutationFn: ({ id, shift }: { id: string; shift: Partial<any> }) => 
-      updateShift(id, shift),
+    mutationFn: ({ id, shift }: { id: string; shift: any }) => 
+      shiftsApi.updateShift(id, shift),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
       toast.success('Shift updated successfully');
@@ -57,7 +107,7 @@ export const useShiftAllocation = () => {
   });
 
   const deleteShiftMutation = useMutation({
-    mutationFn: deleteShift,
+    mutationFn: shiftsApi.deleteShift,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
       toast.success('Shift deleted successfully');
@@ -68,8 +118,9 @@ export const useShiftAllocation = () => {
   });
 
   const selectedSiteData = sites.find(site => site.id === selectedSite);
-  const daySlots = selectedSiteData?.daySlots || 0;
-  const nightSlots = selectedSiteData?.nightSlots || 0;
+  // Calculate slots from staffing requirements
+  const daySlots = selectedSiteData?.staffingSlots?.reduce((sum, slot) => sum + slot.daySlots, 0) || 0;
+  const nightSlots = selectedSiteData?.staffingSlots?.reduce((sum, slot) => sum + slot.nightSlots, 0) || 0;
   const dayShifts = shifts.filter(shift => shift.type === 'day');
   const nightShifts = shifts.filter(shift => shift.type === 'night');
 
@@ -177,9 +228,9 @@ export const useShiftAllocation = () => {
       } else {
         try {
           await createShiftMutation.mutateAsync({
-            siteId: selectedSite,
+            site_id: selectedSite,
             type: shiftType,
-            guardId: guardId
+            guard_id: guardId
           });
         } catch (error) {
           console.error('Error creating shift:', error);

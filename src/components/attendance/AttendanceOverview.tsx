@@ -12,11 +12,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AttendanceDataTable } from "./AttendanceDataTable";
 import { 
   fetchAttendanceByDate, 
-  fetchShiftsBySite,
   fetchSiteMonthlyEarnings,
   formatCurrency
 } from "@/lib/localService";
 import { sitesApi } from "@/lib/sitesApi";
+import { shiftsApi } from "@/lib/shiftsApi";
 import { Site, AttendanceRecord, Shift, SiteEarnings } from "@/types";
 import { useNavigate } from "react-router-dom";
 
@@ -64,14 +64,15 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
   const { data: allShifts = [], isLoading: shiftsLoading } = useQuery({
     queryKey: ["all-shifts"],
     queryFn: async () => {
-      const allShiftsData: Shift[] = [];
-      for (const site of sites) {
-        const siteShifts = await fetchShiftsBySite(site.id);
-        allShiftsData.push(...siteShifts);
-      }
-      return allShiftsData;
-    },
-    enabled: sites.length > 0
+      const allShiftsData = await shiftsApi.getAllShifts();
+      // Transform to match expected interface
+      return allShiftsData.map(shift => ({
+        id: shift.id,
+        siteId: shift.site_id,
+        type: shift.type as 'day' | 'night',
+        guardId: shift.guard_id
+      }));
+    }
   });
 
   const handleSiteClick = (siteId: string) => {
