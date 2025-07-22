@@ -199,13 +199,13 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
       // Unmark attendance
       await unmarkAttendanceMutation.mutateAsync({ guardId, shiftType });
     } else {
-      // Check slot limit
+      // Check slot limit only when marking present
       if (presentGuards.length >= maxSlots) {
         toast.error(`Cannot mark more than ${maxSlots} guards present for ${shiftType} shift`);
         return;
       }
 
-      // Mark attendance
+      // Mark attendance (now idempotent)
       await markAttendanceMutation.mutateAsync({ guardId, shiftType });
     }
   };
@@ -391,39 +391,52 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                       const isLoading = (markAttendanceMutation.isPending || unmarkAttendanceMutation.isPending);
                       
                       return (
-                        <div 
-                          key={guard.id} 
-                          className={`flex items-center justify-between p-3 border rounded-lg transition-all duration-300 ${
-                            isPresent ? 'bg-green-50 border-green-300 shadow-sm' : 'bg-background hover:bg-muted/50'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            {isPresent && (
-                              <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
-                                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                              </div>
-                            )}
-                            <div>
-                              <div className={`font-medium transition-colors ${isPresent ? 'text-green-700' : ''}`}>
-                                {guard.name}
-                              </div>
-                              <div className={`text-sm transition-colors ${isPresent ? 'text-green-600' : 'text-muted-foreground'}`}>
-                                {guard.badge_number} {isPresent && '• Present'}
-                              </div>
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant={isPresent ? "default" : "outline"}
-                            onClick={() => handleGuardToggle(guard.id, 'day')}
-                            disabled={isLoading}
-                            className={`transition-all duration-200 min-w-[100px] ${
-                              isPresent ? 'bg-green-600 hover:bg-green-700 text-white shadow-sm' : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
-                            }`}
-                          >
-                            {isLoading ? 'Loading...' : isPresent ? '✓ Present' : 'Mark Present'}
-                          </Button>
-                        </div>
+                         <div 
+                           key={guard.id} 
+                           className={`flex items-center justify-between p-3 border rounded-lg transition-all duration-300 ${
+                             isPresent ? 'bg-green-50 border-green-300 shadow-sm' : 'bg-background hover:bg-muted/50'
+                           }`}
+                         >
+                           <div className="flex items-center gap-3">
+                             {isPresent && (
+                               <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                                 <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                               </div>
+                             )}
+                             <div>
+                               <div className={`font-medium transition-colors ${isPresent ? 'text-green-700' : ''}`}>
+                                 {guard.name}
+                               </div>
+                               <div className={`text-sm transition-colors ${isPresent ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                 {guard.badge_number} {isPresent && '• Present'}
+                               </div>
+                             </div>
+                           </div>
+                           <div className="flex gap-2">
+                             <Button
+                               size="sm"
+                               variant={isPresent ? "default" : "outline"}
+                               onClick={() => handleGuardToggle(guard.id, 'day')}
+                               disabled={isLoading}
+                               className={`transition-all duration-200 min-w-[100px] ${
+                                 isPresent ? 'bg-green-600 hover:bg-green-700 text-white shadow-sm' : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
+                               }`}
+                             >
+                               {isLoading ? 'Loading...' : 'Present'}
+                             </Button>
+                             {isPresent && (
+                               <Button
+                                 size="sm"
+                                 variant="outline"
+                                 onClick={() => handleGuardToggle(guard.id, 'day')}
+                                 disabled={isLoading}
+                                 className="text-red-600 hover:text-red-700 hover:border-red-300"
+                               >
+                                 Absent
+                               </Button>
+                             )}
+                           </div>
+                         </div>
                       );
                     })}
                   </div>
@@ -479,39 +492,52 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ preselectedSiteId
                       const isLoading = (markAttendanceMutation.isPending || unmarkAttendanceMutation.isPending);
                       
                       return (
-                        <div 
-                          key={guard.id} 
-                          className={`flex items-center justify-between p-3 border rounded-lg transition-all duration-300 ${
-                            isPresent ? 'bg-green-50 border-green-300 shadow-sm' : 'bg-background hover:bg-muted/50'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            {isPresent && (
-                              <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
-                                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                              </div>
-                            )}
-                            <div>
-                              <div className={`font-medium transition-colors ${isPresent ? 'text-green-700' : ''}`}>
-                                {guard.name}
-                              </div>
-                              <div className={`text-sm transition-colors ${isPresent ? 'text-green-600' : 'text-muted-foreground'}`}>
-                                {guard.badge_number} {isPresent && '• Present'}
-                              </div>
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant={isPresent ? "default" : "outline"}
-                            onClick={() => handleGuardToggle(guard.id, 'night')}
-                            disabled={isLoading}
-                            className={`transition-all duration-200 min-w-[100px] ${
-                              isPresent ? 'bg-green-600 hover:bg-green-700 text-white shadow-sm' : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
-                            }`}
-                          >
-                            {isLoading ? 'Loading...' : isPresent ? '✓ Present' : 'Mark Present'}
-                          </Button>
-                        </div>
+                         <div 
+                           key={guard.id} 
+                           className={`flex items-center justify-between p-3 border rounded-lg transition-all duration-300 ${
+                             isPresent ? 'bg-green-50 border-green-300 shadow-sm' : 'bg-background hover:bg-muted/50'
+                           }`}
+                         >
+                           <div className="flex items-center gap-3">
+                             {isPresent && (
+                               <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                                 <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                               </div>
+                             )}
+                             <div>
+                               <div className={`font-medium transition-colors ${isPresent ? 'text-green-700' : ''}`}>
+                                 {guard.name}
+                               </div>
+                               <div className={`text-sm transition-colors ${isPresent ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                 {guard.badge_number} {isPresent && '• Present'}
+                               </div>
+                             </div>
+                           </div>
+                           <div className="flex gap-2">
+                             <Button
+                               size="sm"
+                               variant={isPresent ? "default" : "outline"}
+                               onClick={() => handleGuardToggle(guard.id, 'night')}
+                               disabled={isLoading}
+                               className={`transition-all duration-200 min-w-[100px] ${
+                                 isPresent ? 'bg-green-600 hover:bg-green-700 text-white shadow-sm' : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
+                               }`}
+                             >
+                               {isLoading ? 'Loading...' : 'Present'}
+                             </Button>
+                             {isPresent && (
+                               <Button
+                                 size="sm"
+                                 variant="outline"
+                                 onClick={() => handleGuardToggle(guard.id, 'night')}
+                                 disabled={isLoading}
+                                 className="text-red-600 hover:text-red-700 hover:border-red-300"
+                               >
+                                 Absent
+                               </Button>
+                             )}
+                           </div>
+                         </div>
                       );
                     })}
                   </div>

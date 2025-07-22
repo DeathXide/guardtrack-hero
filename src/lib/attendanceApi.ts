@@ -90,16 +90,45 @@ export interface CreateAttendanceSettingsData {
 
 // Attendance Records API
 export const attendanceApi = {
-  // Create a new attendance record
+  // Create or update attendance record (idempotent)
   async createAttendanceRecord(recordData: CreateAttendanceData) {
-    const { data, error } = await supabase
+    // First check if record already exists for this guard, site, date, and shift
+    const { data: existingRecord } = await supabase
       .from('attendance_records')
-      .insert(recordData)
-      .select()
+      .select('*')
+      .eq('employee_id', recordData.employee_id)
+      .eq('site_id', recordData.site_id)
+      .eq('attendance_date', recordData.attendance_date)
+      .eq('shift_type', recordData.shift_type)
+      .eq('employee_type', recordData.employee_type || 'guard')
       .single();
 
-    if (error) throw error;
-    return data;
+    if (existingRecord) {
+      // Update existing record to present status
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .update({ 
+          status: recordData.status,
+          actual_start_time: recordData.actual_start_time,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingRecord.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } else {
+      // Create new record
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .insert(recordData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    }
   },
 
   // Get attendance records by date
