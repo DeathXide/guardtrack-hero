@@ -136,6 +136,48 @@ export type Database = {
           },
         ]
       }
+      shifts: {
+        Row: {
+          created_at: string
+          guard_id: string | null
+          id: string
+          site_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          guard_id?: string | null
+          id?: string
+          site_id: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          guard_id?: string | null
+          id?: string
+          site_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_guard_id_fkey"
+            columns: ["guard_id"]
+            isOneToOne: false
+            referencedRelation: "guards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shifts_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sites: {
         Row: {
           address: string
