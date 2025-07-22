@@ -132,7 +132,7 @@ const Guards = () => {
       queryClient.invalidateQueries({ queryKey: ['guards'] });
       toast({
         title: paymentType === 'deduction' ? "Deduction Recorded" : "Bonus Recorded",
-        description: `${paymentType === 'deduction' ? 'Deduction' : 'Bonus'} of $${paymentAmount} recorded for ${selectedGuard?.name}`,
+        description: `${paymentType === 'deduction' ? 'Deduction' : 'Bonus'} of ${formatCurrency(parseFloat(paymentAmount))} recorded for ${selectedGuard?.name}`,
       });
       setIsPaymentDialogOpen(false);
       setPaymentAmount('');
@@ -349,10 +349,11 @@ const Guards = () => {
   }, [guardList, currentMonth, allPayments]);
 
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount);
   };
 
@@ -581,7 +582,7 @@ const Guards = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="payment-amount">
-                    {paymentType === 'deduction' ? 'Deduction Amount ($)' : 'Bonus Amount ($)'}
+                    {paymentType === 'deduction' ? 'Deduction Amount (INR)' : 'Bonus Amount (INR)'}
                   </Label>
                   <Input 
                     id="payment-amount" 
@@ -615,16 +616,16 @@ const Guards = () => {
                     <span>{selectedGuard ? getCurrentMonthEarnings(selectedGuard).totalShifts : 0}</span>
                     
                     <span className="text-muted-foreground">Salary Earned:</span>
-                    <span>{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).baseSalary) : '$0.00'}</span>
+                    <span>{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).baseSalary) : formatCurrency(0)}</span>
                     
                     <span className="text-muted-foreground">Total Bonuses:</span>
-                    <span className="text-green-500">{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).bonuses) : '$0.00'}</span>
+                    <span className="text-green-500">{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).bonuses) : formatCurrency(0)}</span>
                     
                     <span className="text-muted-foreground">Total Deductions:</span>
-                    <span className="text-red-500">{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).deductions) : '$0.00'}</span>
+                    <span className="text-red-500">{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).deductions) : formatCurrency(0)}</span>
                     
                     <span className="font-medium border-t pt-1 mt-1">Net Amount:</span>
-                    <span className="font-medium border-t pt-1 mt-1">{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).netAmount) : '$0.00'}</span>
+                    <span className="font-medium border-t pt-1 mt-1">{selectedGuard ? formatCurrency(getCurrentMonthEarnings(selectedGuard).netAmount) : formatCurrency(0)}</span>
                   </div>
                 </div>
                 

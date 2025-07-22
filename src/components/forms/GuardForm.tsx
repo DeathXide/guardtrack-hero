@@ -317,7 +317,7 @@ const GuardForm: React.FC<GuardFormProps> = ({
 
                 <div className="space-y-2">
                   <Label htmlFor="payRate">
-                    Monthly Pay Rate ($) <span className="text-destructive">*</span>
+                    Monthly Pay Rate (INR) <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="payRate"
@@ -325,11 +325,11 @@ const GuardForm: React.FC<GuardFormProps> = ({
                     min="0"
                     step="0.01"
                     {...form.register('payRate', { valueAsNumber: true })}
-                    placeholder="Enter monthly pay rate in USD"
+                    placeholder="Enter monthly pay rate in INR"
                   />
                   {payRateValue && (
                     <div className="text-xs text-muted-foreground">
-                      Per shift rate: ${calculateShiftRate(payRateValue).toFixed(2)}
+                      Per shift rate: {formatCurrency(calculateShiftRate(payRateValue))}
                       <br />
                       <span className="italic">*Calculated based on current month's days</span>
                     </div>
