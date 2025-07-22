@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchSites, createSite, updateSite, deleteSite, formatCurrency } from '@/lib/supabaseService';
+import { deleteAllData } from '@/lib/supabase/dataResetService';
 
 const Sites = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -99,6 +100,27 @@ const Sites = () => {
       toast({
         title: "Error",
         description: `Failed to delete site: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Delete all data mutation
+  const deleteAllDataMutation = useMutation({
+    mutationFn: deleteAllData,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+      queryClient.invalidateQueries({ queryKey: ['guards'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      toast({
+        title: "All Data Deleted",
+        description: "All sites, guards, and attendance records have been permanently deleted",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete all data: ${error.message}`,
         variant: "destructive"
       });
     }
@@ -228,10 +250,20 @@ const Sites = () => {
           </p>
         </div>
         
-        <Button onClick={() => setIsDialogOpen(true)}>
-          <Building className="h-4 w-4 mr-2" />
-          Add Site
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="destructive" 
+            onClick={() => deleteAllDataMutation.mutate()}
+            disabled={deleteAllDataMutation.isPending}
+          >
+            <Trash className="h-4 w-4 mr-2" />
+            {deleteAllDataMutation.isPending ? 'Deleting All...' : 'Delete All Data'}
+          </Button>
+          <Button onClick={() => setIsDialogOpen(true)}>
+            <Building className="h-4 w-4 mr-2" />
+            Add Site
+          </Button>
+        </div>
       </div>
       
       <div className="flex items-center gap-4">
