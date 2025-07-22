@@ -11,12 +11,12 @@ import { AlertCircle, Calendar as CalendarIcon, CheckCircle2, Clock } from "luci
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AttendanceDataTable } from "./AttendanceDataTable";
 import { 
-  fetchSites, 
   fetchAttendanceByDate, 
   fetchShiftsBySite,
   fetchSiteMonthlyEarnings,
   formatCurrency
 } from "@/lib/localService";
+import { sitesApi } from "@/lib/sitesApi";
 import { Site, AttendanceRecord, Shift, SiteEarnings } from "@/types";
 import { useNavigate } from "react-router-dom";
 
@@ -31,10 +31,30 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
   const currentMonth = format(selectedDate, "yyyy-MM");
 
-  const { data: sites = [], isLoading: sitesLoading } = useQuery({
+  const { data: sitesData = [], isLoading: sitesLoading } = useQuery({
     queryKey: ["sites"],
-    queryFn: fetchSites
+    queryFn: sitesApi.getAllSites
   });
+
+  // Transform Supabase site data to match the expected Site interface
+  const sites = sitesData.map(site => ({
+    id: site.id,
+    name: site.site_name,
+    organizationName: site.organization_name,
+    gstNumber: site.gst_number,
+    addressLine1: site.address,
+    addressLine2: "",
+    addressLine3: "",
+    gstType: site.gst_type as 'GST' | 'NGST' | 'RCM' | 'PERSONAL',
+    siteType: site.site_category,
+    staffingSlots: site.staffing_requirements?.map(req => ({
+      id: req.id,
+      role: req.role_type as 'Security Guard' | 'Supervisor' | 'Housekeeping',
+      budgetPerSlot: req.budget_per_slot,
+      daySlots: req.day_slots,
+      nightSlots: req.night_slots
+    })) || []
+  }));
 
   const { data: attendanceRecords = [], isLoading: attendanceLoading } = useQuery({
     queryKey: ["attendance", formattedDate],
