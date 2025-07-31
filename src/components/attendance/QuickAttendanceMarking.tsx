@@ -185,7 +185,9 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
             guardId, formattedDate, shiftType, selectedSite
           );
           if (isMarkedElsewhere) {
-            throw new Error(`Guard ${guardId} is already marked at another site`);
+            const guard = guards.find(g => g.id === guardId);
+            const guardName = guard ? guard.name : 'Unknown Guard';
+            throw new Error(`${guardName} is already marked at another site`);
           }
 
           return attendanceApi.createAttendanceRecord({
