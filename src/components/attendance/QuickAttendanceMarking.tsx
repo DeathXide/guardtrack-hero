@@ -236,18 +236,21 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
     const slot = slots.find(s => s.id === slotId);
     if (!slot?.guard) return;
 
-    // Check if guard is already marked present at another shift
-    const isMarkedElsewhereLocally = slots.some(s => 
-      s.id !== slotId && 
-      s.guard?.id === slot.guard.id && 
-      s.isPresent
-    );
+    // If marking present, check conflicts first
+    if (!slot.isPresent) {
+      const isMarkedElsewhereLocally = slots.some(s => 
+        s.id !== slotId && 
+        s.guard?.id === slot.guard.id && 
+        s.isPresent
+      );
 
-    if (!slot.isPresent && isMarkedElsewhereLocally) {
-      toast.error(`${slot.guard.name} is already marked present at another shift`);
-      return;
+      if (isMarkedElsewhereLocally) {
+        toast.error(`${slot.guard.name} is already marked present at another shift`);
+        return;
+      }
     }
 
+    // Simply toggle present/not present (no absent state)
     setSlots(prev => prev.map(s => 
       s.id === slotId 
         ? { ...s, isPresent: !s.isPresent }
@@ -255,7 +258,7 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
     ));
   };
 
-  const handleBulkAction = (action: 'mark-present' | 'mark-absent' | 'select-all' | 'clear-selection') => {
+  const handleBulkAction = (action: 'mark-present' | 'select-all' | 'clear-selection') => {
     switch (action) {
       case 'select-all':
         setSlots(prev => prev.map(slot => ({ ...slot, isSelected: slot.guard !== null })));
@@ -290,13 +293,6 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
         }
         
         setSlots(updatedSlots);
-        break;
-      case 'mark-absent':
-        setSlots(prev => prev.map(slot => 
-          slot.isSelected && slot.guard 
-            ? { ...slot, isPresent: false, isSelected: false }
-            : slot
-        ));
         break;
     }
   };
@@ -460,7 +456,7 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
 
           {/* Statistics */}
           {selectedSite && (
-            <div className="grid grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
+            <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
               <div className="text-center">
                 <div className="text-2xl font-bold">{assignedSlots.length}</div>
                 <div className="text-sm text-muted-foreground">Assigned</div>
@@ -470,12 +466,8 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
                 <div className="text-sm text-muted-foreground">Present</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">{assignedSlots.length - presentCount}</div>
-                <div className="text-sm text-muted-foreground">Absent</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{selectedSlots.length}</div>
-                <div className="text-sm text-muted-foreground">Selected</div>
+                <div className="text-2xl font-bold text-orange-600">{assignedSlots.length - presentCount}</div>
+                <div className="text-sm text-muted-foreground">Empty Slots</div>
               </div>
             </div>
           )}
@@ -525,17 +517,6 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
                 >
                   <UserCheck className="h-4 w-4 mr-1" />
                   Mark Selected Present ({selectedSlots.length})
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleBulkAction('mark-absent')}
-                  disabled={selectedSlots.length === 0}
-                  className="text-red-600 border-red-300 hover:bg-red-50"
-                >
-                  <UserX className="h-4 w-4 mr-1" />
-                  Mark Selected Absent ({selectedSlots.length})
                 </Button>
 
                 <Button 
@@ -639,13 +620,14 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => handleOpenAssignModal(slot.id, 'replace', slot.guard.id)}
+                                    title="Replace guard"
                                   >
                                     <Replace className="h-4 w-4" />
                                   </Button>
                                 </DialogTrigger>
-                              </Dialog>
-                            </div>
-                          </div>
+                               </Dialog>
+                             </div>
+                           </div>
                         ) : (
                           <div className="text-center py-4 space-y-3">
                             <Users className="h-8 w-8 mx-auto mb-2 opacity-50 text-muted-foreground" />
@@ -756,6 +738,7 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => handleOpenAssignModal(slot.id, 'replace', slot.guard.id)}
+                                    title="Replace guard"
                                   >
                                     <Replace className="h-4 w-4" />
                                   </Button>
