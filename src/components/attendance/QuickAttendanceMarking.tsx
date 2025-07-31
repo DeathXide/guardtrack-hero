@@ -157,15 +157,21 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
     setSlots(newSlots);
   }, [selectedSite, guards, shifts, attendanceRecords, daySlots, nightSlots]);
 
-  // Available guards for replacement
+  // Available guards for replacement - updated in real-time based on current attendance state
   const availableGuards = useMemo(() => {
     const assignedGuardIds = slots
       .filter(slot => slot.guard)
       .map(slot => slot.guard!.id);
     
+    // Guards who are currently marked present (including unsaved local state)
+    const presentGuardIds = slots
+      .filter(slot => slot.guard && slot.isPresent)
+      .map(slot => slot.guard!.id);
+    
     return guards.filter(guard => 
       guard.status === 'active' && 
-      !assignedGuardIds.includes(guard.id)
+      !assignedGuardIds.includes(guard.id) &&
+      !presentGuardIds.includes(guard.id) // Exclude guards marked present anywhere
     );
   }, [guards, slots]);
 
@@ -227,10 +233,25 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
   };
 
   const handleAttendanceToggle = (slotId: string) => {
-    setSlots(prev => prev.map(slot => 
-      slot.id === slotId 
-        ? { ...slot, isPresent: !slot.isPresent }
-        : slot
+    const slot = slots.find(s => s.id === slotId);
+    if (!slot?.guard) return;
+
+    // Check if guard is already marked present at another shift
+    const isMarkedElsewhereLocally = slots.some(s => 
+      s.id !== slotId && 
+      s.guard?.id === slot.guard.id && 
+      s.isPresent
+    );
+
+    if (!slot.isPresent && isMarkedElsewhereLocally) {
+      toast.error(`${slot.guard.name} is already marked present at another shift`);
+      return;
+    }
+
+    setSlots(prev => prev.map(s => 
+      s.id === slotId 
+        ? { ...s, isPresent: !s.isPresent }
+        : s
     ));
   };
 
@@ -243,11 +264,32 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
         setSlots(prev => prev.map(slot => ({ ...slot, isSelected: false })));
         break;
       case 'mark-present':
-        setSlots(prev => prev.map(slot => 
-          slot.isSelected && slot.guard 
-            ? { ...slot, isPresent: true, isSelected: false }
-            : slot
-        ));
+        // Check for conflicts before marking present
+        const conflictingGuards: string[] = [];
+        const updatedSlots = slots.map(slot => {
+          if (slot.isSelected && slot.guard) {
+            // Check if this guard is already marked present elsewhere
+            const isMarkedElsewhere = slots.some(s => 
+              s.id !== slot.id && 
+              s.guard?.id === slot.guard.id && 
+              s.isPresent
+            );
+            
+            if (isMarkedElsewhere) {
+              conflictingGuards.push(slot.guard.name);
+              return { ...slot, isSelected: false }; // Deselect conflicting guards
+            } else {
+              return { ...slot, isPresent: true, isSelected: false };
+            }
+          }
+          return slot;
+        });
+        
+        if (conflictingGuards.length > 0) {
+          toast.error(`Cannot mark present: ${conflictingGuards.join(', ')} already marked at other shifts`);
+        }
+        
+        setSlots(updatedSlots);
         break;
       case 'mark-absent':
         setSlots(prev => prev.map(slot => 
@@ -567,9 +609,28 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
                                 size="sm"
                                 variant={slot.isPresent ? "default" : "outline"}
                                 onClick={() => handleAttendanceToggle(slot.id)}
-                                className="flex-1"
+                                className={`flex-1 ${
+                                  slot.isPresent 
+                                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                    : ''
+                                }`}
+                                disabled={!slot.isPresent && slots.some(s => 
+                                  s.id !== slot.id && 
+                                  s.guard?.id === slot.guard.id && 
+                                  s.isPresent
+                                )}
                               >
-                                {slot.isPresent ? 'Present' : 'Mark Present'}
+                                {!slot.isPresent && slots.some(s => 
+                                  s.id !== slot.id && 
+                                  s.guard?.id === slot.guard.id && 
+                                  s.isPresent
+                                ) ? (
+                                  <span className="text-muted-foreground">Unavailable</span>
+                                ) : slot.isPresent ? (
+                                  'Present'
+                                ) : (
+                                  'Mark Present'
+                                )}
                               </Button>
                               
                               <Dialog>
@@ -665,9 +726,28 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
                                 size="sm"
                                 variant={slot.isPresent ? "default" : "outline"}
                                 onClick={() => handleAttendanceToggle(slot.id)}
-                                className="flex-1"
+                                className={`flex-1 ${
+                                  slot.isPresent 
+                                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                    : ''
+                                }`}
+                                disabled={!slot.isPresent && slots.some(s => 
+                                  s.id !== slot.id && 
+                                  s.guard?.id === slot.guard.id && 
+                                  s.isPresent
+                                )}
                               >
-                                {slot.isPresent ? 'Present' : 'Mark Present'}
+                                {!slot.isPresent && slots.some(s => 
+                                  s.id !== slot.id && 
+                                  s.guard?.id === slot.guard.id && 
+                                  s.isPresent
+                                ) ? (
+                                  <span className="text-muted-foreground">Unavailable</span>
+                                ) : slot.isPresent ? (
+                                  'Present'
+                                ) : (
+                                  'Mark Present'
+                                )}
                               </Button>
                               
                               <Dialog>
