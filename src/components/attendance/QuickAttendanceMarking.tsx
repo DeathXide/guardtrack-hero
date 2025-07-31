@@ -14,6 +14,7 @@ import {
   Users,
   UserCheck,
   UserX,
+  UserPlus,
   Replace
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -55,7 +56,8 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
     isOpen: boolean;
     slotId: string;
     currentGuardId: string;
-  }>({ isOpen: false, slotId: '', currentGuardId: '' });
+    mode: 'assign' | 'replace';
+  }>({ isOpen: false, slotId: '', currentGuardId: '', mode: 'assign' });
   const queryClient = useQueryClient();
 
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
@@ -215,42 +217,6 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
     }
   });
 
-  // Replace guard mutation
-  const replaceGuardMutation = useMutation({
-    mutationFn: async ({ slotId, newGuardId }: { slotId: string; newGuardId: string }) => {
-      const slot = slots.find(s => s.id === slotId);
-      if (!slot) throw new Error('Slot not found');
-
-      const shiftType = slot.shiftType;
-      const slotIndex = slot.slotNumber - 1;
-
-      // Get existing shifts for this type
-      const existingShifts = shifts.filter(shift => 
-        shift.type === shiftType && shift.site_id === selectedSite
-      );
-
-      // Remove old shift if exists
-      if (existingShifts[slotIndex]) {
-        await shiftsApi.deleteShift(existingShifts[slotIndex].id);
-      }
-
-      // Create new shift
-      return shiftsApi.createShift({
-        site_id: selectedSite,
-        guard_id: newGuardId,
-        type: shiftType
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
-      toast.success('Guard replaced successfully');
-      setReplacementModal({ isOpen: false, slotId: '', currentGuardId: '' });
-    },
-    onError: (error: any) => {
-      console.error('Error replacing guard:', error);
-      toast.error('Failed to replace guard');
-    }
-  });
 
   const handleSlotToggle = (slotId: string) => {
     setSlots(prev => prev.map(slot => 
@@ -324,11 +290,56 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
     }
   };
 
-  const handleReplaceGuard = async (newGuardId: string) => {
-    await replaceGuardMutation.mutateAsync({
-      slotId: replacementModal.slotId,
-      newGuardId
+  const handleAssignGuard = async (newGuardId: string) => {
+    const slot = slots.find(s => s.id === replacementModal.slotId);
+    if (!slot) throw new Error('Slot not found');
+
+    const shiftType = slot.shiftType;
+    const slotIndex = slot.slotNumber - 1;
+
+    // Get existing shifts for this type
+    const existingShifts = shifts.filter(shift => 
+      shift.type === shiftType && shift.site_id === selectedSite
+    );
+
+    // Remove old shift if exists (for replacement mode)
+    if (replacementModal.mode === 'replace' && existingShifts[slotIndex]) {
+      await shiftsApi.deleteShift(existingShifts[slotIndex].id);
+    }
+
+    // Create new shift
+    return shiftsApi.createShift({
+      site_id: selectedSite,
+      guard_id: newGuardId,
+      type: shiftType
     });
+  };
+
+  // Assign/Replace guard mutation
+  const assignGuardMutation = useMutation({
+    mutationFn: handleAssignGuard,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
+      toast.success(replacementModal.mode === 'assign' ? 'Guard assigned successfully' : 'Guard replaced successfully');
+      setReplacementModal({ isOpen: false, slotId: '', currentGuardId: '', mode: 'assign' });
+    },
+    onError: (error: any) => {
+      console.error('Error with guard assignment:', error);
+      toast.error('Failed to assign guard');
+    }
+  });
+
+  const handleOpenAssignModal = (slotId: string, mode: 'assign' | 'replace', currentGuardId: string = '') => {
+    setReplacementModal({
+      isOpen: true,
+      slotId,
+      currentGuardId,
+      mode
+    });
+  };
+
+  const handleConfirmAssignment = async (newGuardId: string) => {
+    await assignGuardMutation.mutateAsync(newGuardId);
   };
 
   if (sitesLoading || guardsLoading) {
@@ -566,51 +577,27 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => setReplacementModal({
-                                      isOpen: true,
-                                      slotId: slot.id,
-                                      currentGuardId: slot.guard.id
-                                    })}
+                                    onClick={() => handleOpenAssignModal(slot.id, 'replace', slot.guard.id)}
                                   >
                                     <Replace className="h-4 w-4" />
                                   </Button>
                                 </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Replace Guard</DialogTitle>
-                                  </DialogHeader>
-                                  <div className="space-y-4">
-                                    <div className="p-3 bg-muted rounded-lg">
-                                      <div className="text-sm font-medium">Current: {slot.guard.name}</div>
-                                      <div className="text-xs text-muted-foreground">{slot.guard.badge_number}</div>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label>Select Replacement</Label>
-                                      <div className="max-h-60 overflow-y-auto space-y-2">
-                                        {availableGuards.map(guard => (
-                                          <div
-                                            key={guard.id}
-                                            className="flex items-center justify-between p-2 border rounded cursor-pointer hover:bg-muted/50"
-                                            onClick={() => handleReplaceGuard(guard.id)}
-                                          >
-                                            <div>
-                                              <div className="font-medium">{guard.name}</div>
-                                              <div className="text-sm text-muted-foreground">{guard.badge_number}</div>
-                                            </div>
-                                            <Button size="sm">Select</Button>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </DialogContent>
                               </Dialog>
                             </div>
                           </div>
                         ) : (
-                          <div className="text-center py-4 text-muted-foreground">
-                            <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <div className="text-sm">No guard assigned</div>
+                          <div className="text-center py-4 space-y-3">
+                            <Users className="h-8 w-8 mx-auto mb-2 opacity-50 text-muted-foreground" />
+                            <div className="text-sm text-muted-foreground">No guard assigned</div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenAssignModal(slot.id, 'assign')}
+                              className="w-full"
+                            >
+                              <UserPlus className="h-4 w-4 mr-1" />
+                              Assign Guard
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -688,51 +675,27 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => setReplacementModal({
-                                      isOpen: true,
-                                      slotId: slot.id,
-                                      currentGuardId: slot.guard.id
-                                    })}
+                                    onClick={() => handleOpenAssignModal(slot.id, 'replace', slot.guard.id)}
                                   >
                                     <Replace className="h-4 w-4" />
                                   </Button>
                                 </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Replace Guard</DialogTitle>
-                                  </DialogHeader>
-                                  <div className="space-y-4">
-                                    <div className="p-3 bg-muted rounded-lg">
-                                      <div className="text-sm font-medium">Current: {slot.guard.name}</div>
-                                      <div className="text-xs text-muted-foreground">{slot.guard.badge_number}</div>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label>Select Replacement</Label>
-                                      <div className="max-h-60 overflow-y-auto space-y-2">
-                                        {availableGuards.map(guard => (
-                                          <div
-                                            key={guard.id}
-                                            className="flex items-center justify-between p-2 border rounded cursor-pointer hover:bg-muted/50"
-                                            onClick={() => handleReplaceGuard(guard.id)}
-                                          >
-                                            <div>
-                                              <div className="font-medium">{guard.name}</div>
-                                              <div className="text-sm text-muted-foreground">{guard.badge_number}</div>
-                                            </div>
-                                            <Button size="sm">Select</Button>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </DialogContent>
                               </Dialog>
                             </div>
                           </div>
                         ) : (
-                          <div className="text-center py-4 text-muted-foreground">
-                            <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <div className="text-sm">No guard assigned</div>
+                          <div className="text-center py-4 space-y-3">
+                            <Users className="h-8 w-8 mx-auto mb-2 opacity-50 text-muted-foreground" />
+                            <div className="text-sm text-muted-foreground">No guard assigned</div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenAssignModal(slot.id, 'assign')}
+                              className="w-full"
+                            >
+                              <UserPlus className="h-4 w-4 mr-1" />
+                              Assign Guard
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -744,6 +707,72 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
           </div>
         </>
       )}
+
+      {/* Guard Assignment/Replacement Modal */}
+      <Dialog 
+        open={replacementModal.isOpen} 
+        onOpenChange={(open) => !open && setReplacementModal({ isOpen: false, slotId: '', currentGuardId: '', mode: 'assign' })}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {replacementModal.mode === 'assign' ? 'Assign Guard to Slot' : 'Replace Guard'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {replacementModal.mode === 'replace' && replacementModal.currentGuardId && (
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="text-sm font-medium">
+                  Current: {guards.find(g => g.id === replacementModal.currentGuardId)?.name}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {guards.find(g => g.id === replacementModal.currentGuardId)?.badge_number}
+                </div>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label>
+                {replacementModal.mode === 'assign' ? 'Select Guard to Assign' : 'Select Replacement Guard'}
+              </Label>
+              
+              {availableGuards.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No available guards</p>
+                  <p className="text-sm">All guards are already assigned or inactive</p>
+                </div>
+              ) : (
+                <div className="max-h-60 overflow-y-auto space-y-2">
+                  {availableGuards.map(guard => (
+                    <div
+                      key={guard.id}
+                      className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleConfirmAssignment(guard.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback>
+                            {guard.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{guard.name}</div>
+                          <div className="text-sm text-muted-foreground">{guard.badge_number}</div>
+                        </div>
+                      </div>
+                      <Button size="sm" disabled={assignGuardMutation.isPending}>
+                        {assignGuardMutation.isPending ? 'Assigning...' : 'Select'}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
