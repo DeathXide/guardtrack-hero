@@ -344,8 +344,10 @@ export const shiftsApi = {
       .eq('type', shiftType);
 
     if (date) {
-      query = query.or(`is_temporary.eq.false,created_for_date.eq.${date}`);
+      // For temporary shifts, get the specific one for this date
+      query = query.eq('is_temporary', true).eq('created_for_date', date);
     } else {
+      // For permanent shifts, get the non-temporary one
       query = query.eq('is_temporary', false);
     }
 
