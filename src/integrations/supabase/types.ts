@@ -384,9 +384,7 @@ export type Database = {
           created_at: string
           guard_id: string | null
           id: string
-          is_temporary: boolean | null
           site_id: string
-          temporary_pay_rate: number | null
           type: string
           updated_at: string
         }
@@ -394,9 +392,7 @@ export type Database = {
           created_at?: string
           guard_id?: string | null
           id?: string
-          is_temporary?: boolean | null
           site_id: string
-          temporary_pay_rate?: number | null
           type: string
           updated_at?: string
         }
@@ -404,9 +400,7 @@ export type Database = {
           created_at?: string
           guard_id?: string | null
           id?: string
-          is_temporary?: boolean | null
           site_id?: string
-          temporary_pay_rate?: number | null
           type?: string
           updated_at?: string
         }

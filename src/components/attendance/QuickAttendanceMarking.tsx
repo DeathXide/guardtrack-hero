@@ -52,7 +52,6 @@ interface SlotData {
   } | null;
   isPresent: boolean;
   isPendingSave: boolean;
-  isTemporary?: boolean;
 }
 
 type FilterType = 'all' | 'present' | 'unmarked' | 'empty';
@@ -195,8 +194,7 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
           badge_number: guard.badge_number
         } : null,
         isPresent: !!attendanceRecord,
-        isPendingSave: false,
-        isTemporary: shift?.is_temporary || false
+        isPendingSave: false
       });
     }
 
@@ -221,8 +219,7 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
           badge_number: guard.badge_number
         } : null,
         isPresent: !!attendanceRecord,
-        isPendingSave: false,
-        isTemporary: shift?.is_temporary || false
+        isPendingSave: false
       });
     }
 
@@ -411,27 +408,6 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
     await assignGuardMutation.mutateAsync(newGuardId);
   };
 
-  const handleCreateTempSlot = async (shiftType: 'day' | 'night') => {
-    if (!selectedSite) return;
-
-    try {
-      // Create a temporary shift for this site
-      await shiftsApi.createShift({
-        site_id: selectedSite,
-        guard_id: null, // No guard assigned initially
-        type: shiftType,
-        is_temporary: true
-      });
-
-      // Refresh shifts data
-      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
-      toast.success(`Temporary ${shiftType} slot created successfully`);
-    } catch (error) {
-      console.error('Error creating temporary slot:', error);
-      toast.error('Failed to create temporary slot');
-    }
-  };
-
   if (sitesLoading || guardsLoading) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
@@ -602,20 +578,6 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="text-sm text-muted-foreground">
-                        {filteredSlots.filter(s => s.shiftType === 'day').length} slots
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleCreateTempSlot('day')}
-                        className="text-red-600 border-red-300 hover:bg-red-50"
-                      >
-                        <UserPlus className="h-3 w-3 mr-1" />
-                        Add Temp Slot
-                      </Button>
-                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                       {filteredSlots.filter(slot => slot.shiftType === 'day').map(slot => (
                         <SlotCard 
@@ -656,20 +618,6 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="text-sm text-muted-foreground">
-                        {filteredSlots.filter(s => s.shiftType === 'night').length} slots
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleCreateTempSlot('night')}
-                        className="text-red-600 border-red-300 hover:bg-red-50"
-                      >
-                        <UserPlus className="h-3 w-3 mr-1" />
-                        Add Temp Slot
-                      </Button>
-                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                       {filteredSlots.filter(slot => slot.shiftType === 'night').map(slot => (
                         <SlotCard 
@@ -781,10 +729,9 @@ interface SlotCardProps {
   onAttendanceToggle: (slotId: string) => void;
   onOpenAssignModal: (slotId: string, mode: 'assign' | 'replace', currentGuardId?: string) => void;
   isConflicted: boolean;
-  onCreateTempSlot?: (shiftType: 'day' | 'night') => void;
 }
 
-const SlotCard: React.FC<SlotCardProps> = ({ slot, onAttendanceToggle, onOpenAssignModal, isConflicted, onCreateTempSlot }) => {
+const SlotCard: React.FC<SlotCardProps> = ({ slot, onAttendanceToggle, onOpenAssignModal, isConflicted }) => {
   if (!slot.guard) {
     return (
       <div className="p-3 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50 hover:bg-gray-100/50 transition-colors">
@@ -812,23 +759,16 @@ const SlotCard: React.FC<SlotCardProps> = ({ slot, onAttendanceToggle, onOpenAss
         slot.isPendingSave 
           ? 'border-blue-300 bg-blue-50 animate-pulse' 
           : slot.isPresent 
-          ? (slot.isTemporary ? 'border-red-400 bg-red-50 hover:bg-red-100' : 'border-green-300 bg-green-50 hover:bg-green-100')
+          ? 'border-green-300 bg-green-50 hover:bg-green-100' 
           : isConflicted
           ? 'border-red-300 bg-red-50'
-          : slot.isTemporary
-          ? 'border-red-400 bg-red-50/50 hover:bg-red-100/50'
           : 'border-gray-300 bg-white hover:bg-gray-50'
       }`}
       onClick={() => !isConflicted && onAttendanceToggle(slot.id)}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-          Slot {slot.slotNumber}
-          {slot.isTemporary && (
-            <span className="text-red-600 font-bold text-xs">TEMP</span>
-          )}
-        </div>
+        <div className="text-xs font-medium text-muted-foreground">Slot {slot.slotNumber}</div>
         <div className="flex items-center gap-1">
           {slot.isPendingSave && (
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
