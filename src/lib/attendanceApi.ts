@@ -303,29 +303,63 @@ export const attendanceApi = {
 
     if (fetchError) throw fetchError;
 
-    if (sourceRecords.length === 0) {
-      return { copied: 0, message: 'No records found for the source date' };
+    // Also copy temporary shifts from the source date
+    const { data: tempShifts, error: tempShiftsError } = await supabase
+      .from('shifts')
+      .select('*')
+      .eq('site_id', siteId)
+      .eq('is_temporary', true);
+
+    if (tempShiftsError) throw tempShiftsError;
+
+    let copiedCount = 0;
+
+    if (sourceRecords.length === 0 && tempShifts.length === 0) {
+      return { copied: 0, message: 'No records or temporary shifts found for the source date' };
     }
 
-    // Create new records for the target date
-    const newRecords: CreateAttendanceData[] = sourceRecords.map(record => ({
-      employee_id: record.employee_id,
-      site_id: record.site_id,
-      attendance_date: toDate,
-      shift_type: record.shift_type as 'day' | 'night',
-      employee_type: record.employee_type,
-      status: 'present',
-      scheduled_start_time: new Date().toISOString(),
-      scheduled_end_time: new Date().toISOString()
-    }));
+    // Create new attendance records for the target date
+    if (sourceRecords.length > 0) {
+      const newRecords: CreateAttendanceData[] = sourceRecords.map(record => ({
+        employee_id: record.employee_id,
+        site_id: record.site_id,
+        attendance_date: toDate,
+        shift_type: record.shift_type as 'day' | 'night',
+        employee_type: record.employee_type,
+        status: 'present',
+        scheduled_start_time: new Date().toISOString(),
+        scheduled_end_time: new Date().toISOString()
+      }));
 
-    const { data, error } = await supabase
-      .from('attendance_records')
-      .insert(newRecords)
-      .select();
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .insert(newRecords)
+        .select();
 
-    if (error) throw error;
-    return { copied: data.length, records: data };
+      if (error) throw error;
+      copiedCount += data.length;
+    }
+
+    // Copy temporary shifts for the new date (create new temporary shifts)
+    if (tempShifts.length > 0) {
+      const newTempShifts = tempShifts.map(shift => ({
+        site_id: shift.site_id,
+        guard_id: shift.guard_id,
+        type: shift.type,
+        is_temporary: true,
+        temporary_pay_rate: shift.temporary_pay_rate
+      }));
+
+      const { data: newShiftsData, error: shiftsError } = await supabase
+        .from('shifts')
+        .insert(newTempShifts)
+        .select();
+
+      if (shiftsError) throw shiftsError;
+      copiedCount += newShiftsData.length;
+    }
+
+    return { copied: copiedCount };
   },
 
   // Get attendance statistics for a guard over a period

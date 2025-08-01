@@ -14,7 +14,6 @@ import SitesNew from "./pages/SitesNew";
 import Guards from "./pages/Guards";
 import Attendance from "./pages/Attendance";
 import Schedule from "./pages/Schedule";
-import TemporaryGuards from "./pages/TemporaryGuards";
 import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
@@ -34,7 +33,6 @@ const App = () => (
             <Route path="/guards" element={<DashboardLayout><Guards /></DashboardLayout>} />
             <Route path="/attendance" element={<DashboardLayout><Attendance /></DashboardLayout>} />
             <Route path="/schedule" element={<DashboardLayout><Schedule /></DashboardLayout>} />
-            <Route path="/temporary-guards" element={<DashboardLayout><TemporaryGuards /></DashboardLayout>} />
             <Route path="/reports" element={<DashboardLayout><Reports /></DashboardLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
