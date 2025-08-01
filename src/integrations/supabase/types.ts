@@ -498,62 +498,6 @@ export type Database = {
           },
         ]
       }
-      temporary_staffing_requests: {
-        Row: {
-          approved_by: string | null
-          created_at: string
-          day_slot_pay_rate: number | null
-          day_temp_slots: number
-          id: string
-          night_slot_pay_rate: number | null
-          night_temp_slots: number
-          notes: string | null
-          request_date: string
-          requested_by: string | null
-          site_id: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          approved_by?: string | null
-          created_at?: string
-          day_slot_pay_rate?: number | null
-          day_temp_slots?: number
-          id?: string
-          night_slot_pay_rate?: number | null
-          night_temp_slots?: number
-          notes?: string | null
-          request_date: string
-          requested_by?: string | null
-          site_id: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          approved_by?: string | null
-          created_at?: string
-          day_slot_pay_rate?: number | null
-          day_temp_slots?: number
-          id?: string
-          night_slot_pay_rate?: number | null
-          night_temp_slots?: number
-          notes?: string | null
-          request_date?: string
-          requested_by?: string | null
-          site_id?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "temporary_staffing_requests_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
