@@ -301,7 +301,8 @@ export const shiftsApi = {
       type: slot.type,
       is_temporary: true,
       temporary_pay_rate: slot.temporary_pay_rate,
-      created_for_date: toDate
+      created_for_date: toDate,
+      role_type: slot.role_type
     }));
 
     const { data, error: insertError } = await supabase
@@ -311,6 +312,98 @@ export const shiftsApi = {
     if (insertError) throw insertError;
     
     return { copied: temporarySlots.length };
+  },
+
+  // Check if guard is available for assignment (no existing shift for same type/date)
+  async isGuardAvailable(guardId: string, siteId: string, shiftType: string, date?: string) {
+    let query = supabase
+      .from('shifts')
+      .select('id')
+      .eq('guard_id', guardId)
+      .eq('type', shiftType);
+
+    // For temporary shifts, check specific date
+    if (date) {
+      query = query.or(`is_temporary.eq.false,created_for_date.eq.${date}`);
+    } else {
+      query = query.eq('is_temporary', false);
+    }
+
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    return data.length === 0;
+  },
+
+  // Get guard's existing shift for a specific type and date
+  async getGuardShiftForDate(guardId: string, shiftType: string, date?: string) {
+    let query = supabase
+      .from('shifts')
+      .select('*')
+      .eq('guard_id', guardId)
+      .eq('type', shiftType);
+
+    if (date) {
+      query = query.or(`is_temporary.eq.false,created_for_date.eq.${date}`);
+    } else {
+      query = query.eq('is_temporary', false);
+    }
+
+    const { data, error } = await query.maybeSingle();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  // Safe shift assignment with validation
+  async assignGuardToShift(siteId: string, guardId: string, shiftType: string, options: {
+    isTemporary?: boolean;
+    temporaryPayRate?: number;
+    createdForDate?: string;
+    roleType?: string;
+    replaceExisting?: boolean;
+    existingShiftId?: string;
+  } = {}) {
+    const { 
+      isTemporary = false, 
+      temporaryPayRate, 
+      createdForDate, 
+      roleType,
+      replaceExisting = false,
+      existingShiftId
+    } = options;
+
+    // Check if guard is available
+    const isAvailable = await this.isGuardAvailable(guardId, siteId, shiftType, createdForDate);
+    if (!isAvailable && !replaceExisting) {
+      throw new Error(`Guard is already assigned to a ${shiftType} shift${createdForDate ? ` on ${createdForDate}` : ''}`);
+    }
+
+    // If replacing, delete the existing shift first
+    if (replaceExisting && existingShiftId) {
+      await this.deleteShift(existingShiftId);
+    }
+
+    // Create the new shift
+    const shiftData: CreateShiftData = {
+      site_id: siteId,
+      guard_id: guardId,
+      type: shiftType,
+      is_temporary: isTemporary,
+      temporary_pay_rate: temporaryPayRate,
+      created_for_date: createdForDate,
+      role_type: roleType
+    };
+
+    try {
+      return await this.createShift(shiftData);
+    } catch (error: any) {
+      // Handle specific constraint violations
+      if (error.code === '23505' && error.constraint === 'shifts_site_id_guard_id_type_key') {
+        throw new Error(`Guard is already assigned to a ${shiftType} shift at this site`);
+      }
+      throw error;
+    }
   }
 };
 

@@ -434,27 +434,26 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
       if (!slot) throw new Error('Slot not found');
 
       const shiftType = slot.shiftType;
-      const slotIndex = slot.slotNumber - 1;
 
-      // Get existing shifts for this type
-      const existingShifts = shifts.filter(shift => 
-        shift.type === shiftType && shift.site_id === selectedSite
-      );
-
-      // Remove old shift if exists (for replacement mode)
-      if (replacementModal.mode === 'replace' && existingShifts[slotIndex]) {
-        await shiftsApi.deleteShift(existingShifts[slotIndex].id);
+      // For replacement mode, find the existing shift for this specific slot
+      let existingShiftId: string | undefined;
+      if (replacementModal.mode === 'replace' && slot.guard?.id) {
+        const existingShift = await shiftsApi.getGuardShiftForDate(
+          slot.guard.id, 
+          shiftType, 
+          slot.isTemporary ? formattedDate : undefined
+        );
+        existingShiftId = existingShift?.id;
       }
 
-      // Create new shift
-      const currentSlot = slots.find(s => s.id === replacementModal.slotId);
-      return shiftsApi.createShift({
-        site_id: selectedSite,
-        guard_id: newGuardId,
-        type: shiftType,
-        is_temporary: currentSlot?.isTemporary || false,
-        temporary_pay_rate: currentSlot?.temporaryPayRate,
-        created_for_date: currentSlot?.isTemporary ? formattedDate : undefined
+      // Use the new safe assignment function
+      return shiftsApi.assignGuardToShift(selectedSite, newGuardId, shiftType, {
+        isTemporary: slot.isTemporary || false,
+        temporaryPayRate: slot.temporaryPayRate,
+        createdForDate: slot.isTemporary ? formattedDate : undefined,
+        roleType: slot.roleType,
+        replaceExisting: replacementModal.mode === 'replace',
+        existingShiftId
       });
     },
     onSuccess: () => {
@@ -464,7 +463,16 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
     },
     onError: (error: any) => {
       console.error('Error with guard assignment:', error);
-      toast.error('Failed to assign guard');
+      
+      // Handle specific error messages
+      let errorMessage = 'Failed to assign guard';
+      if (error.message.includes('already assigned')) {
+        errorMessage = error.message;
+      } else if (error.code === '23505') {
+        errorMessage = 'This guard is already assigned to this shift type at this site';
+      }
+      
+      toast.error(errorMessage);
     }
   });
 
