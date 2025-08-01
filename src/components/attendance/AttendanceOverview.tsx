@@ -299,7 +299,14 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
                     <TableCell className="font-medium">{site.site_name}</TableCell>
                     <TableCell>{site.address}</TableCell>
                     <TableCell>
-                      <Badge variant={slotStatus.variant}>{slotStatus.label}</Badge>
+                      <div className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium ${
+                        slotStatus.status === 'fully-filled' ? 'bg-green-100 text-green-800 border border-green-300' :
+                        slotStatus.status === 'partially-filled' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                        slotStatus.status === 'unfilled' ? 'bg-red-100 text-red-800 border border-red-300' :
+                        'bg-gray-100 text-gray-800 border border-gray-300'
+                      }`}>
+                        {slotStatus.label}
+                      </div>
                     </TableCell>
                     <TableCell>{totalSlots}</TableCell>
                     <TableCell>
