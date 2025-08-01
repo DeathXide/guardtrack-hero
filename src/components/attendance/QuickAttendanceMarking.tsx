@@ -4,6 +4,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { 
   Calendar as CalendarIcon, 
@@ -18,7 +19,9 @@ import {
   Replace,
   Eye,
   EyeOff,
-  Zap
+  Zap,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -62,6 +65,8 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
   const [filter, setFilter] = useState<FilterType>('all');
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [guardSearchQuery, setGuardSearchQuery] = useState<string>('');
+  const [dayShiftOpen, setDayShiftOpen] = useState<boolean>(true);
+  const [nightShiftOpen, setNightShiftOpen] = useState<boolean>(true);
   const [replacementModal, setReplacementModal] = useState<{
     isOpen: boolean;
     slotId: string;
@@ -553,67 +558,85 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
           <AlertDescription>Choose a site from the dropdown above to view and mark attendance</AlertDescription>
         </Alert>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Day Shift */}
           {daySlots > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">Day Shift</CardTitle>
-                    <CardDescription>8:00 AM - 8:00 PM • {filteredSlots.filter(s => s.shiftType === 'day').length} slots</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {filteredSlots.filter(slot => slot.shiftType === 'day').map(slot => (
-                    <SlotCard 
-                      key={slot.id}
-                      slot={slot}
-                      onAttendanceToggle={handleAttendanceToggle}
-                      onOpenAssignModal={handleOpenAssignModal}
-                      isConflicted={!slot.isPresent && slots.some(s => 
-                        s.id !== slot.id && 
-                        s.guard?.id === slot.guard?.id && 
-                        s.isPresent
-                      )}
-                    />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <Collapsible open={dayShiftOpen} onOpenChange={setDayShiftOpen}>
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          {dayShiftOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          Day Shift
+                        </CardTitle>
+                        <CardDescription>8:00 AM - 8:00 PM • {filteredSlots.filter(s => s.shiftType === 'day').length} slots</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                      {filteredSlots.filter(slot => slot.shiftType === 'day').map(slot => (
+                        <SlotCard 
+                          key={slot.id}
+                          slot={slot}
+                          onAttendanceToggle={handleAttendanceToggle}
+                          onOpenAssignModal={handleOpenAssignModal}
+                          isConflicted={!slot.isPresent && slots.some(s => 
+                            s.id !== slot.id && 
+                            s.guard?.id === slot.guard?.id && 
+                            s.isPresent
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
           )}
 
           {/* Night Shift */}
           {nightSlots > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">Night Shift</CardTitle>
-                    <CardDescription>8:00 PM - 8:00 AM • {filteredSlots.filter(s => s.shiftType === 'night').length} slots</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {filteredSlots.filter(slot => slot.shiftType === 'night').map(slot => (
-                    <SlotCard 
-                      key={slot.id}
-                      slot={slot}
-                      onAttendanceToggle={handleAttendanceToggle}
-                      onOpenAssignModal={handleOpenAssignModal}
-                      isConflicted={!slot.isPresent && slots.some(s => 
-                        s.id !== slot.id && 
-                        s.guard?.id === slot.guard?.id && 
-                        s.isPresent
-                      )}
-                    />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <Collapsible open={nightShiftOpen} onOpenChange={setNightShiftOpen}>
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          {nightShiftOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          Night Shift
+                        </CardTitle>
+                        <CardDescription>8:00 PM - 8:00 AM • {filteredSlots.filter(s => s.shiftType === 'night').length} slots</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                      {filteredSlots.filter(slot => slot.shiftType === 'night').map(slot => (
+                        <SlotCard 
+                          key={slot.id}
+                          slot={slot}
+                          onAttendanceToggle={handleAttendanceToggle}
+                          onOpenAssignModal={handleOpenAssignModal}
+                          isConflicted={!slot.isPresent && slots.some(s => 
+                            s.id !== slot.id && 
+                            s.guard?.id === slot.guard?.id && 
+                            s.isPresent
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
           )}
         </div>
       )}
