@@ -3,7 +3,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 // Use the database types for better type safety
 export type Shift = Database['public']['Tables']['shifts']['Row'];
-export type CreateShiftData = Omit<Database['public']['Tables']['shifts']['Insert'], 'id' | 'created_at' | 'updated_at'>;
+export type CreateShiftData = Database['public']['Tables']['shifts']['Insert'];
 export type UpdateShiftData = Database['public']['Tables']['shifts']['Update'];
 
 // Shift CRUD Operations
@@ -256,6 +256,61 @@ export const shiftsApi = {
     if (updateFromError) throw updateFromError;
 
     return true;
+  },
+
+  // Get shifts by site ID and date (including temporary slots)
+  async getShiftsBySiteAndDate(siteId: string, date: string) {
+    const { data, error } = await supabase
+      .from('shifts')
+      .select(`
+        *,
+        guards (
+          name,
+          badge_number,
+          status
+        )
+      `)
+      .eq('site_id', siteId)
+      .or(`is_temporary.eq.false,created_for_date.eq.${date}`)
+      .order('type');
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Copy temporary slots from one date to another
+  async copyTemporarySlots(siteId: string, fromDate: string, toDate: string) {
+    // Get temporary slots from the source date
+    const { data: temporarySlots, error: fetchError } = await supabase
+      .from('shifts')
+      .select('*')
+      .eq('site_id', siteId)
+      .eq('is_temporary', true)
+      .eq('created_for_date', fromDate);
+
+    if (fetchError) throw fetchError;
+    
+    if (!temporarySlots || temporarySlots.length === 0) {
+      return { copied: 0 };
+    }
+
+    // Create new temporary slots for the target date
+    const newSlots = temporarySlots.map(slot => ({
+      site_id: slot.site_id,
+      guard_id: null, // Reset guard assignment
+      type: slot.type,
+      is_temporary: true,
+      temporary_pay_rate: slot.temporary_pay_rate,
+      created_for_date: toDate
+    }));
+
+    const { data, error: insertError } = await supabase
+      .from('shifts')
+      .insert(newSlots);
+
+    if (insertError) throw insertError;
+    
+    return { copied: temporarySlots.length };
   }
 };
 

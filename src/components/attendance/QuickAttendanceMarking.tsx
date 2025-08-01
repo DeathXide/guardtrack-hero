@@ -36,6 +36,7 @@ import { sitesApi } from '@/lib/sitesApi';
 import { guardsApi, type Guard } from '@/lib/guardsApi';
 import { shiftsApi } from '@/lib/shiftsApi';
 import { attendanceApi } from '@/lib/attendanceApi';
+import TemporarySlotsDialog from './TemporarySlotsDialog';
 
 interface QuickAttendanceMarkingProps {
   preselectedSiteId?: string;
@@ -52,6 +53,8 @@ interface SlotData {
   } | null;
   isPresent: boolean;
   isPendingSave: boolean;
+  isTemporary?: boolean;
+  temporaryPayRate?: number;
 }
 
 type FilterType = 'all' | 'present' | 'unmarked' | 'empty';
@@ -73,6 +76,7 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
     currentGuardId: string;
     mode: 'assign' | 'replace';
   }>({ isOpen: false, slotId: '', currentGuardId: '', mode: 'assign' });
+  const [temporarySlotsModal, setTemporarySlotsModal] = useState(false);
   const queryClient = useQueryClient();
 
   console.log('slots state initialized:', slots);
@@ -149,8 +153,8 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
   });
 
   const { data: shifts = [] } = useQuery({
-    queryKey: ['shifts', selectedSite],
-    queryFn: () => selectedSite ? shiftsApi.getShiftsBySite(selectedSite) : Promise.resolve([]),
+    queryKey: ['shifts', selectedSite, formattedDate],
+    queryFn: () => selectedSite ? shiftsApi.getShiftsBySiteAndDate(selectedSite, formattedDate) : Promise.resolve([]),
     enabled: !!selectedSite
   });
 
@@ -170,12 +174,14 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
     if (!selectedSite || !guards.length) return;
 
     const newSlots: SlotData[] = [];
-    const dayShifts = shifts.filter(shift => shift.type === 'day');
-    const nightShifts = shifts.filter(shift => shift.type === 'night');
+    const regularDayShifts = shifts.filter(shift => shift.type === 'day' && !shift.is_temporary);
+    const regularNightShifts = shifts.filter(shift => shift.type === 'night' && !shift.is_temporary);
+    const temporaryDayShifts = shifts.filter(shift => shift.type === 'day' && shift.is_temporary);
+    const temporaryNightShifts = shifts.filter(shift => shift.type === 'night' && shift.is_temporary);
 
-    // Create day shift slots
+    // Create regular day shift slots
     for (let i = 1; i <= daySlots; i++) {
-      const shift = dayShifts[i - 1];
+      const shift = regularDayShifts[i - 1];
       const guard = shift ? guards.find(g => g.id === shift.guard_id) : null;
       const attendanceRecord = attendanceRecords.find(record => 
         record.employee_id === guard?.id && 
@@ -194,13 +200,40 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
           badge_number: guard.badge_number
         } : null,
         isPresent: !!attendanceRecord,
-        isPendingSave: false
+        isPendingSave: false,
+        isTemporary: false
       });
     }
 
-    // Create night shift slots
+    // Create temporary day shift slots
+    temporaryDayShifts.forEach((shift, index) => {
+      const guard = guards.find(g => g.id === shift.guard_id);
+      const attendanceRecord = attendanceRecords.find(record => 
+        record.employee_id === guard?.id && 
+        record.shift_type === 'day' &&
+        record.site_id === selectedSite &&
+        record.status === 'present'
+      );
+
+      newSlots.push({
+        id: `day-temp-${index + 1}`,
+        shiftType: 'day',
+        slotNumber: daySlots + index + 1,
+        guard: guard ? {
+          id: guard.id,
+          name: guard.name,
+          badge_number: guard.badge_number
+        } : null,
+        isPresent: !!attendanceRecord,
+        isPendingSave: false,
+        isTemporary: true,
+        temporaryPayRate: shift.temporary_pay_rate || 0
+      });
+    });
+
+    // Create regular night shift slots
     for (let i = 1; i <= nightSlots; i++) {
-      const shift = nightShifts[i - 1];
+      const shift = regularNightShifts[i - 1];
       const guard = shift ? guards.find(g => g.id === shift.guard_id) : null;
       const attendanceRecord = attendanceRecords.find(record => 
         record.employee_id === guard?.id && 
@@ -219,9 +252,36 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
           badge_number: guard.badge_number
         } : null,
         isPresent: !!attendanceRecord,
-        isPendingSave: false
+        isPendingSave: false,
+        isTemporary: false
       });
     }
+
+    // Create temporary night shift slots
+    temporaryNightShifts.forEach((shift, index) => {
+      const guard = guards.find(g => g.id === shift.guard_id);
+      const attendanceRecord = attendanceRecords.find(record => 
+        record.employee_id === guard?.id && 
+        record.shift_type === 'night' &&
+        record.site_id === selectedSite &&
+        record.status === 'present'
+      );
+
+      newSlots.push({
+        id: `night-temp-${index + 1}`,
+        shiftType: 'night',
+        slotNumber: nightSlots + index + 1,
+        guard: guard ? {
+          id: guard.id,
+          name: guard.name,
+          badge_number: guard.badge_number
+        } : null,
+        isPresent: !!attendanceRecord,
+        isPendingSave: false,
+        isTemporary: true,
+        temporaryPayRate: shift.temporary_pay_rate || 0
+      });
+    });
 
     setSlots(newSlots);
   }, [selectedSite, guards, shifts, attendanceRecords, daySlots, nightSlots]);
@@ -345,10 +405,16 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
     const yesterday = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
     
     try {
+      // Copy attendance records
       const result = await attendanceApi.copyAttendanceFromDate(yesterday, formattedDate, selectedSite);
+      
+      // Copy temporary slots from yesterday
+      await shiftsApi.copyTemporarySlots(selectedSite, yesterday, formattedDate);
+      
       if (result.copied > 0) {
-        toast.success(`Copied ${result.copied} attendance records from yesterday`);
+        toast.success(`Copied ${result.copied} attendance records and temporary slots from yesterday`);
         queryClient.invalidateQueries({ queryKey: ['attendance', formattedDate] });
+        queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite, formattedDate] });
       } else {
         toast.info('No attendance records found for yesterday at this site');
       }
@@ -378,14 +444,18 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
       }
 
       // Create new shift
+      const currentSlot = slots.find(s => s.id === replacementModal.slotId);
       return shiftsApi.createShift({
         site_id: selectedSite,
         guard_id: newGuardId,
-        type: shiftType
+        type: shiftType,
+        is_temporary: currentSlot?.isTemporary || false,
+        temporary_pay_rate: currentSlot?.temporaryPayRate,
+        created_for_date: currentSlot?.isTemporary ? formattedDate : undefined
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite] });
+      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite, formattedDate] });
       toast.success(replacementModal.mode === 'assign' ? 'Guard assigned successfully' : 'Guard replaced successfully');
       setReplacementModal({ isOpen: false, slotId: '', currentGuardId: '', mode: 'assign' });
     },
@@ -408,6 +478,52 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
     await assignGuardMutation.mutateAsync(newGuardId);
   };
 
+  // Create temporary slots mutation
+  const createTemporarySlotsMutation = useMutation({
+    mutationFn: async ({ daySlots: tempDaySlots, nightSlots: tempNightSlots, payRate }: { daySlots: number; nightSlots: number; payRate: number }) => {
+      const tempShifts = [];
+      
+      // Create temporary day shifts
+      for (let i = 0; i < tempDaySlots; i++) {
+        tempShifts.push({
+          site_id: selectedSite,
+          guard_id: null,
+          type: 'day' as const,
+          is_temporary: true,
+          temporary_pay_rate: payRate,
+          created_for_date: formattedDate
+        });
+      }
+      
+      // Create temporary night shifts
+      for (let i = 0; i < tempNightSlots; i++) {
+        tempShifts.push({
+          site_id: selectedSite,
+          guard_id: null,
+          type: 'night' as const,
+          is_temporary: true,
+          temporary_pay_rate: payRate,
+          created_for_date: formattedDate
+        });
+      }
+      
+      return shiftsApi.createShifts(tempShifts);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite, formattedDate] });
+      toast.success('Temporary slots created successfully');
+      setTemporarySlotsModal(false);
+    },
+    onError: (error: any) => {
+      console.error('Error creating temporary slots:', error);
+      toast.error('Failed to create temporary slots');
+    }
+  });
+
+  const handleCreateTemporarySlots = (slotData: { daySlots: number; nightSlots: number; payRate: number }) => {
+    createTemporarySlotsMutation.mutate(slotData);
+  };
+
   if (sitesLoading || guardsLoading) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
@@ -428,6 +544,15 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
               <CardDescription>One-click marking • Auto-save • Smart conflicts</CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setTemporarySlotsModal(true)}
+                disabled={!selectedSite}
+              >
+                <UserPlus className="h-4 w-4 mr-1" />
+                Add Temp Slots
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -719,6 +844,14 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Temporary Slots Dialog */}
+      <TemporarySlotsDialog
+        isOpen={temporarySlotsModal}
+        onClose={() => setTemporarySlotsModal(false)}
+        onCreateSlots={handleCreateTemporarySlots}
+        isLoading={createTemporarySlotsMutation.isPending}
+      />
     </div>
   );
 };
@@ -734,11 +867,23 @@ interface SlotCardProps {
 const SlotCard: React.FC<SlotCardProps> = ({ slot, onAttendanceToggle, onOpenAssignModal, isConflicted }) => {
   if (!slot.guard) {
     return (
-      <div className="p-3 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50 hover:bg-gray-100/50 transition-colors">
+      <div className={`p-3 border-2 border-dashed rounded-lg hover:bg-gray-100/50 transition-colors ${
+        slot.isTemporary 
+          ? 'border-red-300 bg-red-50/50' 
+          : 'border-gray-300 bg-gray-50/50'
+      }`}>
         <div className="text-center space-y-2">
-          <div className="text-xs text-muted-foreground font-medium">Slot {slot.slotNumber}</div>
+          <div className="flex items-center justify-center gap-1">
+            <div className="text-xs text-muted-foreground font-medium">Slot {slot.slotNumber}</div>
+            {slot.isTemporary && (
+              <Badge variant="destructive" className="text-xs px-1 py-0">TEMP</Badge>
+            )}
+          </div>
           <Users className="h-6 w-6 mx-auto opacity-50 text-muted-foreground" />
           <div className="text-xs text-muted-foreground">Empty</div>
+          {slot.isTemporary && slot.temporaryPayRate && (
+            <div className="text-xs text-red-600 font-medium">₹{slot.temporaryPayRate}/slot</div>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -759,22 +904,35 @@ const SlotCard: React.FC<SlotCardProps> = ({ slot, onAttendanceToggle, onOpenAss
         slot.isPendingSave 
           ? 'border-blue-300 bg-blue-50 animate-pulse' 
           : slot.isPresent 
-          ? 'border-green-300 bg-green-50 hover:bg-green-100' 
+          ? slot.isTemporary
+            ? 'border-red-400 bg-red-50 hover:bg-red-100'
+            : 'border-green-300 bg-green-50 hover:bg-green-100'
           : isConflicted
           ? 'border-red-300 bg-red-50'
+          : slot.isTemporary
+          ? 'border-red-300 bg-red-50/30 hover:bg-red-50'
           : 'border-gray-300 bg-white hover:bg-gray-50'
       }`}
       onClick={() => !isConflicted && onAttendanceToggle(slot.id)}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <div className="text-xs font-medium text-muted-foreground">Slot {slot.slotNumber}</div>
+        <div className="flex items-center gap-1">
+          <div className="text-xs font-medium text-muted-foreground">Slot {slot.slotNumber}</div>
+          {slot.isTemporary && (
+            <Badge variant="destructive" className="text-xs px-1 py-0">TEMP</Badge>
+          )}
+        </div>
         <div className="flex items-center gap-1">
           {slot.isPendingSave && (
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
           )}
           {slot.isPresent && (
-            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-300 text-xs px-1.5 py-0">
+            <Badge variant="secondary" className={`text-xs px-1.5 py-0 ${
+              slot.isTemporary 
+                ? 'bg-red-100 text-red-800 border-red-300'
+                : 'bg-green-100 text-green-800 border-green-300'
+            }`}>
               ✓
             </Badge>
           )}
@@ -791,6 +949,9 @@ const SlotCard: React.FC<SlotCardProps> = ({ slot, onAttendanceToggle, onOpenAss
         <div className="flex-1 min-w-0">
           <div className="font-medium text-sm truncate">{slot.guard.name}</div>
           <div className="text-xs text-muted-foreground">{slot.guard.badge_number}</div>
+          {slot.isTemporary && slot.temporaryPayRate && (
+            <div className="text-xs text-red-600 font-medium">₹{slot.temporaryPayRate}/slot</div>
+          )}
         </div>
       </div>
 

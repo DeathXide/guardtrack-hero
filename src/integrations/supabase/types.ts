@@ -382,25 +382,34 @@ export type Database = {
       shifts: {
         Row: {
           created_at: string
+          created_for_date: string | null
           guard_id: string | null
           id: string
+          is_temporary: boolean | null
           site_id: string
+          temporary_pay_rate: number | null
           type: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          created_for_date?: string | null
           guard_id?: string | null
           id?: string
+          is_temporary?: boolean | null
           site_id: string
+          temporary_pay_rate?: number | null
           type: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          created_for_date?: string | null
           guard_id?: string | null
           id?: string
+          is_temporary?: boolean | null
           site_id?: string
+          temporary_pay_rate?: number | null
           type?: string
           updated_at?: string
         }
