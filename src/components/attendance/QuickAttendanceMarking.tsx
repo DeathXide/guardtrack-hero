@@ -16,6 +16,7 @@ import {
   Users,
   UserCheck,
   UserPlus,
+  UserMinus,
   Replace,
   Eye,
   EyeOff,
@@ -489,6 +490,43 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
     await assignGuardMutation.mutateAsync(newGuardId);
   };
 
+  // Remove guard mutation
+  const removeGuardMutation = useMutation({
+    mutationFn: async (slotId: string) => {
+      const slot = slots.find(s => s.id === slotId);
+      if (!slot || !slot.guard) throw new Error('Slot or guard not found');
+
+      // Find the existing shift for this guard and remove them
+      const existingShift = await shiftsApi.getGuardShiftForDate(
+        slot.guard.id, 
+        slot.shiftType, 
+        slot.isTemporary ? formattedDate : undefined
+      );
+
+      if (!existingShift) throw new Error('Shift not found');
+
+      // For temporary shifts, delete the entire shift
+      // For permanent shifts, just unassign the guard
+      if (slot.isTemporary) {
+        return shiftsApi.deleteShift(existingShift.id);
+      } else {
+        return shiftsApi.updateShift(existingShift.id, { guard_id: null });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shifts', selectedSite, formattedDate] });
+      toast.success('Guard removed successfully');
+    },
+    onError: (error: any) => {
+      console.error('Error removing guard:', error);
+      toast.error('Failed to remove guard');
+    }
+  });
+
+  const handleRemoveGuard = async (slotId: string) => {
+    await removeGuardMutation.mutateAsync(slotId);
+  };
+
   // Create temporary slots mutation
   const createTemporarySlotsMutation = useMutation({
     mutationFn: async ({ daySlots: tempDaySlots, nightSlots: tempNightSlots, payRate, roleType }: { daySlots: number; nightSlots: number; payRate: number; roleType: string }) => {
@@ -723,6 +761,7 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
                           slot={slot}
                           onAttendanceToggle={handleAttendanceToggle}
                           onOpenAssignModal={handleOpenAssignModal}
+                          onRemoveGuard={handleRemoveGuard}
                           isConflicted={!slot.isPresent && slots.some(s => 
                             s.id !== slot.id && 
                             s.guard?.id === slot.guard?.id && 
@@ -763,6 +802,7 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
                           slot={slot}
                           onAttendanceToggle={handleAttendanceToggle}
                           onOpenAssignModal={handleOpenAssignModal}
+                          onRemoveGuard={handleRemoveGuard}
                           isConflicted={!slot.isPresent && slots.some(s => 
                             s.id !== slot.id && 
                             s.guard?.id === slot.guard?.id && 
@@ -874,10 +914,11 @@ interface SlotCardProps {
   slot: SlotData;
   onAttendanceToggle: (slotId: string) => void;
   onOpenAssignModal: (slotId: string, mode: 'assign' | 'replace', currentGuardId?: string) => void;
+  onRemoveGuard: (slotId: string) => void;
   isConflicted: boolean;
 }
 
-const SlotCard: React.FC<SlotCardProps> = ({ slot, onAttendanceToggle, onOpenAssignModal, isConflicted }) => {
+const SlotCard: React.FC<SlotCardProps> = ({ slot, onAttendanceToggle, onOpenAssignModal, onRemoveGuard, isConflicted }) => {
   if (!slot.guard) {
     return (
       <div className={`p-3 border-2 border-dashed rounded-lg hover:bg-gray-100/50 transition-colors ${
@@ -1018,6 +1059,19 @@ const SlotCard: React.FC<SlotCardProps> = ({ slot, onAttendanceToggle, onOpenAss
           title="Replace guard"
         >
           <Replace className="h-3 w-3" />
+        </Button>
+
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemoveGuard(slot.id);
+          }}
+          className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+          title="Remove guard"
+        >
+          <UserMinus className="h-3 w-3" />
         </Button>
       </div>
     </div>
