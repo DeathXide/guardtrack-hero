@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertCircle, Calendar as CalendarIcon, Search, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { AlertCircle, Calendar as CalendarIcon, Search, ArrowUpDown, ChevronUp, ChevronDown, CheckCircle2, Clock } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getAttendanceOverview } from "@/lib/attendanceOverviewApi";
 import { PageLoader } from "@/components/ui/loader";
@@ -22,6 +22,7 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [sortField, setSortField] = useState<string>("site_name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
@@ -47,7 +48,12 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
       );
     }
     
-    // Status filter
+    // Status filter (attendance-based)
+    if (activeFilters.length > 0) {
+      filtered = filtered.filter(site => activeFilters.includes(site.status));
+    }
+    
+    // Slot status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter(site => {
         const totalSlots = site.daySlots + site.nightSlots;
@@ -96,7 +102,15 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
     });
     
     return filtered;
-  }, [overviewData?.sites, searchTerm, statusFilter, sortField, sortDirection]);
+  }, [overviewData?.sites, searchTerm, statusFilter, activeFilters, sortField, sortDirection]);
+
+  const toggleFilter = (status: string) => {
+    setActiveFilters(prev => 
+      prev.includes(status) 
+        ? prev.filter(f => f !== status)
+        : [...prev, status]
+    );
+  };
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -160,49 +174,97 @@ const AttendanceOverview: React.FC<AttendanceOverviewProps> = ({ onSiteSelect })
         </CardHeader>
         <CardContent>
           {/* Top Controls */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-64 justify-start text-left font-normal"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {format(selectedDate, 'PPP')}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+          <div className="flex flex-col gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-64 justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(selectedDate, 'PPP')}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
 
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search sites..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search sites..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sites</SelectItem>
+                  <SelectItem value="fully-filled">Fully Filled</SelectItem>
+                  <SelectItem value="partially-filled">Partially Filled</SelectItem>
+                  <SelectItem value="unfilled">Unfilled</SelectItem>
+                  <SelectItem value="no-slots">No Slots</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sites</SelectItem>
-                <SelectItem value="fully-filled">Fully Filled</SelectItem>
-                <SelectItem value="partially-filled">Partially Filled</SelectItem>
-                <SelectItem value="unfilled">Unfilled</SelectItem>
-                <SelectItem value="no-slots">No Slots</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Attendance Filter buttons */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium text-muted-foreground">Attendance:</span>
+              <button
+                onClick={() => toggleFilter('fully-marked')}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                  activeFilters.includes('fully-marked')
+                    ? 'bg-green-100 text-green-800 border border-green-300'
+                    : 'hover:bg-muted'
+                }`}
+              >
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span>Marked</span>
+              </button>
+              <button
+                onClick={() => toggleFilter('partially-marked')}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                  activeFilters.includes('partially-marked')
+                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                    : 'hover:bg-muted'
+                }`}
+              >
+                <Clock className="h-4 w-4 text-amber-500" />
+                <span>Partial</span>
+              </button>
+              <button
+                onClick={() => toggleFilter('not-marked')}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                  activeFilters.includes('not-marked')
+                    ? 'bg-red-100 text-red-800 border border-red-300'
+                    : 'hover:bg-muted'
+                }`}
+              >
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                <span>Not Marked</span>
+              </button>
+              {activeFilters.length > 0 && (
+                <button
+                  onClick={() => setActiveFilters([])}
+                  className="text-xs text-muted-foreground hover:text-foreground underline ml-2"
+                >
+                  Clear attendance filters
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Results Summary */}
