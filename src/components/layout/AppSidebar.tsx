@@ -9,6 +9,7 @@ import {
   MapPin,
   Shield,
   Users,
+  UserPlus,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -54,6 +55,12 @@ const navItems: NavItem[] = [
     title: 'Guards',
     href: '/guards',
     icon: Users,
+    roles: ['admin', 'supervisor'],
+  },
+  {
+    title: 'Temporary Guards',
+    href: '/temporary-guards',
+    icon: UserPlus,
     roles: ['admin', 'supervisor'],
   },
   {
