@@ -3,15 +3,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { AlertCircle, Plus } from 'lucide-react';
 import { formatCurrency } from '@/lib/localService';
 
+const ROLE_TYPES = ['Security Guard', 'Supervisor', 'Housekeeping'] as const;
+
 interface TemporarySlotsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateSlots: (data: { daySlots: number; nightSlots: number; payRate: number }) => void;
+  onCreateSlots: (data: { daySlots: number; nightSlots: number; payRate: number; roleType: string }) => void;
   isLoading?: boolean;
 }
 
@@ -24,22 +27,25 @@ const TemporarySlotsDialog: React.FC<TemporarySlotsDialogProps> = ({
   const [daySlots, setDaySlots] = useState<number>(0);
   const [nightSlots, setNightSlots] = useState<number>(0);
   const [payRate, setPayRate] = useState<number>(0);
+  const [roleType, setRoleType] = useState<string>('');
 
   const totalSlots = daySlots + nightSlots;
   const totalCost = totalSlots * payRate;
 
   const handleSubmit = () => {
-    if (totalSlots === 0) return;
-    onCreateSlots({ daySlots, nightSlots, payRate });
+    if (totalSlots === 0 || !roleType) return;
+    onCreateSlots({ daySlots, nightSlots, payRate, roleType });
     setDaySlots(0);
     setNightSlots(0);
     setPayRate(0);
+    setRoleType('');
   };
 
   const resetForm = () => {
     setDaySlots(0);
     setNightSlots(0);
     setPayRate(0);
+    setRoleType('');
   };
 
   return (
@@ -57,7 +63,20 @@ const TemporarySlotsDialog: React.FC<TemporarySlotsDialogProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="roleType">Role Type</Label>
+              <Select value={roleType} onValueChange={setRoleType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLE_TYPES.map(role => (
+                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <AlertCircle className="h-4 w-4 text-amber-600" />
             <p className="text-sm text-amber-800">
@@ -110,6 +129,10 @@ const TemporarySlotsDialog: React.FC<TemporarySlotsDialogProps> = ({
                 <CardContent className="pt-4">
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
+                      <span>Role:</span>
+                      <span className="font-medium">{roleType}</span>
+                    </div>
+                    <div className="flex justify-between">
                       <span>Total Slots:</span>
                       <span className="font-medium">{totalSlots}</span>
                     </div>
@@ -135,9 +158,9 @@ const TemporarySlotsDialog: React.FC<TemporarySlotsDialogProps> = ({
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={totalSlots === 0 || payRate <= 0 || isLoading}
+            disabled={totalSlots === 0 || payRate <= 0 || !roleType || isLoading}
           >
-            {isLoading ? 'Creating...' : `Create ${totalSlots} Slot${totalSlots !== 1 ? 's' : ''}`}
+            {isLoading ? 'Creating...' : `Create ${totalSlots} ${roleType} Slot${totalSlots !== 1 ? 's' : ''}`}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -55,6 +55,7 @@ interface SlotData {
   isPendingSave: boolean;
   isTemporary?: boolean;
   temporaryPayRate?: number;
+  roleType?: string;
 }
 
 type FilterType = 'all' | 'present' | 'unmarked' | 'empty';
@@ -227,7 +228,8 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
         isPresent: !!attendanceRecord,
         isPendingSave: false,
         isTemporary: true,
-        temporaryPayRate: shift.temporary_pay_rate || 0
+        temporaryPayRate: shift.temporary_pay_rate || 0,
+        roleType: shift.role_type
       });
     });
 
@@ -279,7 +281,8 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
         isPresent: !!attendanceRecord,
         isPendingSave: false,
         isTemporary: true,
-        temporaryPayRate: shift.temporary_pay_rate || 0
+        temporaryPayRate: shift.temporary_pay_rate || 0,
+        roleType: shift.role_type
       });
     });
 
@@ -480,7 +483,7 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
 
   // Create temporary slots mutation
   const createTemporarySlotsMutation = useMutation({
-    mutationFn: async ({ daySlots: tempDaySlots, nightSlots: tempNightSlots, payRate }: { daySlots: number; nightSlots: number; payRate: number }) => {
+    mutationFn: async ({ daySlots: tempDaySlots, nightSlots: tempNightSlots, payRate, roleType }: { daySlots: number; nightSlots: number; payRate: number; roleType: string }) => {
       const tempShifts = [];
       
       // Create temporary day shifts
@@ -491,7 +494,8 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
           type: 'day' as const,
           is_temporary: true,
           temporary_pay_rate: payRate,
-          created_for_date: formattedDate
+          created_for_date: formattedDate,
+          role_type: roleType
         });
       }
       
@@ -503,7 +507,8 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
           type: 'night' as const,
           is_temporary: true,
           temporary_pay_rate: payRate,
-          created_for_date: formattedDate
+          created_for_date: formattedDate,
+          role_type: roleType
         });
       }
       
@@ -520,7 +525,7 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
     }
   });
 
-  const handleCreateTemporarySlots = (slotData: { daySlots: number; nightSlots: number; payRate: number }) => {
+  const handleCreateTemporarySlots = (slotData: { daySlots: number; nightSlots: number; payRate: number; roleType: string }) => {
     createTemporarySlotsMutation.mutate(slotData);
   };
 
@@ -874,10 +879,19 @@ const SlotCard: React.FC<SlotCardProps> = ({ slot, onAttendanceToggle, onOpenAss
       }`}>
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-1">
+          <div className="flex items-center gap-1">
             <div className="text-xs text-muted-foreground font-medium">Slot {slot.slotNumber}</div>
             {slot.isTemporary && (
-              <Badge variant="destructive" className="text-xs px-1 py-0">TEMP</Badge>
+              <>
+                <Badge variant="destructive" className="text-xs px-1 py-0">TEMP</Badge>
+                {slot.roleType && (
+                  <Badge variant="outline" className="text-xs px-1 py-0 border-red-300 text-red-700">
+                    {slot.roleType}
+                  </Badge>
+                )}
+              </>
             )}
+          </div>
           </div>
           <Users className="h-6 w-6 mx-auto opacity-50 text-muted-foreground" />
           <div className="text-xs text-muted-foreground">Empty</div>
@@ -949,8 +963,11 @@ const SlotCard: React.FC<SlotCardProps> = ({ slot, onAttendanceToggle, onOpenAss
         <div className="flex-1 min-w-0">
           <div className="font-medium text-sm truncate">{slot.guard.name}</div>
           <div className="text-xs text-muted-foreground">{slot.guard.badge_number}</div>
-          {slot.isTemporary && slot.temporaryPayRate && (
-            <div className="text-xs text-red-600 font-medium">₹{slot.temporaryPayRate}/slot</div>
+          {slot.isTemporary && (
+            <div className="text-xs text-red-600 font-medium">
+              {slot.temporaryPayRate && `₹${slot.temporaryPayRate}/slot`}
+              {slot.roleType && ` • ${slot.roleType}`}
+            </div>
           )}
         </div>
       </div>
