@@ -53,6 +53,8 @@ interface SlotData {
 type FilterType = 'all' | 'present' | 'unmarked' | 'empty';
 
 const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ preselectedSiteId }) => {
+  console.log('QuickAttendanceMarking component initializing');
+  
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedSite, setSelectedSite] = useState<string>('');
   const [slots, setSlots] = useState<SlotData[]>([]);
@@ -66,6 +68,7 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
   }>({ isOpen: false, slotId: '', currentGuardId: '', mode: 'assign' });
   const queryClient = useQueryClient();
 
+  console.log('slots state initialized:', slots);
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
 
   useEffect(() => {
