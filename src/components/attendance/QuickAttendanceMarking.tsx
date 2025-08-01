@@ -3,6 +3,7 @@ import { format, subDays } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { 
   Calendar as CalendarIcon, 
@@ -60,6 +61,7 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
   const [slots, setSlots] = useState<SlotData[]>([]);
   const [filter, setFilter] = useState<FilterType>('all');
   const [showBulkActions, setShowBulkActions] = useState(false);
+  const [guardSearchQuery, setGuardSearchQuery] = useState<string>('');
   const [replacementModal, setReplacementModal] = useState<{
     isOpen: boolean;
     slotId: string;
@@ -645,15 +647,28 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
                 {replacementModal.mode === 'assign' ? 'Select Guard to Assign' : 'Select Replacement Guard'}
               </Label>
               
-              {availableGuards.length === 0 ? (
+              <Input
+                placeholder="Search guards by name or badge number..."
+                value={guardSearchQuery}
+                onChange={(e) => setGuardSearchQuery(e.target.value)}
+                className="mb-2"
+              />
+              
+              {availableGuards.filter(guard => 
+                guard.name.toLowerCase().includes(guardSearchQuery.toLowerCase()) ||
+                guard.badge_number.toLowerCase().includes(guardSearchQuery.toLowerCase())
+              ).length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No available guards</p>
-                  <p className="text-sm">All guards are already assigned or inactive</p>
+                  <p>{guardSearchQuery ? 'No guards found' : 'No available guards'}</p>
+                  <p className="text-sm">{guardSearchQuery ? 'Try a different search term' : 'All guards are already assigned or inactive'}</p>
                 </div>
               ) : (
                 <div className="max-h-60 overflow-y-auto space-y-2">
-                  {availableGuards.map(guard => (
+                  {availableGuards.filter(guard => 
+                    guard.name.toLowerCase().includes(guardSearchQuery.toLowerCase()) ||
+                    guard.badge_number.toLowerCase().includes(guardSearchQuery.toLowerCase())
+                  ).map(guard => (
                     <div
                       key={guard.id}
                       className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
