@@ -23,7 +23,8 @@ import {
   type CreateGuardData,
   type CreatePaymentData
 } from '@/lib/guardsApi';
-import { ShiftTrackingCard } from '@/components/guards/ShiftTrackingCard';
+import { GuardOverviewCard } from '@/components/guards/GuardOverviewCard';
+import { GuardDetailView } from '@/components/guards/GuardDetailView';
 
 // Mapping functions between Supabase types and local types
 const mapSupabaseGuardToLocal = (supabaseGuard: SupabaseGuard): Guard => {
@@ -86,6 +87,7 @@ const Guards = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedGuardId, setSelectedGuardId] = useState<string | null>(null);
   const [guardType, setGuardType] = useState<'permanent' | 'contract'>('permanent');
+  const [selectedGuardForDetail, setSelectedGuardForDetail] = useState<SupabaseGuard | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -418,6 +420,18 @@ const Guards = () => {
     );
   }
 
+  // If a guard is selected for detail view, show that instead
+  if (selectedGuardForDetail) {
+    return (
+      <GuardDetailView
+        guard={selectedGuardForDetail}
+        onBack={() => setSelectedGuardForDetail(null)}
+        onEdit={handleEditGuard}
+        onPayment={handlePaymentDialog}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -433,146 +447,63 @@ const Guards = () => {
           Add Guard
         </Button>
       </div>
-      
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search by name, email or badge number..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
-        </div>
-        
-        <Tabs defaultValue="permanent" className="w-full md:w-auto" onValueChange={(v) => setGuardType(v as 'permanent' | 'contract')}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="permanent">Permanent</TabsTrigger>
-            <TabsTrigger value="contract">Contract</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredGuards.length === 0 ? (
-          <p className="col-span-full text-center py-10 text-muted-foreground">
-            No guards found. Try a different search term or add a new guard.
-          </p>
-        ) : (
-          filteredGuards.map(guard => {
-            const monthlyEarnings = getCurrentMonthEarnings(guard);
-            const shiftRate = guard.monthly_pay_rate ? calculateShiftRate(guard.monthly_pay_rate) : 0;
+
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">Guards Overview</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search by name, email or badge number..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
             
-            return (
-              <Card key={guard.id} className="overflow-hidden border border-border/60">
-                <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                  <div>
-                    <CardTitle className="text-base font-medium">{guard.name}</CardTitle>
-                    <Badge 
-                      variant={guard.guard_type === 'contract' ? 'outline' : 'default'}
-                      className={`mt-1 ${guard.guard_type === 'contract' ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500' : ''}`}
-                    >
-                      {guard.guard_type || 'Permanent'} Guard
-                    </Badge>
-                  </div>
-                  <Badge 
-                    variant={guard.status === 'active' ? 'default' : 'secondary'}
-                    className={`${guard.status === 'active' ? 'bg-success/80 hover:bg-success/70' : 'bg-muted text-muted-foreground'}`}
-                  >
-                    {guard.status === 'active' ? 'Active' : 'Inactive'}
-                  </Badge>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center text-sm">
-                      <Shield className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Badge:</span>
-                      <span className="font-medium ml-2">{guard.badge_number}</span>
-                    </div>
-                    
-                    <div className="flex items-center text-sm">
-                      <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{guard.phone_number}</span>
-                    </div>
-                    
-                    
-                    <div className="flex items-center text-sm">
-                      <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Monthly Rate:</span>
-                      <span className="font-medium ml-2">{formatCurrency(guard.monthly_pay_rate || 0)}</span>
-                    </div>
-                    
-                    <div className="flex items-center text-sm">
-                      <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Shift Rate:</span>
-                      <span className="font-medium ml-2">{formatCurrency(shiftRate)}</span>
-                    </div>
-                    
-                    {/* Shift Tracking Component */}
-                    <div className="pt-3 border-t">
-                      <ShiftTrackingCard 
-                        guardId={guard.id}
-                        guardName={guard.name}
-                        currentMonth={currentMonth}
-                      />
-                    </div>
-                    
-                    <div className="pt-3 border-t">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium">Monthly Payment Summary</span>
-                        <Badge variant="outline" className="text-xs">
-                          {format(new Date(currentMonth + '-01'), 'MMMM yyyy')}
-                        </Badge>
-                      </div>
-                      
-                      <div className="space-y-1 mt-2 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Base salary:</span>
-                          <span>{formatCurrency(monthlyEarnings.baseSalary)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground flex items-center">
-                            <Plus className="h-3 w-3 mr-1 text-green-500" />
-                            Bonuses:
-                          </span>
-                          <span className="text-green-500">+{formatCurrency(monthlyEarnings.bonuses)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground flex items-center">
-                            <Minus className="h-3 w-3 mr-1 text-red-500" />
-                            Deductions:
-                          </span>
-                          <span className="text-red-500">-{formatCurrency(monthlyEarnings.deductions)}</span>
-                        </div>
-                        <div className="flex justify-between pt-1 border-t font-medium">
-                          <span>Net Total:</span>
-                          <span>{formatCurrency(monthlyEarnings.netAmount)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-end gap-2 pt-4">
-                      <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => handlePaymentDialog(guard)}>
-                        <DollarSign className="h-3.5 w-3.5 mr-1" />
-                        Record Payment
-                      </Button>
-                      <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => handleEditGuard(guard)}>
-                        <Edit className="h-3.5 w-3.5 mr-1" />
-                        Edit
-                      </Button>
-                      <Button variant="outline" size="sm" className="h-8 px-2 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30" onClick={() => handleDeleteClick(guard.id)}>
-                        <Trash className="h-3.5 w-3.5 mr-1" />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
-      </div>
+            <Tabs defaultValue="permanent" className="w-full md:w-auto" onValueChange={(v) => setGuardType(v as 'permanent' | 'contract')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="permanent">Permanent</TabsTrigger>
+                <TabsTrigger value="contract">Contract</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Month:</span>
+              <span className="font-medium">{format(new Date(currentMonth + '-01'), 'MMM yyyy')}</span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredGuards.length === 0 ? (
+              <p className="col-span-full text-center py-10 text-muted-foreground">
+                No guards found. Try a different search term or add a new guard.
+              </p>
+            ) : (
+              filteredGuards.map(guard => {
+                const monthlyEarnings = getCurrentMonthEarnings(guard);
+            
+                return (
+                  <GuardOverviewCard
+                    key={guard.id}
+                    guard={guard}
+                    monthlyEarnings={monthlyEarnings}
+                    onEdit={handleEditGuard}
+                    onDelete={handleDeleteClick}
+                    onPayment={handlePaymentDialog}
+                    onViewDetails={setSelectedGuardForDetail}
+                  />
+                );
+              })
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
