@@ -152,11 +152,19 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
         // Convert to our Site format for invoice calculation
         const site = convertSiteToInvoiceFormat(siteData);
         
+        const companyData = showInvoiceOptions ? {
+          company_name: customInvoiceData.companyName,
+          gst_number: customInvoiceData.companyGst
+        } : {
+          company_name: companySettings.company_name,
+          gst_number: companySettings.gst_number
+        };
+
         const invoiceData = calculateInvoiceFromSite(
           site, 
           periodFrom, 
           periodTo, 
-          showInvoiceOptions ? customInvoiceData.companyName : companySettings.company_name
+          companyData
         );
         
         // Add company details to invoice

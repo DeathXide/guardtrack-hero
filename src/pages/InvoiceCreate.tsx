@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { fetchSites } from '@/lib/localService';
 import { createInvoice } from '@/lib/invoiceData';
 import { calculateInvoiceFromSite, formatCurrency } from '@/lib/invoiceUtils';
+import { companyApi } from '@/lib/companyApi';
 import { Site } from '@/types';
 import { InvoiceFormData } from '@/types/invoice';
 import { toast } from 'sonner';
@@ -20,10 +21,12 @@ export default function InvoiceCreate() {
   const navigate = useNavigate();
   const [sites, setSites] = useState<Site[]>([]);
   const [selectedSite, setSelectedSite] = useState<Site | null>(null);
-  const [formData, setFormData] = useState<InvoiceFormData>({
+  const [companySettings, setCompanySettings] = useState<any>(null);
+  const [formData, setFormData] = useState<InvoiceFormData & { invoiceDate?: string }>({
     siteId: '',
     periodFrom: '',
     periodTo: '',
+    invoiceDate: new Date().toISOString().split('T')[0],
     notes: ''
   });
   const [preview, setPreview] = useState<any>(null);
@@ -31,6 +34,7 @@ export default function InvoiceCreate() {
 
   useEffect(() => {
     loadSites();
+    loadCompanySettings();
     // Set default period to current month
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -53,13 +57,23 @@ export default function InvoiceCreate() {
     }
   };
 
+  const loadCompanySettings = async () => {
+    try {
+      const data = await companyApi.getCompanySettings();
+      setCompanySettings(data);
+    } catch (error) {
+      console.error('Error loading company settings:', error);
+      toast.error('Failed to load company settings');
+    }
+  };
+
   const handleSiteChange = (siteId: string) => {
     const site = sites.find(s => s.id === siteId);
     setSelectedSite(site || null);
     setFormData(prev => ({ ...prev, siteId }));
     
     if (site && formData.periodFrom && formData.periodTo) {
-      generatePreview(site, formData.periodFrom, formData.periodTo);
+      generatePreview(site, formData.periodFrom, formData.periodTo, formData.invoiceDate);
     }
   };
 
@@ -68,17 +82,26 @@ export default function InvoiceCreate() {
     setFormData(newFormData);
     
     if (selectedSite && newFormData.periodFrom && newFormData.periodTo) {
-      generatePreview(selectedSite, newFormData.periodFrom, newFormData.periodTo);
+      generatePreview(selectedSite, newFormData.periodFrom, newFormData.periodTo, newFormData.invoiceDate);
     }
   };
 
-  const generatePreview = (site: Site, periodFrom: string, periodTo: string) => {
+  const generatePreview = (site: Site, periodFrom: string, periodTo: string, invoiceDate?: string) => {
     try {
-      const invoiceData = calculateInvoiceFromSite(site, periodFrom, periodTo);
+      const invoiceData = calculateInvoiceFromSite(site, periodFrom, periodTo, companySettings, invoiceDate);
       setPreview(invoiceData);
     } catch (error) {
       console.error('Error generating preview:', error);
       toast.error('Failed to generate invoice preview');
+    }
+  };
+
+  const handleInvoiceDateChange = (value: string) => {
+    const newFormData = { ...formData, invoiceDate: value };
+    setFormData(newFormData);
+    
+    if (selectedSite && newFormData.periodFrom && newFormData.periodTo) {
+      generatePreview(selectedSite, newFormData.periodFrom, newFormData.periodTo, value);
     }
   };
 
@@ -178,6 +201,16 @@ export default function InvoiceCreate() {
                 </div>
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label htmlFor="invoiceDate">Invoice Date *</Label>
+              <Input
+                id="invoiceDate"
+                type="date"
+                value={formData.invoiceDate}
+                onChange={(e) => handleInvoiceDateChange(e.target.value)}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
