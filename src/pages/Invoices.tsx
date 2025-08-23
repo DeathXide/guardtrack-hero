@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import AutoGenerateInvoices from '@/components/invoices/AutoGenerateInvoices';
-import { fetchInvoicesFromDB, deleteInvoiceFromDB } from '@/lib/supabaseInvoiceApiNew';
+import { fetchInvoicesFromDB, deleteInvoiceFromDB, updateInvoiceInDB } from '@/lib/supabaseInvoiceApiNew';
 import { formatCurrency } from '@/lib/invoiceUtils';
 import { Invoice } from '@/types/invoice';
 import { useNavigate } from 'react-router-dom';
@@ -47,6 +47,25 @@ export default function Invoices() {
     } catch (error) {
       console.error('Error deleting invoice:', error);
       toast.error('Failed to delete invoice');
+    }
+  };
+
+  const handleStatusUpdate = async (id: string, newStatus: string) => {
+    try {
+      const validStatuses = ['draft', 'sent', 'paid', 'overdue'];
+      if (!validStatuses.includes(newStatus)) {
+        toast.error('Invalid status');
+        return;
+      }
+      
+      await updateInvoiceInDB(id, { status: newStatus as 'draft' | 'sent' | 'paid' | 'overdue' });
+      setInvoices(invoices.map(inv => 
+        inv.id === id ? { ...inv, status: newStatus as 'draft' | 'sent' | 'paid' | 'overdue' } : inv
+      ));
+      toast.success('Status updated successfully');
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error('Failed to update status');
     }
   };
 
@@ -220,9 +239,20 @@ export default function Invoices() {
                   </TableCell>
                   <TableCell>{formatCurrency(invoice.totalAmount)}</TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(invoice.status)}>
-                      {invoice.status.toUpperCase()}
-                    </Badge>
+                    <Select 
+                      value={invoice.status} 
+                      onValueChange={(newStatus) => handleStatusUpdate(invoice.id, newStatus)}
+                    >
+                      <SelectTrigger className="w-24 h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="sent">Sent</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                        <SelectItem value="overdue">Overdue</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
