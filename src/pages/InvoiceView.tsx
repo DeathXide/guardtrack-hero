@@ -176,7 +176,7 @@ export default function InvoiceView() {
         {/* Invoice Content */}
         <div className="lg:col-span-2">
           <Card className="border border-border shadow-sm">
-            <CardContent id="invoice-content" className="p-0 font-sans bg-white print:bg-white print:p-5 print:m-0 print:shadow-none print:border print:border-gray-300 max-w-[210mm] mx-auto border border-gray-200">
+            <CardContent id="invoice-content" className="p-0 font-sans bg-white w-[210mm] mx-auto border border-border box-border">
               {/* Header */}
               <div className="bg-gradient-to-r from-slate-50 to-gray-50 p-8 mb-8">
                 <div className="flex justify-between items-start">

@@ -35,6 +35,10 @@ export const generatePDF = async (elementId: string, filename: string) => {
       allowTaint: true,
       width: element.scrollWidth,
       height: element.scrollHeight,
+      windowWidth: element.scrollWidth,
+      windowHeight: element.scrollHeight,
+      scrollX: 0,
+      scrollY: 0,
       backgroundColor: '#ffffff'
     });
 
@@ -44,7 +48,7 @@ export const generatePDF = async (elementId: string, filename: string) => {
     // A4 dimensions in mm
     const a4Width = 210;
     const a4Height = 297;
-    const margin = 10; // 10mm margins on all sides
+    const margin = 8; // 8mm margins on all sides
     const contentWidth = a4Width - (2 * margin);
     const contentHeight = a4Height - (2 * margin);
 
@@ -54,10 +58,10 @@ export const generatePDF = async (elementId: string, filename: string) => {
     const imgWidth = canvas.width;
     const imgHeight = canvas.height;
     
-    // Calculate scaling to fit within content area with margins
+    // Calculate scaling to fit within content area with margins (safe factor to avoid clipping)
     const scaleX = contentWidth / (imgWidth / 2); // Divide by 2 because of scale: 2
     const scaleY = contentHeight / (imgHeight / 2);
-    const scale = Math.min(scaleX, scaleY);
+    const scale = Math.min(scaleX, scaleY) * 0.98;
     
     const scaledWidth = (imgWidth / 2) * scale;
     const scaledHeight = (imgHeight / 2) * scale;
