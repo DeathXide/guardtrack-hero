@@ -82,34 +82,22 @@ export function calculateInvoiceFromSite(
   const lineItems: InvoiceLineItem[] = [];
   let subtotal = 0;
 
-  // Calculate line items from staffing slots
+  // Calculate line items from staffing slots - combine day and night for same role
   site.staffingSlots?.forEach((slot: StaffingSlot) => {
-    if (slot.daySlots > 0) {
-      const dayLineTotal = slot.daySlots * slot.budgetPerSlot;
+    const totalSlots = slot.daySlots + slot.nightSlots;
+    
+    if (totalSlots > 0) {
+      const lineTotal = totalSlots * slot.budgetPerSlot;
       lineItems.push({
-        id: `${slot.id}-day`,
+        id: slot.id,
         role: slot.role,
-        shiftType: 'day',
-        quantity: slot.daySlots,
+        shiftType: 'day', // Not relevant anymore since we're combining
+        quantity: totalSlots,
         ratePerSlot: slot.budgetPerSlot,
-        lineTotal: dayLineTotal,
-        description: `${slot.role} - Day Shift`
+        lineTotal: lineTotal,
+        description: `${slot.role} (${slot.daySlots} Day + ${slot.nightSlots} Night slots)`
       });
-      subtotal += dayLineTotal;
-    }
-
-    if (slot.nightSlots > 0) {
-      const nightLineTotal = slot.nightSlots * slot.budgetPerSlot;
-      lineItems.push({
-        id: `${slot.id}-night`,
-        role: slot.role,
-        shiftType: 'night',
-        quantity: slot.nightSlots,
-        ratePerSlot: slot.budgetPerSlot,
-        lineTotal: nightLineTotal,
-        description: `${slot.role} - Night Shift`
-      });
-      subtotal += nightLineTotal;
+      subtotal += lineTotal;
     }
   });
 
