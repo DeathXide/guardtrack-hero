@@ -175,196 +175,218 @@ export default function InvoiceView() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Invoice Content */}
         <div className="lg:col-span-2">
-          <Card>
-            <CardContent id="invoice-content" className="p-8 font-sans bg-white print:bg-white">
+          <Card className="border-0 shadow-sm">
+            <CardContent id="invoice-content" className="p-0 font-sans bg-white print:bg-white">
               {/* Header */}
-              <div className="grid grid-cols-2 gap-8 mb-6 pb-4 border-b border-gray-200">
-                <div>
-                  <h2 className="text-2xl font-bold mb-1 text-gray-900">{companySettings?.company_name || invoice.companyName}</h2>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    {(companySettings?.gst_number || invoice.companyGst) && <p>GST: {companySettings?.gst_number || invoice.companyGst}</p>}
-                    {companySettings?.company_phone && <p>Phone: {companySettings.company_phone}</p>}
-                    {companySettings?.company_email && <p>Email: {companySettings.company_email}</p>}
+              <div className="bg-gradient-to-r from-slate-50 to-gray-50 p-8 mb-8">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-3">
+                    <h1 className="text-3xl font-light text-foreground tracking-wide">{companySettings?.company_name || invoice.companyName}</h1>
+                    <div className="text-sm text-muted-foreground space-y-1 font-mono">
+                      {(companySettings?.gst_number || invoice.companyGst) && <p>GST: {companySettings?.gst_number || invoice.companyGst}</p>}
+                      <div className="flex flex-wrap gap-4 text-xs">
+                        {companySettings?.company_phone && <span>📞 {companySettings.company_phone}</span>}
+                        {companySettings?.company_email && <span>✉ {companySettings.company_email}</span>}
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">INVOICE</h3>
-                  <div className="text-sm space-y-1">
-                    <p><span className="font-medium">Invoice No:</span> {invoice.invoiceNumber}</p>
-                    <p><span className="font-medium">Date:</span> {new Date(invoice.invoiceDate).toLocaleDateString()}</p>
+                  <div className="bg-white border border-border rounded-lg p-4 shadow-sm">
+                    <h2 className="text-lg font-medium text-foreground mb-3">INVOICE</h2>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between items-center gap-8">
+                        <span className="text-muted-foreground">Number:</span>
+                        <span className="font-mono font-medium">{invoice.invoiceNumber}</span>
+                      </div>
+                      <div className="flex justify-between items-center gap-8">
+                        <span className="text-muted-foreground">Date:</span>
+                        <span className="font-mono">{new Date(invoice.invoiceDate).toLocaleDateString()}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Client Info Section */}
-              <div className="grid grid-cols-2 gap-8 mb-6">
-                <div>
-                  <h4 className="font-bold text-gray-900 mb-2">Bill To:</h4>
-                  <div className="text-sm text-gray-700">
-                    <p className="font-medium text-gray-900">{invoice.siteName}</p>
-                    <p>{invoice.clientAddress.split(', ').filter(Boolean).join(', ')}</p>
-                    {invoice.siteGst && <p className="mt-1"><span className="font-medium">GST No:</span> {invoice.siteGst}</p>}
+              {/* Client Info */}
+              <div className="px-8 mb-8">
+                <div className="bg-accent/50 rounded-lg p-4 max-w-md">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">BILL TO</h3>
+                  <div className="space-y-1">
+                    <p className="font-medium text-foreground">{invoice.siteName}</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{invoice.clientAddress.split(', ').filter(Boolean).join(', ')}</p>
+                    {invoice.siteGst && <p className="text-xs text-muted-foreground font-mono mt-2">GST: {invoice.siteGst}</p>}
                   </div>
                 </div>
-                
               </div>
 
               {/* Line Items */}
-              <div className="mb-6">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50 border-b border-gray-200">
-                      <TableHead className="text-center w-16 font-bold text-gray-900">S.No</TableHead>
-                      <TableHead className="font-bold text-gray-900">Description</TableHead>
-                      <TableHead className="text-center font-bold text-gray-900">W.E.F</TableHead>
-                      <TableHead className="text-center font-bold text-gray-900">Quantity</TableHead>
-                      <TableHead className="text-center font-bold text-gray-900">Man Days</TableHead>
-                      <TableHead className="text-right font-bold text-gray-900">Rate</TableHead>
-                      <TableHead className="text-right font-bold text-gray-900">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoice.lineItems.map((item, index) => {
-                    // Calculate days in the billing period
-                    const fromDate = new Date(invoice.periodFrom);
-                    const toDate = new Date(invoice.periodTo);
-                    const timeDiff = toDate.getTime() - fromDate.getTime();
-                    const daysInPeriod = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
-                    const manDays = daysInPeriod * item.quantity;
-                    return <TableRow key={item.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
-                          <TableCell className="text-center text-sm">{index + 1}</TableCell>
-                          <TableCell className="text-sm">{item.description}</TableCell>
-                          <TableCell className="text-center text-xs text-gray-600">
-                            {new Date(invoice.periodFrom).toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric'
-                        })} to {new Date(invoice.periodTo).toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric'
-                        })}
-                          </TableCell>
-                          <TableCell className="text-center text-sm">{item.quantity}</TableCell>
-                          <TableCell className="text-center text-sm">{manDays}</TableCell>
-                          <TableCell className="text-right text-sm font-medium">{formatCurrency(item.ratePerSlot)}</TableCell>
-                          <TableCell className="text-right text-sm font-medium">{formatCurrency(item.lineTotal)}</TableCell>
-                        </TableRow>;
-                  })}
-                  </TableBody>
-                </Table>
+              <div className="px-8 mb-8">
+                <div className="overflow-hidden rounded-lg border border-border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50 hover:bg-muted/50">
+                        <TableHead className="text-center w-12 font-medium text-xs">No.</TableHead>
+                        <TableHead className="font-medium text-xs min-w-[200px]">Description</TableHead>
+                        <TableHead className="text-center font-medium text-xs w-24">Period</TableHead>
+                        <TableHead className="text-center font-medium text-xs w-16">Qty</TableHead>
+                        <TableHead className="text-center font-medium text-xs w-20">Days</TableHead>
+                        <TableHead className="text-right font-medium text-xs w-24">Rate</TableHead>
+                        <TableHead className="text-right font-medium text-xs w-28">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {invoice.lineItems.map((item, index) => {
+                        const fromDate = new Date(invoice.periodFrom);
+                        const toDate = new Date(invoice.periodTo);
+                        const timeDiff = toDate.getTime() - fromDate.getTime();
+                        const daysInPeriod = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+                        const manDays = daysInPeriod * item.quantity;
+                        return (
+                          <TableRow key={item.id} className={index % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+                            <TableCell className="text-center text-sm text-muted-foreground">{index + 1}</TableCell>
+                            <TableCell className="text-sm font-medium">{item.description}</TableCell>
+                            <TableCell className="text-center text-xs text-muted-foreground font-mono">
+                              {new Date(invoice.periodFrom).toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: '2-digit'
+                              })} - {new Date(invoice.periodTo).toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: '2-digit'
+                              })}
+                            </TableCell>
+                            <TableCell className="text-center text-sm font-medium">{item.quantity}</TableCell>
+                            <TableCell className="text-center text-sm font-medium">{manDays}</TableCell>
+                            <TableCell className="text-right text-sm font-mono">{formatCurrency(item.ratePerSlot)}</TableCell>
+                            <TableCell className="text-right text-sm font-mono font-semibold">{formatCurrency(item.lineTotal)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
 
               {/* Totals */}
-              <div className="border-t border-gray-200 pt-4">
-                <div className={`flex ${invoice.gstType === 'RCM' ? 'justify-between items-start gap-6' : 'justify-end'}`}>
-                  {/* RCM Notice - Left Side */}
-                  {invoice.gstType === 'RCM' && <div className="flex-1 max-w-md">
-                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <div className="font-bold text-yellow-800 mb-2 text-sm">REVERSE CHARGE MECHANISM ON SECURITY SERVICES</div>
-                        <div className="text-xs text-yellow-700 mb-2">
-                          AS PER NOTIFICATION NO.29/2018 –UNION TERRITORY TAX (RATE) W.E.F 01/01/2019
+              <div className="px-8 mb-8">
+                <div className={`flex ${invoice.gstType === 'RCM' ? 'justify-between items-start gap-8' : 'justify-end'}`}>
+                  {/* RCM Notice - Subtle Design */}
+                  {invoice.gstType === 'RCM' && (
+                    <div className="flex-1 max-w-sm">
+                      <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4">
+                        <div className="flex items-start gap-2 mb-2">
+                          <div className="w-1 h-4 bg-blue-400 rounded-full mt-0.5 flex-shrink-0"></div>
+                          <div>
+                            <p className="text-xs font-medium text-blue-900 leading-tight">Reverse Charge Mechanism</p>
+                            <p className="text-xs text-blue-700 mt-1">Security Services - Notification No.29/2018</p>
+                          </div>
                         </div>
-                        <p className="text-xs text-yellow-800">
-                          <strong>Note:</strong> The recipient is liable to pay CGST ({(invoice.cgstRate || 0).toFixed(1)}%) and SGST ({(invoice.sgstRate || 0).toFixed(1)}%) 
-                          totaling {formatCurrency(invoice.subtotal * (invoice.cgstRate || 0) / 100 + invoice.subtotal * (invoice.sgstRate || 0) / 100)} directly to the government.
+                        <p className="text-xs text-blue-800 leading-relaxed">
+                          Recipient liable for CGST ({(invoice.cgstRate || 0).toFixed(1)}%) & SGST ({(invoice.sgstRate || 0).toFixed(1)}%) 
+                          totaling {formatCurrency(invoice.subtotal * (invoice.cgstRate || 0) / 100 + invoice.subtotal * (invoice.sgstRate || 0) / 100)}
                         </p>
                       </div>
-                    </div>}
+                    </div>
+                  )}
                   
-                  {/* Totals Section - Right Side */}
-                  <div className="w-80 space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Subtotal:</span>
-                      <span className="font-medium">{formatCurrency(invoice.subtotal)}</span>
-                    </div>
-                    
-                    {/* GST Breakdown */}
-                    {invoice.gstType === 'GST' && <>
-                        <div className="flex justify-between text-xs text-gray-600">
-                          <span>CGST ({(invoice.cgstRate || 0).toFixed(1)}%):</span>
-                          <span className="font-medium">{formatCurrency(invoice.cgstAmount || 0)}</span>
-                        </div>
-                        <div className="flex justify-between text-xs text-gray-600">
-                          <span>SGST ({(invoice.sgstRate || 0).toFixed(1)}%):</span>
-                          <span className="font-medium">{formatCurrency(invoice.sgstAmount || 0)}</span>
-                        </div>
-                      </>}
-                    
-                    {invoice.gstType === 'IGST' && <div className="flex justify-between text-xs text-gray-600">
-                        <span>IGST ({(invoice.igstRate || 0).toFixed(1)}%):</span>
-                        <span className="font-medium">{formatCurrency(invoice.igstAmount || 0)}</span>
-                      </div>}
-                    
-                    {invoice.gstType === 'RCM' && <>
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mt-1">
-                          <div className="text-xs font-medium text-yellow-800 mb-1">Tax Payable by Recipient:</div>
-                          <div className="flex justify-between text-xs text-yellow-700">
-                            <span>CGST ({(invoice.cgstRate || 0).toFixed(1)}%):</span>
-                            <span className="font-medium">{formatCurrency(invoice.subtotal * (invoice.cgstRate || 0) / 100)}</span>
-                          </div>
-                          <div className="flex justify-between text-xs text-yellow-700">
-                            <span>SGST ({(invoice.sgstRate || 0).toFixed(1)}%):</span>
-                            <span className="font-medium">{formatCurrency(invoice.subtotal * (invoice.sgstRate || 0) / 100)}</span>
-                          </div>
-                        </div>
-                      </>}
-                    
-                    {(invoice.gstType === 'NGST' || invoice.gstType === 'PERSONAL') && <div className="flex justify-between text-xs text-gray-600">
-                        <span>GST ({(invoice.gstRate || 0).toFixed(1)}%):</span>
-                        <span className="font-medium">{formatCurrency(invoice.gstAmount || 0)}</span>
-                      </div>}
-                    
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
-                      <div className="flex justify-between font-bold text-lg text-blue-900">
-                        <span>Total Amount:</span>
-                        <span>{formatCurrency(invoice.totalAmount || 0)}</span>
+                  {/* Totals Section */}
+                  <div className="w-72">
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between py-2">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span className="font-mono font-medium">{formatCurrency(invoice.subtotal)}</span>
                       </div>
-                    </div>
-                    
-                    <div className="mt-3 pt-2 border-t border-gray-200">
-                      <p className="text-xs font-medium text-gray-700">
-                        Amount in Words: <span className="font-normal">{numberToWords(invoice.totalAmount || 0)}</span>
-                      </p>
+                      
+                      {/* GST Breakdown */}
+                      {invoice.gstType === 'GST' && (
+                        <div className="space-y-1 border-l-2 border-muted pl-3">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">CGST ({(invoice.cgstRate || 0).toFixed(1)}%)</span>
+                            <span className="font-mono">{formatCurrency(invoice.cgstAmount || 0)}</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">SGST ({(invoice.sgstRate || 0).toFixed(1)}%)</span>
+                            <span className="font-mono">{formatCurrency(invoice.sgstAmount || 0)}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {invoice.gstType === 'IGST' && (
+                        <div className="flex justify-between text-xs border-l-2 border-muted pl-3">
+                          <span className="text-muted-foreground">IGST ({(invoice.igstRate || 0).toFixed(1)}%)</span>
+                          <span className="font-mono">{formatCurrency(invoice.igstAmount || 0)}</span>
+                        </div>
+                      )}
+                      
+                      {invoice.gstType === 'RCM' && (
+                        <div className="bg-blue-50/30 border border-blue-100 rounded p-2">
+                          <div className="text-xs text-blue-900 font-medium mb-1">Tax Payable by Recipient</div>
+                          <div className="space-y-0.5 text-xs">
+                            <div className="flex justify-between text-blue-800">
+                              <span>CGST ({(invoice.cgstRate || 0).toFixed(1)}%)</span>
+                              <span className="font-mono">{formatCurrency(invoice.subtotal * (invoice.cgstRate || 0) / 100)}</span>
+                            </div>
+                            <div className="flex justify-between text-blue-800">
+                              <span>SGST ({(invoice.sgstRate || 0).toFixed(1)}%)</span>
+                              <span className="font-mono">{formatCurrency(invoice.subtotal * (invoice.sgstRate || 0) / 100)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {(invoice.gstType === 'NGST' || invoice.gstType === 'PERSONAL') && (
+                        <div className="flex justify-between text-xs border-l-2 border-muted pl-3">
+                          <span className="text-muted-foreground">GST ({(invoice.gstRate || 0).toFixed(1)}%)</span>
+                          <span className="font-mono">{formatCurrency(invoice.gstAmount || 0)}</span>
+                        </div>
+                      )}
+                      
+                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mt-4">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-primary">Total Amount</span>
+                          <span className="text-xl font-mono font-bold text-primary">{formatCurrency(invoice.totalAmount || 0)}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-3 border-t border-border">
+                        <p className="text-xs text-muted-foreground font-medium">
+                          Amount in Words: <span className="font-normal italic">{numberToWords(invoice.totalAmount || 0)}</span>
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Notes */}
-              {invoice.notes && <div className="mt-8 pt-4 border-t">
-                  <h4 className="font-semibold mb-2">Notes:</h4>
-                  <p className="text-muted-foreground">{invoice.notes}</p>
-                </div>}
-
-              {/* Authorized Signatory */}
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <div className="flex justify-between items-end">
-                  
-                  <div className="text-right">
-                    <div className="space-y-6">
-                      {companySettings?.company_seal_image_url ? <img src={companySettings.company_seal_image_url} alt="Company Seal" className="h-12 w-32 object-contain" /> : <div className="h-12 w-32"></div>}
-                      <div>
-                        <p className="font-medium text-gray-900">For {invoice.companyName}</p>
-                        <p className="text-sm text-gray-600 mt-1">Authorized Signatory</p>
-                      </div>
-                    </div>
+              {invoice.notes && (
+                <div className="px-8 mb-8">
+                  <div className="bg-accent/30 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Notes</h4>
+                    <p className="text-sm text-foreground leading-relaxed">{invoice.notes}</p>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Footer */}
-              <div className="mt-6 pt-4 border-t border-gray-200 text-center">
-                <div className="text-xs text-gray-500 space-y-1">
-                  <p>Thank you for your business!</p>
-                  {companySettings?.company_address_line1 && <p>{[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}</p>}
-                  <p>
-                    {companySettings?.company_phone && `Phone: ${companySettings.company_phone}`}
-                    {companySettings?.company_phone && companySettings?.company_email && ' | '}
-                    {companySettings?.company_email && `Email: ${companySettings.company_email}`}
-                    {(companySettings?.company_phone || companySettings?.company_email) && companySettings?.company_website && ' | '}
-                    {companySettings?.company_website && `Website: ${companySettings.company_website}`}
-                  </p>
+              {/* Authorized Signatory */}
+              <div className="px-8 py-6 border-t border-border bg-accent/20">
+                <div className="flex justify-between items-end">
+                  <div className="text-xs text-muted-foreground">
+                    <p className="mb-1">Thank you for your business!</p>
+                    {companySettings?.company_address_line1 && (
+                      <p>{[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}</p>
+                    )}
+                  </div>
+                  
+                  <div className="text-right space-y-4">
+                    <div className="h-12 w-32 flex items-end justify-end">
+                      {companySettings?.company_seal_image_url && (
+                        <img src={companySettings.company_seal_image_url} alt="Company Seal" className="h-10 w-auto object-contain opacity-80" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">For {invoice.companyName}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Authorized Signatory</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
