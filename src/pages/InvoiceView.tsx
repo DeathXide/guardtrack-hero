@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getInvoiceById, updateInvoice } from '@/lib/invoiceData';
 import { formatCurrency } from '@/lib/invoiceUtils';
 import { generatePDF } from '@/lib/pdfUtils';
+import { numberToWords } from '@/lib/numberToWords';
 import { Invoice } from '@/types/invoice';
 import { toast } from 'sonner';
 
@@ -202,6 +203,7 @@ export default function InvoiceView() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="text-center w-16">S.No</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead className="text-center">W.E.F</TableHead>
                       <TableHead className="text-center">Quantity</TableHead>
@@ -211,7 +213,7 @@ export default function InvoiceView() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoice.lineItems.map((item) => {
+                    {invoice.lineItems.map((item, index) => {
                       // Calculate days in the billing period
                       const fromDate = new Date(invoice.periodFrom);
                       const toDate = new Date(invoice.periodTo);
@@ -221,6 +223,7 @@ export default function InvoiceView() {
 
                       return (
                         <TableRow key={item.id}>
+                          <TableCell className="text-center">{index + 1}</TableCell>
                           <TableCell>{item.description}</TableCell>
                           <TableCell className="text-center text-sm">
                             {new Date(invoice.periodFrom).toLocaleDateString('en-GB', {
@@ -297,6 +300,12 @@ export default function InvoiceView() {
                     <div className="flex justify-between font-bold text-lg border-t pt-2">
                       <span>Total Amount:</span>
                       <span>{formatCurrency(invoice.totalAmount || 0)}</span>
+                    </div>
+                    
+                    <div className="mt-2 pt-2 border-t">
+                      <p className="text-sm font-medium">
+                        Amount in Words: <span className="font-normal">{numberToWords(invoice.totalAmount || 0)}</span>
+                      </p>
                     </div>
                   </div>
                 </div>
