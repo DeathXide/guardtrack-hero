@@ -23,6 +23,7 @@ import {
   type CreateGuardData,
   type CreatePaymentData
 } from '@/lib/guardsApi';
+import { ShiftTrackingCard } from '@/components/guards/ShiftTrackingCard';
 
 // Mapping functions between Supabase types and local types
 const mapSupabaseGuardToLocal = (supabaseGuard: SupabaseGuard): Guard => {
@@ -508,9 +509,18 @@ const Guards = () => {
                       <span className="font-medium ml-2">{formatCurrency(shiftRate)}</span>
                     </div>
                     
+                    {/* Shift Tracking Component */}
+                    <div className="pt-3 border-t">
+                      <ShiftTrackingCard 
+                        guardId={guard.id}
+                        guardName={guard.name}
+                        currentMonth={currentMonth}
+                      />
+                    </div>
+                    
                     <div className="pt-3 border-t">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium">Current Month Summary</span>
+                        <span className="text-sm font-medium">Monthly Payment Summary</span>
                         <Badge variant="outline" className="text-xs">
                           {format(new Date(currentMonth + '-01'), 'MMMM yyyy')}
                         </Badge>
@@ -518,13 +528,7 @@ const Guards = () => {
                       
                       <div className="space-y-1 mt-2 text-xs">
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground flex items-center">
-                            <span>Shifts worked:</span>
-                          </span>
-                          <span>{monthlyEarnings.totalShifts} shifts</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Salary earned:</span>
+                          <span className="text-muted-foreground">Base salary:</span>
                           <span>{formatCurrency(monthlyEarnings.baseSalary)}</span>
                         </div>
                         <div className="flex justify-between">
