@@ -62,9 +62,9 @@ export const generatePDF = async (elementId: string, filename: string) => {
     const scaledWidth = (imgWidth / 2) * scale;
     const scaledHeight = (imgHeight / 2) * scale;
     
-    // Center the content within margins
+    // Position at top with margins, center horizontally only
     const x = margin + (contentWidth - scaledWidth) / 2;
-    const y = margin + (contentHeight - scaledHeight) / 2;
+    const y = margin; // Start from top margin instead of centering vertically
 
     pdf.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight);
     pdf.save(filename);
