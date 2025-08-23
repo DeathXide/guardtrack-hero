@@ -128,11 +128,29 @@ export function saveInvoices(invoices: Invoice[]): void {
 export function createInvoice(invoice: Omit<Invoice, 'id' | 'created_at'>): Invoice {
   const newInvoice: Invoice = {
     ...invoice,
-    id: Date.now().toString(),
-    created_at: new Date().toISOString()
+    id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9), // More unique ID
+    created_at: new Date().toISOString(),
+    // Ensure all GST fields have valid numbers
+    gstRate: Number(invoice.gstRate) || 0,
+    gstAmount: Number(invoice.gstAmount) || 0,
+    cgstRate: Number(invoice.cgstRate) || 0,
+    cgstAmount: Number(invoice.cgstAmount) || 0,
+    sgstRate: Number(invoice.sgstRate) || 0,
+    sgstAmount: Number(invoice.sgstAmount) || 0,
+    igstRate: Number(invoice.igstRate) || 0,
+    igstAmount: Number(invoice.igstAmount) || 0,
+    totalAmount: Number(invoice.totalAmount) || 0
   };
 
   const invoices = getInvoices();
+  
+  // Check for duplicates and prevent adding if already exists
+  const existingInvoice = invoices.find(inv => inv.id === newInvoice.id);
+  if (existingInvoice) {
+    console.warn('Invoice with this ID already exists:', newInvoice.id);
+    return existingInvoice;
+  }
+  
   invoices.unshift(newInvoice);
   saveInvoices(invoices);
 

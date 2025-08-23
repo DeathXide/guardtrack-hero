@@ -25,37 +25,40 @@ export function calculateGST(amount: number, gstType: string): {
   let cgstRate = 0, cgstAmount = 0, sgstRate = 0, sgstAmount = 0, igstRate = 0, igstAmount = 0;
   let totalGstAmount = 0;
 
+  // Ensure amount is a valid number
+  const validAmount = Number(amount) || 0;
+
   if (gstType === 'GST') {
     // For intra-state: CGST + SGST (9% each = 18% total)
-    cgstRate = gstRate / 2; // 9%
-    sgstRate = gstRate / 2; // 9%
-    cgstAmount = (amount * cgstRate) / 100;
-    sgstAmount = (amount * sgstRate) / 100;
+    cgstRate = Number((gstRate / 2).toFixed(2)); // 9%
+    sgstRate = Number((gstRate / 2).toFixed(2)); // 9%
+    cgstAmount = Number(((validAmount * cgstRate) / 100).toFixed(2));
+    sgstAmount = Number(((validAmount * sgstRate) / 100).toFixed(2));
     totalGstAmount = cgstAmount + sgstAmount;
   } else if (gstType === 'IGST') {
     // For inter-state: IGST (18% total)
     igstRate = gstRate;
-    igstAmount = (amount * igstRate) / 100;
+    igstAmount = Number(((validAmount * igstRate) / 100).toFixed(2));
     totalGstAmount = igstAmount;
   } else if (gstType === 'RCM') {
     // RCM - client pays GST, but we show the breakdown
-    cgstRate = gstRate / 2;
-    sgstRate = gstRate / 2;
+    cgstRate = Number((gstRate / 2).toFixed(2));
+    sgstRate = Number((gstRate / 2).toFixed(2));
     totalGstAmount = 0; // Client pays, not added to invoice total
   }
   // NGST and PERSONAL have 0% GST
 
-  const totalAmount = amount + totalGstAmount;
+  const totalAmount = Number((validAmount + totalGstAmount).toFixed(2));
 
   return {
-    gstRate,
-    gstAmount: totalGstAmount,
-    cgstRate,
-    cgstAmount,
-    sgstRate,
-    sgstAmount,
-    igstRate,
-    igstAmount,
+    gstRate: Number(gstRate.toFixed(2)),
+    gstAmount: Number(totalGstAmount.toFixed(2)),
+    cgstRate: Number(cgstRate.toFixed(2)),
+    cgstAmount: Number(cgstAmount.toFixed(2)),
+    sgstRate: Number(sgstRate.toFixed(2)),
+    sgstAmount: Number(sgstAmount.toFixed(2)),
+    igstRate: Number(igstRate.toFixed(2)),
+    igstAmount: Number(igstAmount.toFixed(2)),
     totalAmount
   };
 }

@@ -30,7 +30,11 @@ export default function Invoices() {
     setLoading(true);
     try {
       const data = getInvoices();
-      setInvoices(data);
+      // Remove duplicates based on ID
+      const uniqueInvoices = data.filter((invoice, index, self) => 
+        index === self.findIndex(i => i.id === invoice.id)
+      );
+      setInvoices(uniqueInvoices);
     } catch (error) {
       console.error('Error loading invoices:', error);
       toast.error('Failed to load invoices');

@@ -223,31 +223,31 @@ export default function InvoiceView() {
                     {invoice.gstType === 'GST' && (
                       <>
                         <div className="flex justify-between">
-                          <span>CGST ({invoice.cgstRate}%):</span>
-                          <span>{formatCurrency(invoice.cgstAmount)}</span>
+                          <span>CGST ({(invoice.cgstRate || 0).toFixed(1)}%):</span>
+                          <span>{formatCurrency(invoice.cgstAmount || 0)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>SGST ({invoice.sgstRate}%):</span>
-                          <span>{formatCurrency(invoice.sgstAmount)}</span>
+                          <span>SGST ({(invoice.sgstRate || 0).toFixed(1)}%):</span>
+                          <span>{formatCurrency(invoice.sgstAmount || 0)}</span>
                         </div>
                       </>
                     )}
                     
                     {invoice.gstType === 'IGST' && (
                       <div className="flex justify-between">
-                        <span>IGST ({invoice.igstRate}%):</span>
-                        <span>{formatCurrency(invoice.igstAmount)}</span>
+                        <span>IGST ({(invoice.igstRate || 0).toFixed(1)}%):</span>
+                        <span>{formatCurrency(invoice.igstAmount || 0)}</span>
                       </div>
                     )}
                     
                     {invoice.gstType === 'RCM' && (
                       <>
                         <div className="flex justify-between">
-                          <span>CGST ({invoice.cgstRate}%) - Reverse Charge:</span>
+                          <span>CGST ({(invoice.cgstRate || 0).toFixed(1)}%) - Reverse Charge:</span>
                           <span>₹ 0.00</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>SGST ({invoice.sgstRate}%) - Reverse Charge:</span>
+                          <span>SGST ({(invoice.sgstRate || 0).toFixed(1)}%) - Reverse Charge:</span>
                           <span>₹ 0.00</span>
                         </div>
                       </>
@@ -255,14 +255,14 @@ export default function InvoiceView() {
                     
                     {(invoice.gstType === 'NGST' || invoice.gstType === 'PERSONAL') && (
                       <div className="flex justify-between">
-                        <span>GST ({invoice.gstRate}%):</span>
-                        <span>{formatCurrency(invoice.gstAmount)}</span>
+                        <span>GST ({(invoice.gstRate || 0).toFixed(1)}%):</span>
+                        <span>{formatCurrency(invoice.gstAmount || 0)}</span>
                       </div>
                     )}
                     
                     <div className="flex justify-between font-bold text-lg border-t pt-2">
                       <span>Total Amount:</span>
-                      <span>{formatCurrency(invoice.totalAmount)}</span>
+                      <span>{formatCurrency(invoice.totalAmount || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -281,7 +281,7 @@ export default function InvoiceView() {
                 <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm text-yellow-800">
                     <strong>Note:</strong> This invoice is under Reverse Charge Mechanism. 
-                    The recipient is liable to pay CGST ({invoice.cgstRate}%) and SGST ({invoice.sgstRate}%) directly to the government.
+                    The recipient is liable to pay CGST ({(invoice.cgstRate || 0).toFixed(1)}%) and SGST ({(invoice.sgstRate || 0).toFixed(1)}%) directly to the government.
                   </p>
                 </div>
               )}
@@ -290,7 +290,7 @@ export default function InvoiceView() {
               {invoice.gstType === 'GST' && (
                 <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-800">
-                    <strong>Tax Details:</strong> Intra-state supply - CGST ({invoice.cgstRate}%) + SGST ({invoice.sgstRate}%) = Total GST ({invoice.gstRate}%)
+                    <strong>Tax Details:</strong> Intra-state supply - CGST ({(invoice.cgstRate || 0).toFixed(1)}%) + SGST ({(invoice.sgstRate || 0).toFixed(1)}%) = Total GST ({(invoice.gstRate || 0).toFixed(1)}%)
                   </p>
                 </div>
               )}
@@ -298,7 +298,7 @@ export default function InvoiceView() {
               {invoice.gstType === 'IGST' && (
                 <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg">
                   <p className="text-sm text-green-800">
-                    <strong>Tax Details:</strong> Inter-state supply - IGST ({invoice.igstRate}%)
+                    <strong>Tax Details:</strong> Inter-state supply - IGST ({(invoice.igstRate || 0).toFixed(1)}%)
                   </p>
                 </div>
               )}
