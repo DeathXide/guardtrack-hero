@@ -24,10 +24,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedUser = localStorage.getItem('secureGuardUser');
         if (savedUser) {
           setUser(JSON.parse(savedUser));
+        } else {
+          // Auto-login admin user for development
+          const adminUser = users.find(u => u.role === 'admin');
+          if (adminUser) {
+            setUser(adminUser);
+            localStorage.setItem('secureGuardUser', JSON.stringify(adminUser));
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
         localStorage.removeItem('secureGuardUser');
+        // Auto-login admin user for development
+        const adminUser = users.find(u => u.role === 'admin');
+        if (adminUser) {
+          setUser(adminUser);
+          localStorage.setItem('secureGuardUser', JSON.stringify(adminUser));
+        }
       } finally {
         setLoading(false);
       }
