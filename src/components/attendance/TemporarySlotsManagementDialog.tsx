@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Edit, AlertTriangle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -8,6 +8,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +41,18 @@ interface SlotFormData {
   pay_rate: string;
 }
 
+interface EditingSlot {
+  id: string;
+  role_type: string;
+  pay_rate: string;
+}
+
+interface DeleteConfirmation {
+  slotId: string;
+  slotInfo: string;
+  isAssigned: boolean;
+}
+
 const TemporarySlotsManagementDialog: React.FC<TemporarySlotsManagementDialogProps> = ({
   isOpen,
   onClose,
@@ -44,6 +66,8 @@ const TemporarySlotsManagementDialog: React.FC<TemporarySlotsManagementDialogPro
     role_type: '',
     pay_rate: ''
   });
+  const [editingSlot, setEditingSlot] = useState<EditingSlot | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<DeleteConfirmation | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -70,6 +94,25 @@ const TemporarySlotsManagementDialog: React.FC<TemporarySlotsManagementDialogPro
     }
   });
 
+  // Update temporary slot mutation
+  const updateSlotMutation = useMutation({
+    mutationFn: ({ slotId, updateData }: { slotId: string; updateData: Partial<CreateSlotData> }) => 
+      dailyAttendanceSlotsApi.updateTemporarySlot(slotId, updateData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['temporary-slots'] });
+      toast({ title: 'Temporary slot updated successfully' });
+      setEditingSlot(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error updating temporary slot',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
   // Delete temporary slot mutation
   const deleteSlotMutation = useMutation({
     mutationFn: (slotId: string) => dailyAttendanceSlotsApi.deleteTemporarySlot(slotId),
@@ -77,10 +120,29 @@ const TemporarySlotsManagementDialog: React.FC<TemporarySlotsManagementDialogPro
       queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
       queryClient.invalidateQueries({ queryKey: ['temporary-slots'] });
       toast({ title: 'Temporary slot deleted successfully' });
+      setDeleteConfirmation(null);
     },
     onError: (error: any) => {
       toast({
         title: 'Error deleting temporary slot',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Unassign guard mutation
+  const unassignGuardMutation = useMutation({
+    mutationFn: (slotId: string) => dailyAttendanceSlotsApi.unassignGuardFromSlot(slotId),
+    onSuccess: (_, slotId) => {
+      queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['temporary-slots'] });
+      // After unassigning, delete the slot
+      deleteSlotMutation.mutate(slotId);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error unassigning guard',
         description: error.message,
         variant: 'destructive'
       });
@@ -106,9 +168,49 @@ const TemporarySlotsManagementDialog: React.FC<TemporarySlotsManagementDialogPro
     });
   };
 
-  const handleDeleteSlot = (slotId: string) => {
-    if (confirm('Are you sure you want to delete this temporary slot?')) {
-      deleteSlotMutation.mutate(slotId);
+  const handleEditSlot = (slot: DailyAttendanceSlot) => {
+    setEditingSlot({
+      id: slot.id,
+      role_type: slot.role_type,
+      pay_rate: slot.pay_rate?.toString() || ''
+    });
+  };
+
+  const handleUpdateSlot = () => {
+    if (!editingSlot?.role_type || !editingSlot?.pay_rate) {
+      toast({
+        title: 'Please fill in all required fields',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    updateSlotMutation.mutate({
+      slotId: editingSlot.id,
+      updateData: {
+        role_type: editingSlot.role_type,
+        pay_rate: parseFloat(editingSlot.pay_rate)
+      }
+    });
+  };
+
+  const handleDeleteSlot = (slot: DailyAttendanceSlot) => {
+    setDeleteConfirmation({
+      slotId: slot.id,
+      slotInfo: `${slot.role_type} - Slot ${slot.slot_number}`,
+      isAssigned: !!slot.assigned_guard_id
+    });
+  };
+
+  const confirmDelete = () => {
+    if (!deleteConfirmation) return;
+
+    if (deleteConfirmation.isAssigned) {
+      // First unassign the guard, then delete
+      unassignGuardMutation.mutate(deleteConfirmation.slotId);
+    } else {
+      // Delete directly
+      deleteSlotMutation.mutate(deleteConfirmation.slotId);
     }
   };
 
@@ -255,16 +357,22 @@ const TemporarySlotsManagementDialog: React.FC<TemporarySlotsManagementDialogPro
                                     </Badge>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleDeleteSlot(slot.id)}
-                                    disabled={!!slot.assigned_guard_id}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
+                                 <div className="flex items-center gap-2">
+                                   <Button
+                                     variant="outline"
+                                     size="sm"
+                                     onClick={() => handleEditSlot(slot)}
+                                   >
+                                     <Edit className="h-3 w-3" />
+                                   </Button>
+                                   <Button
+                                     variant="outline"
+                                     size="sm"
+                                     onClick={() => handleDeleteSlot(slot)}
+                                   >
+                                     <Trash2 className="h-3 w-3" />
+                                   </Button>
+                                 </div>
                               </div>
                             </CardContent>
                           </Card>
@@ -278,6 +386,101 @@ const TemporarySlotsManagementDialog: React.FC<TemporarySlotsManagementDialogPro
           </div>
         </div>
       </DialogContent>
+
+      {/* Edit Slot Dialog */}
+      <Dialog open={!!editingSlot} onOpenChange={() => setEditingSlot(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Temporary Slot</DialogTitle>
+            <DialogDescription>
+              Update the role type and pay rate for this temporary slot
+            </DialogDescription>
+          </DialogHeader>
+          {editingSlot && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Role Type</Label>
+                <Select
+                  value={editingSlot.role_type}
+                  onValueChange={(value) => 
+                    setEditingSlot(prev => prev ? { ...prev, role_type: value } : null)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roleTypes.map(role => (
+                      <SelectItem key={role} value={role}>{role}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Pay Rate</Label>
+                <Input
+                  type="number"
+                  value={editingSlot.pay_rate}
+                  onChange={(e) => 
+                    setEditingSlot(prev => prev ? { ...prev, pay_rate: e.target.value } : null)
+                  }
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleUpdateSlot}
+                  disabled={updateSlotMutation.isPending}
+                >
+                  {updateSlotMutation.isPending ? 'Updating...' : 'Update Slot'}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setEditingSlot(null)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmation} onOpenChange={() => setDeleteConfirmation(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Confirm Delete
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteConfirmation?.isAssigned ? (
+                <>
+                  This slot has a guard assigned to it. Deleting will first unassign the guard and then remove the slot.
+                  <br /><br />
+                  <strong>Slot:</strong> {deleteConfirmation.slotInfo}
+                </>
+              ) : (
+                <>
+                  Are you sure you want to delete this temporary slot?
+                  <br /><br />
+                  <strong>Slot:</strong> {deleteConfirmation?.slotInfo}
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteSlotMutation.isPending || unassignGuardMutation.isPending}
+            >
+              {(deleteSlotMutation.isPending || unassignGuardMutation.isPending) ? 'Deleting...' : 'Delete Slot'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
