@@ -95,7 +95,7 @@ export function calculateInvoiceFromSite(
         quantity: totalSlots,
         ratePerSlot: slot.budgetPerSlot,
         lineTotal: lineTotal,
-        description: `${slot.role} (${slot.daySlots} Day + ${slot.nightSlots} Night slots)`
+        description: slot.role // Just show the role name
       });
       subtotal += lineTotal;
     }
