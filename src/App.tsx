@@ -13,7 +13,6 @@ import Dashboard from "./pages/Dashboard";
 import SitesNew from "./pages/SitesNew";
 import Guards from "./pages/Guards";
 import Attendance from "./pages/Attendance";
-import AttendanceSlotBased from "./pages/AttendanceSlotBased";
 import Schedule from "./pages/Schedule";
 import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
@@ -33,7 +32,6 @@ const App = () => (
             <Route path="/sites" element={<DashboardLayout><SitesNew /></DashboardLayout>} />
             <Route path="/guards" element={<DashboardLayout><Guards /></DashboardLayout>} />
             <Route path="/attendance" element={<DashboardLayout><Attendance /></DashboardLayout>} />
-            <Route path="/attendance-slots" element={<DashboardLayout><AttendanceSlotBased /></DashboardLayout>} />
             <Route path="/schedule" element={<DashboardLayout><Schedule /></DashboardLayout>} />
             <Route path="/reports" element={<DashboardLayout><Reports /></DashboardLayout>} />
             <Route path="*" element={<NotFound />} />
