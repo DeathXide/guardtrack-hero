@@ -45,6 +45,12 @@ const navItems: NavItem[] = [
     roles: ['admin', 'supervisor', 'guard'],
   },
   {
+    title: 'Slot-Based Attendance',
+    href: '/attendance-slots',
+    icon: CalendarCheck,
+    roles: ['admin', 'supervisor', 'guard'],
+  },
+  {
     title: 'Sites',
     href: '/sites',
     icon: MapPin,
