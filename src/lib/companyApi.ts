@@ -13,6 +13,7 @@ export interface CompanySettings {
   company_website?: string;
   gst_number?: string;
   pan_number?: string;
+  company_seal_image_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -29,6 +30,7 @@ export interface UpdateCompanySettingsData {
   company_website?: string;
   gst_number?: string;
   pan_number?: string;
+  company_seal_image_url?: string;
 }
 
 export const companyApi = {

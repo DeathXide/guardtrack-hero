@@ -23,6 +23,7 @@ export default function CompanySettings() {
     company_website: "",
     gst_number: "",
     pan_number: "",
+    company_seal_image_url: "",
   });
   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
 
@@ -91,6 +92,7 @@ export default function CompanySettings() {
         company_website: companySettings.company_website || "",
         gst_number: companySettings.gst_number || "",
         pan_number: companySettings.pan_number || "",
+        company_seal_image_url: companySettings.company_seal_image_url || "",
       });
     }
   }, [companySettings]);
@@ -288,6 +290,17 @@ export default function CompanySettings() {
                 value={formData.pan_number}
                 onChange={(e) => handleInputChange("pan_number", e.target.value)}
                 placeholder="PAN card number"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="company_seal_image_url">Company Seal Image URL</Label>
+              <Input
+                id="company_seal_image_url"
+                value={formData.company_seal_image_url || ''}
+                onChange={(e) => handleInputChange("company_seal_image_url", e.target.value)}
+                placeholder="Company seal image URL for invoices"
                 disabled={isLoading}
               />
             </div>

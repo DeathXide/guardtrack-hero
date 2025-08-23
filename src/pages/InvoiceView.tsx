@@ -10,6 +10,7 @@ import { getInvoiceById, updateInvoice } from '@/lib/invoiceData';
 import { formatCurrency } from '@/lib/invoiceUtils';
 import { generatePDF } from '@/lib/pdfUtils';
 import { numberToWords } from '@/lib/numberToWords';
+import { companyApi } from '@/lib/companyApi';
 import { Invoice } from '@/types/invoice';
 import { toast } from 'sonner';
 
@@ -17,11 +18,13 @@ export default function InvoiceView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [companySettings, setCompanySettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (id) {
       loadInvoice(id);
+      loadCompanySettings();
     }
   }, [id]);
 
@@ -41,6 +44,15 @@ export default function InvoiceView() {
       navigate('/invoices');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCompanySettings = async () => {
+    try {
+      const data = await companyApi.getCompanySettings();
+      setCompanySettings(data);
+    } catch (error) {
+      console.error('Error loading company settings:', error);
     }
   };
 
@@ -358,7 +370,15 @@ export default function InvoiceView() {
                   </div>
                   <div className="text-right">
                     <div className="space-y-6">
-                      <div className="h-12 w-32 border border-dashed border-gray-300 rounded text-xs text-gray-400 flex items-center justify-center">Company Seal</div>
+                      {companySettings?.company_seal_image_url ? (
+                        <img 
+                          src={companySettings.company_seal_image_url} 
+                          alt="Company Seal" 
+                          className="h-12 w-32 object-contain"
+                        />
+                      ) : (
+                        <div className="h-12 w-32"></div>
+                      )}
                       <div>
                         <p className="font-medium text-gray-900">For {invoice.companyName}</p>
                         <p className="text-sm text-gray-600 mt-1">Authorized Signatory</p>
@@ -372,7 +392,13 @@ export default function InvoiceView() {
               <div className="mt-6 pt-4 border-t border-gray-200 text-center">
                 <div className="text-xs text-gray-500 space-y-1">
                   <p>Thank you for your business!</p>
-                  <p>Phone: +91 9876543210 | Email: info@company.com | Website: www.company.com</p>
+                  <p>
+                    {companySettings?.company_phone && `Phone: ${companySettings.company_phone}`}
+                    {companySettings?.company_phone && companySettings?.company_email && ' | '}
+                    {companySettings?.company_email && `Email: ${companySettings.company_email}`}
+                    {(companySettings?.company_phone || companySettings?.company_email) && companySettings?.company_website && ' | '}
+                    {companySettings?.company_website && `Website: ${companySettings.company_website}`}
+                  </p>
                 </div>
               </div>
 
