@@ -200,6 +200,9 @@ export default function InvoiceView() {
                   <div className="text-sm text-gray-700 space-y-1">
                     <p><span className="font-medium">Period:</span> {new Date(invoice.periodFrom).toLocaleDateString()} - {new Date(invoice.periodTo).toLocaleDateString()}</p>
                     <p><span className="font-medium">Site:</span> {invoice.siteName}</p>
+                    {invoice.siteGst && (
+                      <p><span className="font-medium">Site GST:</span> {invoice.siteGst}</p>
+                    )}
                   </div>
                 </div>
               </div>

@@ -13,6 +13,7 @@ export interface Invoice {
   invoiceNumber: string;
   siteId: string;
   siteName: string;
+  siteGst?: string;
   companyName: string;
   companyGst: string;
   clientName: string;
