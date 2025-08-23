@@ -157,6 +157,7 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['temporary-slots'] });
       toast({ title: 'Slots copied from previous day successfully', description: 'Assigned guards marked as present automatically' });
     },
     onError: (error: any) => {
@@ -180,6 +181,7 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
       queryClient.invalidateQueries({ queryKey: ['sites'] }); // Also refresh sites data
+      queryClient.invalidateQueries({ queryKey: ['temporary-slots'] });
       toast({ title: 'Slots regenerated successfully', description: 'Updated slots based on current site requirements' });
     },
     onError: (error: any) => {
