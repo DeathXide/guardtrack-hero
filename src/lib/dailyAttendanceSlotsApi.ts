@@ -285,7 +285,7 @@ export const dailyAttendanceSlotsApi = {
       return [];
     }
 
-    // Check if current date already has slots
+    // Check if current date already has slots; if so, replace them to ensure a clean copy
     const { data: existingSlots } = await supabase
       .from('daily_attendance_slots')
       .select('id')
@@ -293,7 +293,12 @@ export const dailyAttendanceSlotsApi = {
       .eq('attendance_date', currentDate);
 
     if (existingSlots && existingSlots.length > 0) {
-      throw new Error('Slots already exist for this date');
+      const { error: deleteError } = await supabase
+        .from('daily_attendance_slots')
+        .delete()
+        .eq('site_id', siteId)
+        .eq('attendance_date', currentDate);
+      if (deleteError) throw deleteError;
     }
 
     // Create new slots for current date with assigned guards marked as present
