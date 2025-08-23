@@ -270,7 +270,7 @@ export const dailyAttendanceSlotsApi = {
     return data;
   },
 
-  // Copy slots from previous day
+  // Copy slots from previous day and mark assigned guards as present
   async copySlotsFromPreviousDay(siteId: string, currentDate: string, previousDate: string) {
     // Get previous day's slots
     const { data: previousSlots, error: fetchError } = await supabase
@@ -296,7 +296,7 @@ export const dailyAttendanceSlotsApi = {
       throw new Error('Slots already exist for this date');
     }
 
-    // Create new slots for current date (without attendance marking)
+    // Create new slots for current date with assigned guards marked as present
     const newSlots = previousSlots.map(slot => ({
       site_id: slot.site_id,
       attendance_date: currentDate,
@@ -304,8 +304,9 @@ export const dailyAttendanceSlotsApi = {
       role_type: slot.role_type,
       slot_number: slot.slot_number,
       assigned_guard_id: slot.assigned_guard_id,
-      pay_rate: slot.pay_rate
-      // Don't copy is_present - it should be null for new day
+      pay_rate: slot.pay_rate,
+      // Mark as present if guard was assigned, null if no guard assigned
+      is_present: slot.assigned_guard_id ? true : null
     }));
 
     const { data: createdSlots, error: createError } = await supabase

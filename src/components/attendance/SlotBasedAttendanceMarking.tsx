@@ -142,7 +142,7 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
-      toast({ title: 'Slots copied from previous day successfully' });
+      toast({ title: 'Slots copied from previous day successfully', description: 'Assigned guards marked as present automatically' });
     },
     onError: (error: any) => {
       toast({
