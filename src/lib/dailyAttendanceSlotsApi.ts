@@ -312,6 +312,7 @@ export const dailyAttendanceSlotsApi = {
       slot_number: slot.slot_number,
       assigned_guard_id: slot.assigned_guard_id,
       pay_rate: slot.pay_rate,
+      is_temporary: slot.is_temporary, // Preserve temporary status
       // Mark as present if guard was assigned, null if no guard assigned
       is_present: slot.assigned_guard_id ? true : null
     }));
