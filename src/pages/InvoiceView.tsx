@@ -403,12 +403,16 @@ export default function InvoiceView() {
                 {/* Authorized Signatory */}
                 <div className="px-4 mb-6">
                   <div className="flex justify-start">
-                     <div className="text-left space-y-3">
-                       <div className="h-16 w-32">
-                         {/* Space for company seal/signature image */}
-                       </div>
+                     <div className="text-left space-y-4">
                        <div>
                          <p className="text-sm font-medium text-foreground">For {invoice.companyName}</p>
+                       </div>
+                       <div className="h-12 w-32 flex items-end justify-end">
+                         {companySettings?.company_seal_image_url && (
+                           <img src={companySettings.company_seal_image_url} alt="Company Seal" className="h-24 w-auto object-contain opacity-80 ml-auto" />
+                         )}
+                       </div>
+                       <div>
                          <p className="text-xs text-muted-foreground mt-1">Authorized Signatory</p>
                        </div>
                      </div>
