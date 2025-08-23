@@ -72,46 +72,51 @@ export default function Invoices() {
     }
   };
 
-  // Simplified bulk download using new tabs approach
-  const handleSimpleBulkDownload = async () => {
+  // Server-side bulk download using edge function
+  const handleBulkDownload = async () => {
     if (filteredInvoices.length === 0) {
       toast.error('No invoices to download');
       return;
     }
 
     setBulkDownloading(true);
-    toast.success(`Starting download of ${filteredInvoices.length} invoices. This may take a moment...`);
+    toast.success(`Generating ${filteredInvoices.length} invoice HTMLs. This may take a moment...`);
 
     try {
-      for (let i = 0; i < filteredInvoices.length; i++) {
-        const invoice = filteredInvoices[i];
-        
-        // Open invoice in new tab and trigger download
-        const newWindow = window.open(`/invoices/${invoice.id}`, '_blank');
-        
-        // Wait a bit for the page to load
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        if (newWindow) {
-          // Trigger PDF download in the new window
-          newWindow.postMessage({ action: 'downloadPDF' }, '*');
-          
-          // Close the window after a short delay
-          setTimeout(() => {
-            newWindow.close();
-          }, 3000);
-        }
-        
-        // Small delay between downloads to avoid overwhelming the browser
-        if (i < filteredInvoices.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+      // Get invoice IDs
+      const invoiceIds = filteredInvoices.map(invoice => invoice.id);
+      
+      // Call the edge function
+      const response = await fetch(`https://yntbkgrkgicddwmhqimy.supabase.co/functions/v1/bulk-invoice-pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ invoiceIds }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate invoices');
       }
 
-      toast.success(`Download initiated for ${filteredInvoices.length} invoices`);
+      // Get the ZIP file as a blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoices-${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Downloaded ${filteredInvoices.length} invoices as HTML files in ZIP`);
     } catch (error) {
       console.error('Error during bulk download:', error);
-      toast.error('Failed to download some invoices');
+      toast.error(`Failed to download invoices: ${error.message}`);
     } finally {
       setBulkDownloading(false);
     }
@@ -175,12 +180,12 @@ export default function Invoices() {
           {filteredInvoices.length > 0 && (
             <Button 
               variant="outline" 
-              onClick={handleSimpleBulkDownload}
+              onClick={handleBulkDownload}
               disabled={bulkDownloading}
               className="gap-2"
             >
               <Download className="h-4 w-4" />
-              {bulkDownloading ? 'Downloading...' : `Download All (${filteredInvoices.length})`}
+              {bulkDownloading ? 'Generating...' : `Download All HTML (${filteredInvoices.length})`}
             </Button>
           )}
           <Dialog open={autoGenerateOpen} onOpenChange={setAutoGenerateOpen}>
