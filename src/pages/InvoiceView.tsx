@@ -203,14 +203,13 @@ export default function InvoiceView() {
                   <div className="text-sm text-gray-700">
                     <p className="font-medium text-gray-900">{invoice.siteName}</p>
                     <p>{invoice.clientAddress.split(', ').filter(Boolean).join(', ')}</p>
+                    {invoice.siteGst && <p><span className="font-medium">GST:</span> {invoice.siteGst}</p>}
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-bold text-gray-900 mb-2">Service Details:</h4>
-                  <div className="text-sm text-gray-700 space-y-1">
-                    <p><span className="font-medium">Period:</span> {new Date(invoice.periodFrom).toLocaleDateString()} - {new Date(invoice.periodTo).toLocaleDateString()}</p>
-                    <p><span className="font-medium">Site:</span> {invoice.siteName}</p>
-                    {invoice.siteGst && <p><span className="font-medium">Site GST:</span> {invoice.siteGst}</p>}
+                  <h4 className="font-bold text-gray-900 mb-2">Service Period:</h4>
+                  <div className="text-sm text-gray-700">
+                    <p>{new Date(invoice.periodFrom).toLocaleDateString()} - {new Date(invoice.periodTo).toLocaleDateString()}</p>
                   </div>
                 </div>
               </div>
