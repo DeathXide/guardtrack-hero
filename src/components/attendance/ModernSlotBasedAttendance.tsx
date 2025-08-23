@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Calendar, MapPin, AlertCircle, Sun, Moon, Search, Filter } from 'lucide-react';
+import { Calendar, MapPin, AlertCircle, Sun, Moon, Search, Copy, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,6 @@ import { guardsApi } from '@/lib/guardsApi';
 import { dailyAttendanceSlotsApi, DailyAttendanceSlot } from '@/lib/dailyAttendanceSlotsApi';
 import AttendanceStatsCards from './AttendanceStatsCards';
 import ModernSlotCard from './ModernSlotCard';
-import FloatingActionToolbar from './FloatingActionToolbar';
 import EnhancedGuardSelectionModal from './EnhancedGuardSelectionModal';
 import TemporarySlotsManagementDialog from './TemporarySlotsManagementDialog';
 
@@ -306,8 +305,8 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
     if (totalSlotsInShift === 0) return null;
 
     return (
-      <div key={shiftType} className="space-y-4">
-        <div className="flex items-center gap-3 pb-3 border-b border-border/50">
+      <div key={shiftType} className="space-y-6">
+        <div className="flex items-center gap-3 pb-4 border-b border-border/50">
           <div className={`p-2 rounded-lg ${
             shiftType === 'day' 
               ? 'bg-amber-100 text-amber-600 dark:bg-amber-950/20' 
@@ -326,39 +325,41 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
           </Badge>
         </div>
 
-        {Object.entries(shiftSlots).map(([roleType, roleSlots]) => (
-          <div key={`${shiftType}-${roleType}`} className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="font-medium text-foreground flex items-center gap-2">
-                {roleType}
-                <Badge variant="outline" className="text-xs">
-                  {roleSlots.length}
-                </Badge>
-              </h4>
+        <div className="space-y-6">
+          {Object.entries(shiftSlots).map(([roleType, roleSlots]) => (
+            <div key={`${shiftType}-${roleType}`} className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-foreground flex items-center gap-2">
+                  {roleType}
+                  <Badge variant="outline" className="text-xs">
+                    {roleSlots.length}
+                  </Badge>
+                </h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                {roleSlots.map(slot => {
+                  const assignedGuard = guards.find(g => g.id === slot.assigned_guard_id);
+                  return (
+                    <ModernSlotCard
+                      key={slot.id}
+                      slot={slot}
+                      assignedGuard={assignedGuard}
+                      onAssignGuard={handleOpenAllocation}
+                      onUnassignGuard={(slotId) => unassignGuardMutation.mutate(slotId)}
+                      onReplaceGuard={(slotId, shiftType, roleType, originalGuardId) => 
+                        handleOpenAllocation(slotId, shiftType, roleType, true, originalGuardId)
+                      }
+                      onMarkAttendance={(slotId, isPresent) => 
+                        markAttendanceMutation.mutate({ slotId, isPresent })
+                      }
+                      isLoading={assignGuardMutation.isPending || unassignGuardMutation.isPending || markAttendanceMutation.isPending}
+                    />
+                  );
+                })}
+              </div>
             </div>
-            <div className="attendance-grid">
-              {roleSlots.map(slot => {
-                const assignedGuard = guards.find(g => g.id === slot.assigned_guard_id);
-                return (
-                  <ModernSlotCard
-                    key={slot.id}
-                    slot={slot}
-                    assignedGuard={assignedGuard}
-                    onAssignGuard={handleOpenAllocation}
-                    onUnassignGuard={(slotId) => unassignGuardMutation.mutate(slotId)}
-                    onReplaceGuard={(slotId, shiftType, roleType, originalGuardId) => 
-                      handleOpenAllocation(slotId, shiftType, roleType, true, originalGuardId)
-                    }
-                    onMarkAttendance={(slotId, isPresent) => 
-                      markAttendanceMutation.mutate({ slotId, isPresent })
-                    }
-                    isLoading={assignGuardMutation.isPending || unassignGuardMutation.isPending || markAttendanceMutation.isPending}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     );
   };
@@ -377,53 +378,71 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
             </p>
           </div>
           
-          {/* Date and Site Selection */}
-          <Card className="glass-card w-full lg:w-auto">
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Date
-                  </label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="justify-start text-left font-normal">
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {format(selectedDate, 'PPP')}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={(date) => date && setSelectedDate(date)}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+          {/* Date and Site Selection with Quick Actions */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+            <Card className="glass-card">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Date
+                    </label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="justify-start text-left font-normal">
+                          <Calendar className="mr-2 h-4 w-4" />
+                          {format(selectedDate, 'PPP')}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={(date) => date && setSelectedDate(date)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  
+                  <div className="space-y-2 flex-1 sm:min-w-[200px]">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Site
+                    </label>
+                    <Select value={selectedSite} onValueChange={setSelectedSite}>
+                      <SelectTrigger>
+                        <MapPin className="mr-2 h-4 w-4" />
+                        <SelectValue placeholder="Select a site" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sites.map(site => (
+                          <SelectItem key={site.id} value={site.id}>
+                            {site.site_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                
-                <div className="space-y-2 flex-1 sm:min-w-[200px]">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Site
-                  </label>
-                  <Select value={selectedSite} onValueChange={setSelectedSite}>
-                    <SelectTrigger>
-                      <MapPin className="mr-2 h-4 w-4" />
-                      <SelectValue placeholder="Select a site" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sites.map(site => (
-                        <SelectItem key={site.id} value={site.id}>
-                          {site.site_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            {selectedSite && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyPreviousDayMutation.mutate()}
+                  disabled={copyPreviousDayMutation.isPending}
+                  className="whitespace-nowrap"
+                >
+                  <Copy className={`h-4 w-4 mr-2 ${copyPreviousDayMutation.isPending ? 'animate-spin' : ''}`} />
+                  Copy Yesterday
+                </Button>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
         </div>
 
         {selectedSite && (
@@ -506,50 +525,38 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
                 </CardContent>
               </Card>
             ) : (
-              <Tabs value={activeShift} onValueChange={(value) => setActiveShift(value as 'all' | 'day' | 'night')} className="space-y-6">
-                <TabsList className="grid w-full max-w-md grid-cols-3">
-                  <TabsTrigger value="all" className="text-sm">
-                    All ({shiftCounts.all})
-                  </TabsTrigger>
-                  <TabsTrigger value="day" className="text-sm">
-                    <Sun className="h-4 w-4 mr-1" />
-                    Day ({shiftCounts.day})
-                  </TabsTrigger>
-                  <TabsTrigger value="night" className="text-sm">
-                    <Moon className="h-4 w-4 mr-1" />
-                    Night ({shiftCounts.night})
-                  </TabsTrigger>
-                </TabsList>
+              <div className="space-y-8">
+                <Tabs value={activeShift} onValueChange={(value) => setActiveShift(value as 'all' | 'day' | 'night')} className="space-y-6">
+                  <TabsList className="grid w-full max-w-md grid-cols-3">
+                    <TabsTrigger value="all" className="text-sm">
+                      All ({shiftCounts.all})
+                    </TabsTrigger>
+                    <TabsTrigger value="day" className="text-sm">
+                      <Sun className="h-4 w-4 mr-1" />
+                      Day ({shiftCounts.day})
+                    </TabsTrigger>
+                    <TabsTrigger value="night" className="text-sm">
+                      <Moon className="h-4 w-4 mr-1" />
+                      Night ({shiftCounts.night})
+                    </TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="all" className="space-y-8">
-                  {renderShiftSection('day')}
-                  {renderShiftSection('night')}
-                </TabsContent>
+                  <TabsContent value="all" className="space-y-8 mt-6">
+                    {renderShiftSection('day')}
+                    {renderShiftSection('night')}
+                  </TabsContent>
 
-                <TabsContent value="day" className="space-y-8">
-                  {renderShiftSection('day')}
-                </TabsContent>
+                  <TabsContent value="day" className="space-y-8 mt-6">
+                    {renderShiftSection('day')}
+                  </TabsContent>
 
-                <TabsContent value="night" className="space-y-8">
-                  {renderShiftSection('night')}
-                </TabsContent>
-              </Tabs>
+                  <TabsContent value="night" className="space-y-8 mt-6">
+                    {renderShiftSection('night')}
+                  </TabsContent>
+                </Tabs>
+              </div>
             )}
           </>
-        )}
-
-        {/* Floating Action Toolbar */}
-        {selectedSite && (
-          <FloatingActionToolbar
-            onCopyPreviousDay={() => copyPreviousDayMutation.mutate()}
-            onRegenerateSlots={() => regenerateSlotsMutation.mutate()}
-            onOpenTemporarySlots={() => setTemporarySlotsDialog(true)}
-            isLoading={{
-              copy: copyPreviousDayMutation.isPending,
-              regenerate: regenerateSlotsMutation.isPending
-            }}
-            disabled={!selectedSite}
-          />
         )}
 
         {/* Enhanced Guard Selection Modal */}
@@ -563,14 +570,16 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
           preferredRole={allocationModal.roleType}
         />
 
-        {/* Temporary Slots Management */}
-        <TemporarySlotsManagementDialog
-          isOpen={temporarySlotsDialog}
-          onClose={() => setTemporarySlotsDialog(false)}
-          siteId={selectedSite}
-          date={format(selectedDate, 'yyyy-MM-dd')}
-          temporarySlots={temporarySlots}
-        />
+        {/* Temporary Slots Management (removed for now) */}
+        {false && (
+          <TemporarySlotsManagementDialog
+            isOpen={temporarySlotsDialog}
+            onClose={() => setTemporarySlotsDialog(false)}
+            siteId={selectedSite}
+            date={format(selectedDate, 'yyyy-MM-dd')}
+            temporarySlots={temporarySlots}
+          />
+        )}
       </div>
     </div>
   );
