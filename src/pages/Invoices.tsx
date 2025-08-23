@@ -44,13 +44,11 @@ export default function Invoices() {
   };
 
   const handleDeleteInvoice = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this invoice?')) {
-      if (deleteInvoice(id)) {
-        setInvoices(invoices.filter(inv => inv.id !== id));
-        toast.success('Invoice deleted successfully');
-      } else {
-        toast.error('Failed to delete invoice');
-      }
+    if (deleteInvoice(id)) {
+      setInvoices(invoices.filter(inv => inv.id !== id));
+      toast.success('Invoice deleted successfully');
+    } else {
+      toast.error('Failed to delete invoice');
     }
   };
 
