@@ -379,15 +379,15 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
           
           {/* Date and Site Selection */}
           <Card className="glass-card w-full lg:w-auto">
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <div className="space-y-2">
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+                <div className="space-y-3">
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Date
                   </label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="justify-start text-left font-normal">
+                      <Button variant="outline" className="justify-start text-left font-normal min-w-[180px]">
                         <Calendar className="mr-2 h-4 w-4" />
                         {format(selectedDate, 'PPP')}
                       </Button>
@@ -403,12 +403,12 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
                   </Popover>
                 </div>
                 
-                <div className="space-y-2 flex-1 sm:min-w-[200px]">
+                <div className="space-y-3 flex-1 sm:min-w-[220px]">
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Site
                   </label>
                   <Select value={selectedSite} onValueChange={setSelectedSite}>
-                    <SelectTrigger>
+                    <SelectTrigger className="min-w-[220px]">
                       <MapPin className="mr-2 h-4 w-4" />
                       <SelectValue placeholder="Select a site" />
                     </SelectTrigger>
