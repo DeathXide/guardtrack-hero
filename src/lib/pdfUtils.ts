@@ -11,10 +11,10 @@ export const generatePDF = async (elementId: string, filename: string) => {
     // Add print styles temporarily
     const printStyles = document.createElement('style');
     printStyles.innerHTML = `
-      @media print {
+      @media screen {
         #${elementId} {
           margin: 0 !important;
-          padding: 20mm !important;
+          padding: 0 !important;
           background: white !important;
           box-shadow: none !important;
           border: none !important;
@@ -23,10 +23,34 @@ export const generatePDF = async (elementId: string, filename: string) => {
         #${elementId} * {
           -webkit-print-color-adjust: exact !important;
           color-adjust: exact !important;
+          text-align: inherit !important;
+          font-family: inherit !important;
+          line-height: inherit !important;
+        }
+        #${elementId} .text-right {
+          text-align: right !important;
+        }
+        #${elementId} .text-left {
+          text-align: left !important;
+        }
+        #${elementId} .text-center {
+          text-align: center !important;
+        }
+        #${elementId} .justify-end {
+          justify-content: flex-end !important;
+        }
+        #${elementId} .justify-start {
+          justify-content: flex-start !important;
+        }
+        #${elementId} .justify-between {
+          justify-content: space-between !important;
         }
       }
     `;
     document.head.appendChild(printStyles);
+
+    // Give time for styles to apply
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // Generate canvas from HTML element with proper A4 scaling
     const canvas = await html2canvas(element, {
@@ -39,7 +63,9 @@ export const generatePDF = async (elementId: string, filename: string) => {
       windowHeight: element.scrollHeight,
       scrollX: 0,
       scrollY: 0,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      logging: false,
+      imageTimeout: 0
     });
 
     // Remove temporary styles
