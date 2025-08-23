@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
-import { FileText, Calendar, Building2, Wand2, Settings } from 'lucide-react';
+import { FileText, Calendar, Building2, Wand2, CheckSquare, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { fetchSitesWithStaffing, fetchCompanySettings, convertSiteToInvoiceFormat, SiteWithStaffing, CompanySettings } from '@/lib/supabaseInvoiceApi';
 import { createInvoice } from '@/lib/invoiceData';
 import { calculateInvoiceFromSite, formatCurrency } from '@/lib/invoiceUtils';
@@ -25,20 +23,6 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
   const [periodTo, setPeriodTo] = useState('');
   const [loading, setLoading] = useState(false);
   const [sitesLoaded, setSitesLoaded] = useState(false);
-  const [showInvoiceOptions, setShowInvoiceOptions] = useState(false);
-  
-  // Invoice customization options
-  const [customInvoiceData, setCustomInvoiceData] = useState({
-    companyName: '',
-    companyGst: '',
-    companyPhone: '',
-    companyEmail: '',
-    companyAddress: '',
-    notes: '',
-    gstType: 'GST' as 'GST' | 'IGST' | 'NGST' | 'RCM' | 'PERSONAL',
-    gstRate: 18,
-    invoiceDate: new Date().toISOString().split('T')[0] // Today's date as default
-  });
 
   // Set default period to current month on component mount
   useEffect(() => {
@@ -55,41 +39,15 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
 
   const loadSites = async () => {
     try {
-      // Load both sites and company settings
       const [sitesData, companyData] = await Promise.all([
         fetchSitesWithStaffing(),
         fetchCompanySettings()
       ]);
       
-      setSites(sitesData);
       setCompanySettings(companyData);
+      setSites(sitesData);
+      setSelectedSites(new Set(sitesData.map(site => site.id))); // Select all sites by default
       setSitesLoaded(true);
-      
-      // Pre-fill custom invoice data with company settings
-      if (companyData) {
-        setCustomInvoiceData({
-          companyName: companyData.company_name || '',
-          companyGst: companyData.gst_number || '',
-          companyPhone: companyData.company_phone || '',
-          companyEmail: companyData.company_email || '',
-          companyAddress: [
-            companyData.company_address_line1,
-            companyData.company_address_line2,
-            companyData.company_address_line3
-          ].filter(Boolean).join(', '),
-          notes: '',
-          gstType: 'GST',
-          gstRate: 18,
-          invoiceDate: new Date().toISOString().split('T')[0]
-        });
-      }
-      
-      if (sitesData.length === 0) {
-        toast.info('No sites found. Please create some sites first.');
-      } else {
-        // Select all sites by default
-        setSelectedSites(new Set(sitesData.map(site => site.id)));
-      }
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Failed to load sites and company data');
@@ -125,8 +83,8 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
       return;
     }
 
-    if (!companySettings && !showInvoiceOptions) {
-      toast.error('Company settings not found. Please configure company settings first.');
+    if (!companySettings) {
+      toast.error('Company settings not loaded. Please try again.');
       return;
     }
 
@@ -152,10 +110,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
         // Convert to our Site format for invoice calculation
         const site = convertSiteToInvoiceFormat(siteData);
         
-        const companyData = showInvoiceOptions ? {
-          company_name: customInvoiceData.companyName,
-          gst_number: customInvoiceData.companyGst
-        } : {
+        const companyData = {
           company_name: companySettings.company_name,
           gst_number: companySettings.gst_number
         };
@@ -167,26 +122,9 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
           companyData
         );
         
-        // Add company details to invoice
-        const enhancedInvoiceData = {
-          ...invoiceData,
-          companyGst: showInvoiceOptions ? customInvoiceData.companyGst : (companySettings.gst_number || ''),
-          companyPhone: showInvoiceOptions ? customInvoiceData.companyPhone : (companySettings.company_phone || ''),
-          companyEmail: showInvoiceOptions ? customInvoiceData.companyEmail : (companySettings.company_email || ''),
-          companyAddress: showInvoiceOptions ? customInvoiceData.companyAddress : [
-            companySettings.company_address_line1,
-            companySettings.company_address_line2,
-            companySettings.company_address_line3
-          ].filter(Boolean).join(', '),
-          notes: showInvoiceOptions ? customInvoiceData.notes : '',
-          gstType: showInvoiceOptions ? customInvoiceData.gstType : 'GST',
-          gstRate: showInvoiceOptions ? customInvoiceData.gstRate : 18,
-          invoiceDate: showInvoiceOptions ? customInvoiceData.invoiceDate : new Date().toISOString().split('T')[0]
-        };
-        
         const newInvoice = createInvoice({
-          ...enhancedInvoiceData,
-          status: 'draft'
+          ...invoiceData,
+          status: 'draft' as const
         });
         
         createdCount++;
@@ -253,7 +191,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
                 {/* Period Selection */}
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-base font-semibold">Billing Period</Label>
+                    <Label className="text-base font-medium">Billing Period</Label>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -275,160 +213,31 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
                       />
                     </div>
                   </div>
-
-                  {/* Invoice Data Customization Toggle */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-base font-semibold">Invoice Data</Label>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowInvoiceOptions(!showInvoiceOptions)}
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        {showInvoiceOptions ? 'Use Company Settings' : 'Customize Invoice Data'}
-                      </Button>
-                    </div>
-                    
-                    {showInvoiceOptions ? (
-                      <div className="p-4 bg-muted rounded-lg space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="invoiceDate">Invoice Date</Label>
-                          <Input
-                            id="invoiceDate"
-                            type="date"
-                            value={customInvoiceData.invoiceDate}
-                            onChange={(e) => setCustomInvoiceData(prev => ({ ...prev, invoiceDate: e.target.value }))}
-                          />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="companyName">Company Name</Label>
-                            <Input
-                              id="companyName"
-                              value={customInvoiceData.companyName}
-                              onChange={(e) => setCustomInvoiceData(prev => ({ ...prev, companyName: e.target.value }))}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="companyGst">GST Number</Label>
-                            <Input
-                              id="companyGst"
-                              value={customInvoiceData.companyGst}
-                              onChange={(e) => setCustomInvoiceData(prev => ({ ...prev, companyGst: e.target.value }))}
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="companyPhone">Phone</Label>
-                            <Input
-                              id="companyPhone"
-                              value={customInvoiceData.companyPhone}
-                              onChange={(e) => setCustomInvoiceData(prev => ({ ...prev, companyPhone: e.target.value }))}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="companyEmail">Email</Label>
-                            <Input
-                              id="companyEmail"
-                              type="email"
-                              value={customInvoiceData.companyEmail}
-                              onChange={(e) => setCustomInvoiceData(prev => ({ ...prev, companyEmail: e.target.value }))}
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="companyAddress">Company Address</Label>
-                          <Textarea
-                            id="companyAddress"
-                            value={customInvoiceData.companyAddress}
-                            onChange={(e) => setCustomInvoiceData(prev => ({ ...prev, companyAddress: e.target.value }))}
-                            placeholder="Enter complete address"
-                          />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="gstType">GST Type</Label>
-                            <Select 
-                              value={customInvoiceData.gstType} 
-                              onValueChange={(value: any) => setCustomInvoiceData(prev => ({ ...prev, gstType: value }))}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="GST">Standard GST</SelectItem>
-                                <SelectItem value="IGST">Inter-State GST</SelectItem>
-                                <SelectItem value="NGST">No GST</SelectItem>
-                                <SelectItem value="RCM">Reverse Charge</SelectItem>
-                                <SelectItem value="PERSONAL">Personal Billing</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="gstRate">GST Rate (%)</Label>
-                            <Input
-                              id="gstRate"
-                              type="number"
-                              value={customInvoiceData.gstRate}
-                              onChange={(e) => setCustomInvoiceData(prev => ({ ...prev, gstRate: Number(e.target.value) }))}
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="notes">Invoice Notes</Label>
-                          <Textarea
-                            id="notes"
-                            value={customInvoiceData.notes}
-                            onChange={(e) => setCustomInvoiceData(prev => ({ ...prev, notes: e.target.value }))}
-                            placeholder="Additional notes for all invoices"
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-4 bg-muted rounded-lg space-y-2">
-                        {companySettings ? (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="font-medium">Company:</span>
-                              <span>{companySettings.company_name}</span>
-                            </div>
-                            {companySettings.gst_number && (
-                              <div className="flex justify-between">
-                                <span className="font-medium">GST Number:</span>
-                                <span>{companySettings.gst_number}</span>
-                              </div>
-                            )}
-                            {companySettings.company_phone && (
-                              <div className="flex justify-between">
-                                <span className="font-medium">Phone:</span>
-                                <span>{companySettings.company_phone}</span>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground">Loading company settings...</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
                 </div>
 
-                {/* Site Selection */}
+                {/* Sites Selection */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-base font-semibold">Select Sites ({selectedSites.size} of {sites.length})</Label>
-                    <div className="space-x-2">
-                      <Button variant="outline" size="sm" onClick={selectAllSites}>
+                    <Label className="text-base font-medium">Select Sites to Generate Invoices</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={selectAllSites}
+                        disabled={sites.length === 0}
+                      >
+                        <CheckSquare className="h-4 w-4 mr-1" />
                         Select All
                       </Button>
-                      <Button variant="outline" size="sm" onClick={clearSelection}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={clearSelection}
+                        disabled={selectedSites.size === 0}
+                      >
+                        <X className="h-4 w-4 mr-1" />
                         Clear All
                       </Button>
                     </div>
@@ -486,7 +295,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
                 <div className="pt-4 border-t">
                   <Button 
                     onClick={generateInvoices} 
-                    disabled={selectedSites.size === 0 || loading || (!companySettings && !showInvoiceOptions)}
+                    disabled={selectedSites.size === 0 || loading}
                     className="w-full gap-2"
                     size="lg"
                   >
