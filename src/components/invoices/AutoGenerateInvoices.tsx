@@ -36,7 +36,8 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
     companyAddress: '',
     notes: '',
     gstType: 'GST' as 'GST' | 'IGST' | 'NGST' | 'RCM' | 'PERSONAL',
-    gstRate: 18
+    gstRate: 18,
+    invoiceDate: new Date().toISOString().split('T')[0] // Today's date as default
   });
 
   // Set default period to current month on component mount
@@ -78,7 +79,8 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
           ].filter(Boolean).join(', '),
           notes: '',
           gstType: 'GST',
-          gstRate: 18
+          gstRate: 18,
+          invoiceDate: new Date().toISOString().split('T')[0]
         });
       }
       
@@ -170,7 +172,8 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
           ].filter(Boolean).join(', '),
           notes: showInvoiceOptions ? customInvoiceData.notes : '',
           gstType: showInvoiceOptions ? customInvoiceData.gstType : 'GST',
-          gstRate: showInvoiceOptions ? customInvoiceData.gstRate : 18
+          gstRate: showInvoiceOptions ? customInvoiceData.gstRate : 18,
+          invoiceDate: showInvoiceOptions ? customInvoiceData.invoiceDate : new Date().toISOString().split('T')[0]
         };
         
         const newInvoice = createInvoice({
@@ -281,6 +284,16 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
                     
                     {showInvoiceOptions ? (
                       <div className="p-4 bg-muted rounded-lg space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="invoiceDate">Invoice Date</Label>
+                          <Input
+                            id="invoiceDate"
+                            type="date"
+                            value={customInvoiceData.invoiceDate}
+                            onChange={(e) => setCustomInvoiceData(prev => ({ ...prev, invoiceDate: e.target.value }))}
+                          />
+                        </div>
+                        
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="companyName">Company Name</Label>
