@@ -307,6 +307,44 @@ export const dailyAttendanceSlotsApi = {
     return data;
   },
 
+  // Replace guard in slot (resets attendance status)
+  async replaceGuardInSlot(slotId: string, guardId: string) {
+    // Check if guard is already assigned to another slot for the same date and shift
+    const { data: slot } = await supabase
+      .from('daily_attendance_slots')
+      .select('attendance_date, shift_type')
+      .eq('id', slotId)
+      .single();
+
+    if (slot) {
+      const { data: conflictingSlots } = await supabase
+        .from('daily_attendance_slots')
+        .select('id')
+        .eq('assigned_guard_id', guardId)
+        .eq('attendance_date', slot.attendance_date)
+        .eq('shift_type', slot.shift_type)
+        .neq('id', slotId);
+
+      if (conflictingSlots && conflictingSlots.length > 0) {
+        throw new Error('Guard is already assigned to another slot for this date and shift');
+      }
+    }
+
+    // Replace guard and reset attendance status
+    const { data, error } = await supabase
+      .from('daily_attendance_slots')
+      .update({ 
+        assigned_guard_id: guardId,
+        is_present: null // Reset attendance status for new guard
+      })
+      .eq('id', slotId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
   // Unassign guard from slot
   async unassignGuardFromSlot(slotId: string) {
     const { data, error } = await supabase

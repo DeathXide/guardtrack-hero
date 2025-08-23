@@ -174,8 +174,10 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
 
   // Mutations
   const assignGuardMutation = useMutation({
-    mutationFn: ({ slotId, guardId }: { slotId: string; guardId: string }) =>
-      dailyAttendanceSlotsApi.assignGuardToSlot(slotId, guardId),
+    mutationFn: ({ slotId, guardId, isReplacement }: { slotId: string; guardId: string; isReplacement?: boolean }) =>
+      isReplacement 
+        ? dailyAttendanceSlotsApi.replaceGuardInSlot(slotId, guardId)
+        : dailyAttendanceSlotsApi.assignGuardToSlot(slotId, guardId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
       queryClient.invalidateQueries({ queryKey: ['guards'] });
@@ -312,7 +314,8 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
     if (allocationModal.slotId) {
       assignGuardMutation.mutate({
         slotId: allocationModal.slotId,
-        guardId
+        guardId,
+        isReplacement: allocationModal.isReplacement
       });
     }
   };
