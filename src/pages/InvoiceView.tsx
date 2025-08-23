@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Download, Send, Check, X, Printer } from 'lucide-react';
+import { ArrowLeft, Edit, Download, Send, Check, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,8 +8,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getInvoiceById, updateInvoice } from '@/lib/invoiceData';
 import { formatCurrency } from '@/lib/invoiceUtils';
-import { generateInvoicePDF, printInvoice } from '@/lib/pdfUtils';
-import PrintableInvoice from '@/components/invoices/PrintableInvoice';
 import { Invoice } from '@/types/invoice';
 import { toast } from 'sonner';
 
@@ -18,7 +16,6 @@ export default function InvoiceView() {
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
-  const printableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (id) {
@@ -58,22 +55,6 @@ export default function InvoiceView() {
       console.error('Error updating status:', error);
       toast.error('Failed to update status');
     }
-  };
-
-  const handleDownloadPDF = async () => {
-    if (!invoice || !printableRef.current) return;
-    
-    try {
-      await generateInvoicePDF(printableRef.current, invoice.invoiceNumber);
-      toast.success('PDF downloaded successfully');
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast.error('Failed to generate PDF');
-    }
-  };
-
-  const handlePrint = () => {
-    printInvoice();
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -156,11 +137,7 @@ export default function InvoiceView() {
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
-          <Button variant="outline" onClick={handleDownloadPDF}>
+          <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Download PDF
           </Button>
@@ -171,14 +148,9 @@ export default function InvoiceView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        {/* Printable Invoice - Hidden from normal view */}
-        <div ref={printableRef} className="hidden">
-          <PrintableInvoice invoice={invoice} />
-        </div>
-
-        {/* Regular Invoice Display */}
-        <div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Invoice Content */}
+        <div className="lg:col-span-2">
           <Card>
             <CardContent className="p-8">
               {/* Header */}
@@ -349,7 +321,7 @@ export default function InvoiceView() {
               </div>
               <div className="flex justify-between">
                 <span>Total Amount:</span>
-                <span className="font-semibold">{formatCurrency(invoice.totalAmount || 0)}</span>
+                <span className="font-semibold">{formatCurrency(invoice.totalAmount)}</span>
               </div>
               <div className="flex justify-between">
                 <span>GST Type:</span>
@@ -371,13 +343,9 @@ export default function InvoiceView() {
                 <Send className="h-4 w-4 mr-2" />
                 Send via Email
               </Button>
-              <Button variant="outline" className="w-full" onClick={handleDownloadPDF}>
+              <Button variant="outline" className="w-full">
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
-              </Button>
-              <Button variant="outline" className="w-full" onClick={handlePrint}>
-                <Printer className="h-4 w-4 mr-2" />
-                Print Invoice
               </Button>
               <Button variant="outline" className="w-full" onClick={() => navigate(`/invoices/${invoice.id}/edit`)}>
                 <Edit className="h-4 w-4 mr-2" />
