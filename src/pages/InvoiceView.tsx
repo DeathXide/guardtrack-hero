@@ -258,7 +258,24 @@ export default function InvoiceView() {
 
               {/* Totals */}
               <div className="border-t border-gray-200 pt-4">
-                <div className="flex justify-end">
+                <div className={`flex ${invoice.gstType === 'RCM' ? 'justify-between items-start gap-6' : 'justify-end'}`}>
+                  {/* RCM Notice - Left Side */}
+                  {invoice.gstType === 'RCM' && (
+                    <div className="flex-1 max-w-md">
+                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="font-bold text-yellow-800 mb-2 text-sm">REVERSE CHARGE MECHANISM ON SECURITY SERVICES</div>
+                        <div className="text-xs text-yellow-700 mb-2">
+                          AS PER NOTIFICATION NO.29/2018 –UNION TERRITORY TAX (RATE) W.E.F 01/01/2019
+                        </div>
+                        <p className="text-xs text-yellow-800">
+                          <strong>Note:</strong> The recipient is liable to pay CGST ({(invoice.cgstRate || 0).toFixed(1)}%) and SGST ({(invoice.sgstRate || 0).toFixed(1)}%) 
+                          totaling {formatCurrency(((invoice.subtotal * (invoice.cgstRate || 0)) / 100) + ((invoice.subtotal * (invoice.sgstRate || 0)) / 100))} directly to the government.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Totals Section - Right Side */}
                   <div className="w-80 space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
@@ -359,19 +376,6 @@ export default function InvoiceView() {
                 </div>
               </div>
 
-              {/* RCM Notice */}
-              {invoice.gstType === 'RCM' && (
-                <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="font-bold text-yellow-800 mb-2">REVERSE CHARGE MECHANISM ON SECURITY SERVICES</div>
-                  <div className="text-sm text-yellow-700 mb-2">
-                    AS PER NOTIFICATION NO.29/2018 –UNION TERRITORY TAX (RATE) W.E.F 01/01/2019
-                  </div>
-                  <p className="text-sm text-yellow-800">
-                    <strong>Note:</strong> The recipient is liable to pay CGST ({(invoice.cgstRate || 0).toFixed(1)}%) and SGST ({(invoice.sgstRate || 0).toFixed(1)}%) 
-                    totaling {formatCurrency(((invoice.subtotal * (invoice.cgstRate || 0)) / 100) + ((invoice.subtotal * (invoice.sgstRate || 0)) / 100))} directly to the government.
-                  </p>
-                </div>
-              )}
 
               {/* GST Type Information */}
               {invoice.gstType === 'GST' && (
