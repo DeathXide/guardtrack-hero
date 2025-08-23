@@ -206,12 +206,7 @@ export default function InvoiceView() {
                     {invoice.siteGst && <p className="mt-1"><span className="font-medium">GST No:</span> {invoice.siteGst}</p>}
                   </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-gray-900 mb-2">Invoice Details:</h4>
-                  <div className="text-sm text-gray-700 space-y-1">
-                    <p><span className="font-medium">Period:</span> {new Date(invoice.periodFrom).toLocaleDateString()} - {new Date(invoice.periodTo).toLocaleDateString()}</p>
-                  </div>
-                </div>
+                
               </div>
 
               {/* Line Items */}
