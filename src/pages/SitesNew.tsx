@@ -200,10 +200,23 @@ export default function SitesNew() {
   };
 
   const handleSubmit = () => {
-    if (!formData.site_name || !formData.organization_name || !formData.address_line1) {
+    // Validate required fields
+    const errors: string[] = [];
+    
+    if (!formData.site_name.trim()) errors.push("Site Name");
+    if (!formData.organization_name.trim()) errors.push("Organization Name");
+    if (!formData.address_line1.trim()) errors.push("Address Line 1");
+    if (!formData.site_category) errors.push("Site Category");
+    
+    // GST number is required only when GST type is "GST"
+    if (formData.gst_type === "GST" && !formData.gst_number.trim()) {
+      errors.push("GST Number (required for GST type)");
+    }
+
+    if (errors.length > 0) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields.",
+        description: `Please fill in the following required fields: ${errors.join(", ")}`,
         variant: "destructive",
       });
       return;
