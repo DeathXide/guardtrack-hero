@@ -69,7 +69,8 @@ export default function InvoiceView() {
 
   const getGstTypeDescription = (gstType: string) => {
     switch (gstType) {
-      case 'GST': return 'Standard GST';
+      case 'GST': return 'Intra-State GST';
+      case 'IGST': return 'Inter-State GST';
       case 'NGST': return 'No GST';
       case 'RCM': return 'Reverse Charge Mechanism';
       case 'PERSONAL': return 'Personal Billing';
@@ -212,19 +213,55 @@ export default function InvoiceView() {
               {/* Totals */}
               <div className="border-t pt-4">
                 <div className="flex justify-end">
-                  <div className="w-64 space-y-2">
+                  <div className="w-80 space-y-2">
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
                       <span>{formatCurrency(invoice.subtotal)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>
-                        {invoice.gstType === 'RCM' ? 'GST (Reverse Charge)' : `${getGstTypeDescription(invoice.gstType)} (${invoice.gstRate}%)`}:
-                      </span>
-                      <span>{formatCurrency(invoice.gstAmount)}</span>
-                    </div>
+                    
+                    {/* GST Breakdown */}
+                    {invoice.gstType === 'GST' && (
+                      <>
+                        <div className="flex justify-between">
+                          <span>CGST ({invoice.cgstRate}%):</span>
+                          <span>{formatCurrency(invoice.cgstAmount)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>SGST ({invoice.sgstRate}%):</span>
+                          <span>{formatCurrency(invoice.sgstAmount)}</span>
+                        </div>
+                      </>
+                    )}
+                    
+                    {invoice.gstType === 'IGST' && (
+                      <div className="flex justify-between">
+                        <span>IGST ({invoice.igstRate}%):</span>
+                        <span>{formatCurrency(invoice.igstAmount)}</span>
+                      </div>
+                    )}
+                    
+                    {invoice.gstType === 'RCM' && (
+                      <>
+                        <div className="flex justify-between">
+                          <span>CGST ({invoice.cgstRate}%) - Reverse Charge:</span>
+                          <span>₹ 0.00</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>SGST ({invoice.sgstRate}%) - Reverse Charge:</span>
+                          <span>₹ 0.00</span>
+                        </div>
+                      </>
+                    )}
+                    
+                    {(invoice.gstType === 'NGST' || invoice.gstType === 'PERSONAL') && (
+                      <div className="flex justify-between">
+                        <span>GST ({invoice.gstRate}%):</span>
+                        <span>{formatCurrency(invoice.gstAmount)}</span>
+                      </div>
+                    )}
+                    
                     <div className="flex justify-between font-bold text-lg border-t pt-2">
-                      <span>Total:</span>
+                      <span>Total Amount:</span>
                       <span>{formatCurrency(invoice.totalAmount)}</span>
                     </div>
                   </div>
@@ -244,7 +281,24 @@ export default function InvoiceView() {
                 <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm text-yellow-800">
                     <strong>Note:</strong> This invoice is under Reverse Charge Mechanism. 
-                    The recipient is liable to pay GST directly to the government.
+                    The recipient is liable to pay CGST ({invoice.cgstRate}%) and SGST ({invoice.sgstRate}%) directly to the government.
+                  </p>
+                </div>
+              )}
+
+              {/* GST Type Information */}
+              {invoice.gstType === 'GST' && (
+                <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Tax Details:</strong> Intra-state supply - CGST ({invoice.cgstRate}%) + SGST ({invoice.sgstRate}%) = Total GST ({invoice.gstRate}%)
+                  </p>
+                </div>
+              )}
+
+              {invoice.gstType === 'IGST' && (
+                <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-800">
+                    <strong>Tax Details:</strong> Inter-state supply - IGST ({invoice.igstRate}%)
                   </p>
                 </div>
               )}

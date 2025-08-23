@@ -22,9 +22,15 @@ export interface Invoice {
   periodTo: string;
   lineItems: InvoiceLineItem[];
   subtotal: number;
-  gstType: 'GST' | 'NGST' | 'RCM' | 'PERSONAL';
+  gstType: 'GST' | 'IGST' | 'NGST' | 'RCM' | 'PERSONAL';
   gstRate: number;
   gstAmount: number;
+  cgstRate: number;
+  cgstAmount: number;
+  sgstRate: number;
+  sgstAmount: number;
+  igstRate: number;
+  igstAmount: number;
   totalAmount: number;
   status: 'draft' | 'sent' | 'paid' | 'overdue';
   notes?: string;

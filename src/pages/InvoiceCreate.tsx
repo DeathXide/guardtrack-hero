@@ -114,7 +114,8 @@ export default function InvoiceCreate() {
 
   const getGstTypeDescription = (gstType: string) => {
     switch (gstType) {
-      case 'GST': return 'Standard GST (18%)';
+      case 'GST': return 'Intra-State GST (CGST + SGST)';
+      case 'IGST': return 'Inter-State GST (IGST)';
       case 'NGST': return 'No GST (0%)';
       case 'RCM': return 'Reverse Charge Mechanism';
       case 'PERSONAL': return 'Personal Billing (No GST)';
@@ -276,12 +277,42 @@ export default function InvoiceCreate() {
                     <span>Subtotal:</span>
                     <span>{formatCurrency(preview.subtotal)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>
-                      {preview.gstType === 'RCM' ? 'GST (Reverse Charge)' : `GST (${preview.gstRate}%)`}:
-                    </span>
-                    <span>{formatCurrency(preview.gstAmount)}</span>
-                  </div>
+                  
+                  {/* GST Breakdown */}
+                  {preview.gstType === 'GST' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span>CGST ({preview.cgstRate}%):</span>
+                        <span>{formatCurrency(preview.cgstAmount)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>SGST ({preview.sgstRate}%):</span>
+                        <span>{formatCurrency(preview.sgstAmount)}</span>
+                      </div>
+                    </>
+                  )}
+                  
+                  {preview.gstType === 'IGST' && (
+                    <div className="flex justify-between">
+                      <span>IGST ({preview.igstRate}%):</span>
+                      <span>{formatCurrency(preview.igstAmount)}</span>
+                    </div>
+                  )}
+                  
+                  {preview.gstType === 'RCM' && (
+                    <div className="flex justify-between">
+                      <span>GST (Reverse Charge):</span>
+                      <span>{formatCurrency(preview.gstAmount)}</span>
+                    </div>
+                  )}
+                  
+                  {(preview.gstType === 'NGST' || preview.gstType === 'PERSONAL') && (
+                    <div className="flex justify-between">
+                      <span>GST ({preview.gstRate}%):</span>
+                      <span>{formatCurrency(preview.gstAmount)}</span>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total:</span>
                     <span>{formatCurrency(preview.totalAmount)}</span>
@@ -292,7 +323,15 @@ export default function InvoiceCreate() {
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                     <p className="text-sm text-yellow-800">
                       <strong>Note:</strong> This invoice is under Reverse Charge Mechanism. 
-                      The recipient is liable to pay GST directly to the government.
+                      The recipient is liable to pay CGST ({preview.cgstRate}%) and SGST ({preview.sgstRate}%) directly to the government.
+                    </p>
+                  </div>
+                )}
+
+                {preview.gstType === 'GST' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-800">
+                      <strong>Tax Breakdown:</strong> CGST ({preview.cgstRate}%) + SGST ({preview.sgstRate}%) = Total GST ({preview.gstRate}%)
                     </p>
                   </div>
                 )}

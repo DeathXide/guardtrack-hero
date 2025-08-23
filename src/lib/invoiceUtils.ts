@@ -2,20 +2,60 @@ import { Site, StaffingSlot } from '@/types';
 import { Invoice, InvoiceLineItem } from '@/types/invoice';
 
 export const GST_RATES = {
-  GST: 18, // Standard GST rate for security services
+  GST: 18, // Standard GST rate for security services (CGST 9% + SGST 9%)
+  IGST: 18, // Inter-state GST (IGST 18%)
   NGST: 0, // No GST
   RCM: 18, // Reverse Charge Mechanism - same rate but different handling
   PERSONAL: 0 // Personal billing - no GST
 };
 
-export function calculateGST(amount: number, gstType: string): { gstRate: number; gstAmount: number; totalAmount: number } {
+export function calculateGST(amount: number, gstType: string): { 
+  gstRate: number; 
+  gstAmount: number; 
+  cgstRate: number;
+  cgstAmount: number;
+  sgstRate: number;
+  sgstAmount: number;
+  igstRate: number;
+  igstAmount: number;
+  totalAmount: number;
+} {
   const gstRate = GST_RATES[gstType as keyof typeof GST_RATES] || 0;
-  const gstAmount = gstType === 'RCM' ? 0 : (amount * gstRate) / 100; // RCM - client pays GST
-  const totalAmount = amount + gstAmount;
+  
+  let cgstRate = 0, cgstAmount = 0, sgstRate = 0, sgstAmount = 0, igstRate = 0, igstAmount = 0;
+  let totalGstAmount = 0;
+
+  if (gstType === 'GST') {
+    // For intra-state: CGST + SGST (9% each = 18% total)
+    cgstRate = gstRate / 2; // 9%
+    sgstRate = gstRate / 2; // 9%
+    cgstAmount = (amount * cgstRate) / 100;
+    sgstAmount = (amount * sgstRate) / 100;
+    totalGstAmount = cgstAmount + sgstAmount;
+  } else if (gstType === 'IGST') {
+    // For inter-state: IGST (18% total)
+    igstRate = gstRate;
+    igstAmount = (amount * igstRate) / 100;
+    totalGstAmount = igstAmount;
+  } else if (gstType === 'RCM') {
+    // RCM - client pays GST, but we show the breakdown
+    cgstRate = gstRate / 2;
+    sgstRate = gstRate / 2;
+    totalGstAmount = 0; // Client pays, not added to invoice total
+  }
+  // NGST and PERSONAL have 0% GST
+
+  const totalAmount = amount + totalGstAmount;
 
   return {
     gstRate,
-    gstAmount,
+    gstAmount: totalGstAmount,
+    cgstRate,
+    cgstAmount,
+    sgstRate,
+    sgstAmount,
+    igstRate,
+    igstAmount,
     totalAmount
   };
 }
@@ -70,8 +110,8 @@ export function calculateInvoiceFromSite(
     }
   });
 
-  // Calculate GST
-  const { gstRate, gstAmount, totalAmount } = calculateGST(subtotal, site.gstType);
+  // Calculate GST with proper breakdown
+  const gstCalculation = calculateGST(subtotal, site.gstType);
 
   return {
     invoiceNumber: generateInvoiceNumber(),
@@ -87,9 +127,15 @@ export function calculateInvoiceFromSite(
     lineItems,
     subtotal,
     gstType: site.gstType,
-    gstRate,
-    gstAmount,
-    totalAmount
+    gstRate: gstCalculation.gstRate,
+    gstAmount: gstCalculation.gstAmount,
+    cgstRate: gstCalculation.cgstRate,
+    cgstAmount: gstCalculation.cgstAmount,
+    sgstRate: gstCalculation.sgstRate,
+    sgstAmount: gstCalculation.sgstAmount,
+    igstRate: gstCalculation.igstRate,
+    igstAmount: gstCalculation.igstAmount,
+    totalAmount: gstCalculation.totalAmount
   };
 }
 
