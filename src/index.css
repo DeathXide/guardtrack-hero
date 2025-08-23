@@ -35,6 +35,15 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
+    --info: 204 94% 94%;
+    --info-foreground: 220 10% 12%;
+
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
@@ -81,6 +90,15 @@
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+
+    --info: 204 94% 94%;
+    --info-foreground: 0 0% 98%;
+
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
 
     --border: 215 25% 20%;
     --input: 215 25% 20%;
@@ -151,25 +169,84 @@
     @apply bg-background/80 backdrop-blur-md border border-border/50 shadow-sm;
   }
   
-  /* Button hover effect */
+  /* Enhanced glass morphism for attendance cards */
+  .attendance-card {
+    @apply relative bg-gradient-to-br from-background/90 to-background/60 backdrop-blur-lg border border-border/30 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+  
+  /* Status indicator gradients */
+  .status-assigned {
+    @apply bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200 dark:from-blue-950/50 dark:to-blue-900/50 dark:border-blue-800;
+  }
+  
+  .status-present {
+    @apply bg-gradient-to-r from-green-50 to-green-100 border-green-200 dark:from-green-950/50 dark:to-green-900/50 dark:border-green-800;
+  }
+  
+  .status-absent {
+    @apply bg-gradient-to-r from-red-50 to-red-100 border-red-200 dark:from-red-950/50 dark:to-red-900/50 dark:border-red-800;
+  }
+  
+  .status-empty {
+    @apply bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200 dark:from-gray-950/50 dark:to-gray-900/50 dark:border-gray-800;
+  }
+  
+  .status-temporary {
+    @apply bg-gradient-to-r from-amber-50 to-amber-100 border-amber-200 dark:from-amber-950/50 dark:to-amber-900/50 dark:border-amber-800;
+  }
+  
+  /* Button hover effects */
   .btn-hover {
     @apply relative overflow-hidden transition-all duration-300 after:absolute after:inset-0 after:z-[-1] after:bg-gradient-to-r after:from-primary/20 after:to-primary/0 after:opacity-0 hover:after:opacity-100 after:transition-opacity;
   }
   
+  /* Interactive hover animations */
+  .hover-lift {
+    @apply transition-all duration-200 hover:-translate-y-1 hover:shadow-lg;
+  }
+  
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+  
+  /* Stat card styles */
+  .stat-card {
+    @apply relative overflow-hidden bg-gradient-to-br from-background to-background/80 border border-border/50 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+  
+  .stat-card::before {
+    @apply absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/60 to-primary/30 content-[''];
+  }
+  
+  /* Floating action button */
+  .fab {
+    @apply fixed bottom-6 right-6 z-50 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center hover:scale-110;
+  }
+  
+  /* Badge animations */
+  .badge-pulse {
+    @apply animate-pulse;
+  }
+  
+  /* Grid responsive layouts */
+  .attendance-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
+  }
+  
   /* Page transitions */
   .page-transition-enter {
-    @apply opacity-0;
+    @apply opacity-0 translate-y-4;
   }
   
   .page-transition-enter-active {
-    @apply opacity-100 transition-opacity duration-300;
+    @apply opacity-100 translate-y-0 transition-all duration-300;
   }
   
   .page-transition-exit {
-    @apply opacity-100;
+    @apply opacity-100 translate-y-0;
   }
   
   .page-transition-exit-active {
-    @apply opacity-0 transition-opacity duration-300;
+    @apply opacity-0 translate-y-4 transition-all duration-300;
   }
 }
