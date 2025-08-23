@@ -410,6 +410,22 @@ export default function InvoiceView() {
               </div>
 
 
+              {/* GST Type Information */}
+              {invoice.gstType === 'GST' && (
+                <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Tax Details:</strong> Intra-state supply - CGST ({(invoice.cgstRate || 0).toFixed(1)}%) + SGST ({(invoice.sgstRate || 0).toFixed(1)}%) = Total GST ({(invoice.gstRate || 0).toFixed(1)}%)
+                  </p>
+                </div>
+              )}
+
+              {invoice.gstType === 'IGST' && (
+                <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-800">
+                    <strong>Tax Details:</strong> Inter-state supply - IGST ({(invoice.igstRate || 0).toFixed(1)}%)
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
