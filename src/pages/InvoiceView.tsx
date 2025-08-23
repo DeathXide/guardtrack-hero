@@ -184,6 +184,11 @@ export default function InvoiceView() {
                     <h1 className="text-3xl font-light text-foreground tracking-wide">{companySettings?.company_name || invoice.companyName}</h1>
                     <div className="text-sm text-muted-foreground space-y-1 font-mono">
                       {(companySettings?.gst_number || invoice.companyGst) && <p>GST: {companySettings?.gst_number || invoice.companyGst}</p>}
+                      {companySettings?.company_address_line1 && (
+                        <p className="text-xs leading-relaxed">
+                          {[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-4 text-xs">
                         {companySettings?.company_phone && (
                           <div className="flex items-center gap-1">
@@ -412,15 +417,6 @@ export default function InvoiceView() {
                 )}
               </div>
 
-              {/* Footer - Simple footer */}
-              <div className="mt-auto px-8 py-6 border-t border-border bg-accent/20">
-                <div className="text-xs text-muted-foreground">
-                  <p className="mb-1">Thank you for your business!</p>
-                  {companySettings?.company_address_line1 && (
-                    <p>{[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}</p>
-                  )}
-                </div>
-              </div>
 
 
             </CardContent>
