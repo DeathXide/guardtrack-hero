@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, FileText, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, FileText, Eye, Edit, Trash2, Wand2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import AutoGenerateInvoices from '@/components/invoices/AutoGenerateInvoices';
 import { getInvoices, deleteInvoice } from '@/lib/invoiceData';
 import { formatCurrency } from '@/lib/invoiceUtils';
 import { Invoice } from '@/types/invoice';
@@ -18,6 +20,7 @@ export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+  const [autoGenerateOpen, setAutoGenerateOpen] = useState(false);
 
   useEffect(() => {
     loadInvoices();
@@ -45,6 +48,11 @@ export default function Invoices() {
         toast.error('Failed to delete invoice');
       }
     }
+  };
+
+  const handleInvoicesCreated = () => {
+    loadInvoices();
+    setAutoGenerateOpen(false);
   };
 
   const filteredInvoices = invoices.filter(invoice => {
@@ -96,10 +104,26 @@ export default function Invoices() {
           <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
           <p className="text-muted-foreground">Manage your billing and invoices</p>
         </div>
-        <Button onClick={() => navigate('/invoices/create')} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Create Invoice
-        </Button>
+        <div className="flex items-center gap-2">
+          <Dialog open={autoGenerateOpen} onOpenChange={setAutoGenerateOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Wand2 className="h-4 w-4" />
+                Auto Generate
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Auto Generate Invoices</DialogTitle>
+              </DialogHeader>
+              <AutoGenerateInvoices onInvoicesCreated={handleInvoicesCreated} />
+            </DialogContent>
+          </Dialog>
+          <Button onClick={() => navigate('/invoices/create')} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create Invoice
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}

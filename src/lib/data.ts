@@ -10,8 +10,86 @@ export const users: User[] = [
   }
 ];
 
-// Empty sites array - ready for your real data
-export let sites: Site[] = [];
+// Sample sites with staffing data for invoice generation
+export let sites: Site[] = [
+  {
+    id: '1',
+    name: 'Corporate Office Complex',
+    organizationName: 'TechCorp Industries',
+    gstNumber: '29ABCDE1234F1Z5',
+    addressLine1: '123 Business District',
+    addressLine2: 'Tech Park',
+    addressLine3: 'Bangalore - 560001',
+    gstType: 'GST',
+    siteType: 'Corporate',
+    staffingSlots: [
+      {
+        id: '1',
+        role: 'Security Guard',
+        daySlots: 4,
+        nightSlots: 3,
+        budgetPerSlot: 1500
+      },
+      {
+        id: '2',
+        role: 'Supervisor',
+        daySlots: 1,
+        nightSlots: 1,
+        budgetPerSlot: 2500
+      }
+    ],
+    created_at: '2024-08-01T00:00:00Z'
+  },
+  {
+    id: '2',
+    name: 'Manufacturing Plant',
+    organizationName: 'Industrial Corp',
+    gstNumber: '27XYZAB9876C1D2',
+    addressLine1: '456 Industrial Area',
+    addressLine2: 'Sector 5',
+    addressLine3: 'Gurgaon - 122001',
+    gstType: 'RCM',
+    siteType: 'Industrial',
+    staffingSlots: [
+      {
+        id: '3',
+        role: 'Security Guard',
+        daySlots: 6,
+        nightSlots: 6,
+        budgetPerSlot: 1400
+      },
+      {
+        id: '4',
+        role: 'Housekeeping',
+        daySlots: 2,
+        nightSlots: 1,
+        budgetPerSlot: 1200
+      }
+    ],
+    created_at: '2024-08-01T00:00:00Z'
+  },
+  {
+    id: '3',
+    name: 'Residential Complex',
+    organizationName: 'Premium Homes Society',
+    gstNumber: '',
+    addressLine1: '789 Housing Society',
+    addressLine2: 'Green Valley',
+    addressLine3: 'Pune - 411001',
+    gstType: 'PERSONAL',
+    siteType: 'Residential',
+    staffingSlots: [
+      {
+        id: '5',
+        role: 'Security Guard',
+        daySlots: 2,
+        nightSlots: 2,
+        budgetPerSlot: 1600
+      }
+    ],
+    created_at: '2024-08-01T00:00:00Z'
+  }
+];
 
 // Empty guards array - ready for your real data
 export let guards: Guard[] = [];
