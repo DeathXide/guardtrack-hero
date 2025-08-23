@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
@@ -39,6 +39,7 @@ export type Database = {
           scheduled_start_time: string
           shift_type: string
           site_id: string
+          slot_id: string | null
           status: string
           updated_at: string
         }
@@ -66,6 +67,7 @@ export type Database = {
           scheduled_start_time: string
           shift_type: string
           site_id: string
+          slot_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -93,6 +95,7 @@ export type Database = {
           scheduled_start_time?: string
           shift_type?: string
           site_id?: string
+          slot_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -109,6 +112,13 @@ export type Database = {
             columns: ["site_id"]
             isOneToOne: false
             referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "daily_attendance_slots"
             referencedColumns: ["id"]
           },
           {
@@ -180,6 +190,63 @@ export type Database = {
             foreignKeyName: "attendance_settings_site_id_fkey"
             columns: ["site_id"]
             isOneToOne: true
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_attendance_slots: {
+        Row: {
+          assigned_guard_id: string | null
+          attendance_date: string
+          created_at: string
+          id: string
+          is_present: boolean | null
+          pay_rate: number | null
+          role_type: string
+          shift_type: string
+          site_id: string
+          slot_number: number
+          updated_at: string
+        }
+        Insert: {
+          assigned_guard_id?: string | null
+          attendance_date: string
+          created_at?: string
+          id?: string
+          is_present?: boolean | null
+          pay_rate?: number | null
+          role_type: string
+          shift_type: string
+          site_id: string
+          slot_number: number
+          updated_at?: string
+        }
+        Update: {
+          assigned_guard_id?: string | null
+          attendance_date?: string
+          created_at?: string
+          id?: string
+          is_present?: boolean | null
+          pay_rate?: number | null
+          role_type?: string
+          shift_type?: string
+          site_id?: string
+          slot_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_attendance_slots_assigned_guard_id_fkey"
+            columns: ["assigned_guard_id"]
+            isOneToOne: false
+            referencedRelation: "guards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_attendance_slots_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
