@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Download, Send, Check, X } from 'lucide-react';
+import { ArrowLeft, Edit, Download, Send, Check, X, Phone, Mail, MapPin, Building2, Hash, Calendar, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -185,8 +185,18 @@ export default function InvoiceView() {
                     <div className="text-sm text-muted-foreground space-y-1 font-mono">
                       {(companySettings?.gst_number || invoice.companyGst) && <p>GST: {companySettings?.gst_number || invoice.companyGst}</p>}
                       <div className="flex flex-wrap gap-4 text-xs">
-                        {companySettings?.company_phone && <span>📞 {companySettings.company_phone}</span>}
-                        {companySettings?.company_email && <span>✉ {companySettings.company_email}</span>}
+                        {companySettings?.company_phone && (
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            <span>{companySettings.company_phone}</span>
+                          </div>
+                        )}
+                        {companySettings?.company_email && (
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            <span>{companySettings.company_email}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -194,11 +204,17 @@ export default function InvoiceView() {
                     <h2 className="text-lg font-medium text-foreground mb-3">INVOICE</h2>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between items-center gap-8">
-                        <span className="text-muted-foreground">Number:</span>
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Hash className="h-3 w-3" />
+                          <span>Number:</span>
+                        </div>
                         <span className="font-mono font-medium">{invoice.invoiceNumber}</span>
                       </div>
                       <div className="flex justify-between items-center gap-8">
-                        <span className="text-muted-foreground">Date:</span>
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          <span>Date:</span>
+                        </div>
                         <span className="font-mono">{new Date(invoice.invoiceDate).toLocaleDateString()}</span>
                       </div>
                     </div>
@@ -209,11 +225,21 @@ export default function InvoiceView() {
               {/* Client Info */}
               <div className="px-8 mb-8">
                 <div className="bg-accent/50 rounded-lg p-4 max-w-md">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">BILL TO</h3>
-                  <div className="space-y-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="text-sm font-medium text-muted-foreground">BILL TO</h3>
+                  </div>
+                  <div className="space-y-2">
                     <p className="font-medium text-foreground">{invoice.siteName}</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{invoice.clientAddress.split(', ').filter(Boolean).join(', ')}</p>
-                    {invoice.siteGst && <p className="text-xs text-muted-foreground font-mono mt-2">GST: {invoice.siteGst}</p>}
+                    <div className="flex items-start gap-1">
+                      <MapPin className="h-3 w-3 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-muted-foreground leading-relaxed">{invoice.clientAddress.split(', ').filter(Boolean).join(', ')}</p>
+                    </div>
+                    {invoice.siteGst && (
+                      <p className="text-xs text-muted-foreground font-mono mt-2">
+                        <span className="font-medium">GST:</span> {invoice.siteGst}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -273,7 +299,7 @@ export default function InvoiceView() {
                     <div className="flex-1 max-w-sm">
                       <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4">
                         <div className="flex items-start gap-2 mb-2">
-                          <div className="w-1 h-4 bg-blue-400 rounded-full mt-0.5 flex-shrink-0"></div>
+                          <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                           <div>
                             <p className="text-xs font-medium text-blue-900 leading-tight">Reverse Charge Mechanism</p>
                             <p className="text-xs text-blue-700 mt-1">Security Services - Notification No.29/2018</p>
