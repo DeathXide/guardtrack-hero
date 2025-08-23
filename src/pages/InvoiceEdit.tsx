@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getInvoiceById, updateInvoice } from '@/lib/invoiceData';
+import { fetchInvoiceByIdFromDB, updateInvoiceInDB } from '@/lib/supabaseInvoiceApiNew';
 import { calculateGST, formatCurrency } from '@/lib/invoiceUtils';
 import { Invoice, InvoiceLineItem } from '@/types/invoice';
 import { toast } from 'sonner';
@@ -33,10 +33,10 @@ export default function InvoiceEdit() {
     }
   }, [id]);
 
-  const loadInvoice = (invoiceId: string) => {
+  const loadInvoice = async (invoiceId: string) => {
     setLoading(true);
     try {
-      const data = getInvoiceById(invoiceId);
+      const data = await fetchInvoiceByIdFromDB(invoiceId);
       if (data) {
         setInvoice(data);
         setFormData({
@@ -102,7 +102,7 @@ export default function InvoiceEdit() {
     try {
       const { subtotal, gstRate, gstAmount, totalAmount } = calculateTotals();
       
-      const updatedInvoice = updateInvoice(invoice.id, {
+      const updatedInvoice = await updateInvoiceInDB(invoice.id, {
         ...formData,
         lineItems,
         subtotal,

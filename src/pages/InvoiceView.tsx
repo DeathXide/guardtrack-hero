@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getInvoiceById, updateInvoice } from '@/lib/invoiceData';
+import { fetchInvoiceByIdFromDB, updateInvoiceInDB } from '@/lib/supabaseInvoiceApiNew';
 import { formatCurrency } from '@/lib/invoiceUtils';
 import { generatePDF } from '@/lib/pdfUtils';
 import { numberToWords } from '@/lib/numberToWords';
@@ -29,10 +29,10 @@ export default function InvoiceView() {
       loadCompanySettings();
     }
   }, [id]);
-  const loadInvoice = (invoiceId: string) => {
+  const loadInvoice = async (invoiceId: string) => {
     setLoading(true);
     try {
-      const data = getInvoiceById(invoiceId);
+      const data = await fetchInvoiceByIdFromDB(invoiceId);
       if (data) {
         setInvoice(data);
       } else {
@@ -58,7 +58,7 @@ export default function InvoiceView() {
   const handleStatusChange = async (newStatus: string) => {
     if (!invoice) return;
     try {
-      const updatedInvoice = updateInvoice(invoice.id, {
+      const updatedInvoice = await updateInvoiceInDB(invoice.id, {
         status: newStatus as any
       });
       if (updatedInvoice) {

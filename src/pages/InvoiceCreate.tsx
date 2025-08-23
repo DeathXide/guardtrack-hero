@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { fetchSites } from '@/lib/localService';
-import { createInvoice } from '@/lib/invoiceData';
+import { createInvoiceInDB } from '@/lib/supabaseInvoiceApiNew';
 import { calculateInvoiceFromSite, formatCurrency } from '@/lib/invoiceUtils';
 import { companyApi } from '@/lib/companyApi';
 import { Site } from '@/types';
@@ -124,7 +124,7 @@ export default function InvoiceCreate() {
         status: 'draft' as const
       };
 
-      const newInvoice = createInvoice(invoiceData);
+      const newInvoice = await createInvoiceInDB(invoiceData);
       toast.success('Invoice created successfully');
       navigate(`/invoices/${newInvoice.id}`);
     } catch (error) {

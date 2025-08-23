@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { fetchSitesWithStaffing, fetchCompanySettings, convertSiteToInvoiceFormat, SiteWithStaffing, CompanySettings } from '@/lib/supabaseInvoiceApi';
-import { createInvoice } from '@/lib/invoiceData';
+import { createInvoiceInDB } from '@/lib/supabaseInvoiceApiNew';
 import { calculateInvoiceFromSite, formatCurrency } from '@/lib/invoiceUtils';
 import { toast } from 'sonner';
 
@@ -122,7 +122,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
           companyData
         );
         
-        const newInvoice = createInvoice({
+        const newInvoice = await createInvoiceInDB({
           ...invoiceData,
           status: 'draft' as const
         });

@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import AutoGenerateInvoices from '@/components/invoices/AutoGenerateInvoices';
-import { getInvoices, deleteInvoice } from '@/lib/invoiceData';
+import { fetchInvoicesFromDB, deleteInvoiceFromDB } from '@/lib/supabaseInvoiceApiNew';
 import { formatCurrency } from '@/lib/invoiceUtils';
 import { Invoice } from '@/types/invoice';
 import { useNavigate } from 'react-router-dom';
@@ -26,15 +26,11 @@ export default function Invoices() {
     loadInvoices();
   }, []);
 
-  const loadInvoices = () => {
+  const loadInvoices = async () => {
     setLoading(true);
     try {
-      const data = getInvoices();
-      // Remove duplicates based on ID
-      const uniqueInvoices = data.filter((invoice, index, self) => 
-        index === self.findIndex(i => i.id === invoice.id)
-      );
-      setInvoices(uniqueInvoices);
+      const data = await fetchInvoicesFromDB();
+      setInvoices(data);
     } catch (error) {
       console.error('Error loading invoices:', error);
       toast.error('Failed to load invoices');
@@ -43,11 +39,13 @@ export default function Invoices() {
     }
   };
 
-  const handleDeleteInvoice = (id: string) => {
-    if (deleteInvoice(id)) {
+  const handleDeleteInvoice = async (id: string) => {
+    try {
+      await deleteInvoiceFromDB(id);
       setInvoices(invoices.filter(inv => inv.id !== id));
       toast.success('Invoice deleted successfully');
-    } else {
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
       toast.error('Failed to delete invoice');
     }
   };
