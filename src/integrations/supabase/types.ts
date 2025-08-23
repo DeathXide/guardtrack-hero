@@ -408,6 +408,126 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_sequences: {
+        Row: {
+          created_at: string
+          financial_year: string
+          id: string
+          next_number: number
+          prefix: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          financial_year: string
+          id?: string
+          next_number?: number
+          prefix?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          financial_year?: string
+          id?: string
+          next_number?: number
+          prefix?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          cgst_amount: number
+          cgst_rate: number
+          client_address: string
+          client_name: string
+          company_gst: string | null
+          company_name: string
+          created_at: string
+          gst_amount: number
+          gst_rate: number
+          gst_type: string
+          id: string
+          igst_amount: number
+          igst_rate: number
+          invoice_date: string
+          invoice_number: string
+          line_items: Json
+          notes: string | null
+          period_from: string
+          period_to: string
+          sgst_amount: number
+          sgst_rate: number
+          site_gst: string | null
+          site_id: string
+          site_name: string
+          status: string
+          subtotal: number
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          cgst_amount?: number
+          cgst_rate?: number
+          client_address: string
+          client_name: string
+          company_gst?: string | null
+          company_name: string
+          created_at?: string
+          gst_amount?: number
+          gst_rate?: number
+          gst_type: string
+          id?: string
+          igst_amount?: number
+          igst_rate?: number
+          invoice_date: string
+          invoice_number: string
+          line_items?: Json
+          notes?: string | null
+          period_from: string
+          period_to: string
+          sgst_amount?: number
+          sgst_rate?: number
+          site_gst?: string | null
+          site_id: string
+          site_name: string
+          status?: string
+          subtotal: number
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          cgst_amount?: number
+          cgst_rate?: number
+          client_address?: string
+          client_name?: string
+          company_gst?: string | null
+          company_name?: string
+          created_at?: string
+          gst_amount?: number
+          gst_rate?: number
+          gst_type?: string
+          id?: string
+          igst_amount?: number
+          igst_rate?: number
+          invoice_date?: string
+          invoice_number?: string
+          line_items?: Json
+          notes?: string | null
+          period_from?: string
+          period_to?: string
+          sgst_amount?: number
+          sgst_rate?: number
+          site_gst?: string | null
+          site_id?: string
+          site_name?: string
+          status?: string
+          subtotal?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leave_requests: {
         Row: {
           approved_at: string | null
@@ -649,6 +769,14 @@ export type Database = {
     }
     Functions: {
       generate_badge_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_current_financial_year: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_next_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
