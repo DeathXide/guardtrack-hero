@@ -66,7 +66,12 @@ export const GuardOverviewCard: React.FC<GuardOverviewCardProps> = ({
         
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Base Salary:</span>
+            <span className="text-muted-foreground">Shifts Worked:</span>
+            <span className="font-medium">{monthlyEarnings.totalShifts}</span>
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Shift Earnings:</span>
             <span className="font-medium">{guardUtils.formatCurrency(monthlyEarnings.baseSalary)}</span>
           </div>
           

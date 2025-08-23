@@ -237,22 +237,27 @@ export const GuardDetailView: React.FC<GuardDetailViewProps> = ({
                 <CardTitle>Monthly Summary - {format(new Date(selectedMonth + '-01'), 'MMMM yyyy')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   <div className="text-center p-4 border rounded-lg">
-                    <p className="text-sm text-muted-foreground">Base Salary</p>
-                    <p className="text-xl font-bold">{guardUtils.formatCurrency(monthlyEarnings.baseSalary)}</p>
+                    <p className="text-sm text-muted-foreground">Shifts Worked</p>
+                    <p className="text-xl font-bold">{monthlyEarnings?.shiftsWorked || 0}</p>
+                    <p className="text-xs text-muted-foreground">of {monthlyEarnings?.totalShifts || 0} assigned</p>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <p className="text-sm text-muted-foreground">Shift Earnings</p>
+                    <p className="text-xl font-bold">{guardUtils.formatCurrency(monthlyEarnings?.shiftBasedSalary || 0)}</p>
                   </div>
                   <div className="text-center p-4 border rounded-lg">
                     <p className="text-sm text-muted-foreground">Total Bonuses</p>
-                    <p className="text-xl font-bold text-green-600">+{guardUtils.formatCurrency(monthlyEarnings.totalBonus)}</p>
+                    <p className="text-xl font-bold text-green-600">+{guardUtils.formatCurrency(monthlyEarnings?.totalBonus || 0)}</p>
                   </div>
                   <div className="text-center p-4 border rounded-lg">
                     <p className="text-sm text-muted-foreground">Total Deductions</p>
-                    <p className="text-xl font-bold text-red-600">-{guardUtils.formatCurrency(monthlyEarnings.totalDeduction)}</p>
+                    <p className="text-xl font-bold text-red-600">-{guardUtils.formatCurrency(monthlyEarnings?.totalDeduction || 0)}</p>
                   </div>
                   <div className="text-center p-4 border rounded-lg bg-primary/5">
                     <p className="text-sm text-muted-foreground">Net Amount</p>
-                    <p className="text-xl font-bold">{guardUtils.formatCurrency(monthlyEarnings.netAmount)}</p>
+                    <p className="text-xl font-bold">{guardUtils.formatCurrency(monthlyEarnings?.netAmount || 0)}</p>
                   </div>
                 </div>
               </CardContent>

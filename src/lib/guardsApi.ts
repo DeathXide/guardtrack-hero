@@ -170,10 +170,10 @@ export const paymentsApi = {
     return true;
   },
 
-  // Get payment summary for a guard in a specific month with base salary
+  // Get payment summary for a guard in a specific month with shift-based calculation
   async getGuardMonthlySummary(guardId: string, month: string) {
-    // Get both payments and guard's base salary
-    const [paymentsResult, guardResult] = await Promise.all([
+    // Get payments, guard's base salary, and actual shifts worked
+    const [paymentsResult, guardResult, shiftsResult] = await Promise.all([
       supabase
         .from('payments')
         .select('payment_type, amount')
@@ -183,16 +183,37 @@ export const paymentsApi = {
         .from('guards')
         .select('monthly_pay_rate')
         .eq('id', guardId)
-        .single()
+        .single(),
+      supabase
+        .from('daily_attendance_slots')
+        .select('is_present, shift_type')
+        .eq('assigned_guard_id', guardId)
+        .gte('attendance_date', `${month}-01`)
+        .lt('attendance_date', `${month}-32`) // This will get all days in the month
     ]);
 
     if (paymentsResult.error) throw paymentsResult.error;
     if (guardResult.error) throw guardResult.error;
+    if (shiftsResult.error) throw shiftsResult.error;
+
+    const monthlyPayRate = Number(guardResult.data?.monthly_pay_rate || 0);
+    
+    // Calculate daily rate (monthly rate / 30 days)
+    const dailyRate = monthlyPayRate / 30;
+    
+    // Count actual shifts worked (where is_present = true)
+    const shiftsWorked = shiftsResult.data.filter(shift => shift.is_present === true).length;
+    
+    // Calculate shift-based salary
+    const shiftBasedSalary = shiftsWorked * dailyRate;
 
     const summary = {
       totalBonus: 0,
       totalDeduction: 0,
-      baseSalary: Number(guardResult.data?.monthly_pay_rate || 0),
+      baseSalary: monthlyPayRate, // Keep original monthly rate for reference
+      shiftBasedSalary: shiftBasedSalary, // Actual earnings based on shifts worked
+      shiftsWorked: shiftsWorked,
+      totalShifts: shiftsResult.data.length, // Total assigned shifts
       netAmount: 0
     };
 
@@ -204,8 +225,8 @@ export const paymentsApi = {
       }
     });
 
-    // Calculate net amount: base salary + bonuses - deductions
-    summary.netAmount = summary.baseSalary + summary.totalBonus - summary.totalDeduction;
+    // Calculate net amount: shift-based salary + bonuses - deductions
+    summary.netAmount = summary.shiftBasedSalary + summary.totalBonus - summary.totalDeduction;
     return summary;
   }
 };
