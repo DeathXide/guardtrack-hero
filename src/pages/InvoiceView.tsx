@@ -190,7 +190,7 @@ export default function InvoiceView() {
                 <div className="text-right">
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">INVOICE</h3>
                   <div className="text-sm space-y-1">
-                    <p><span className="font-medium">Invoice No:</span> #{invoice.invoiceNumber}</p>
+                    <p><span className="font-medium">Invoice No:</span> {invoice.invoiceNumber}</p>
                     <p><span className="font-medium">Date:</span> {new Date(invoice.invoiceDate).toLocaleDateString()}</p>
                   </div>
                 </div>
