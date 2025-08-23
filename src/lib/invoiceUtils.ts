@@ -111,7 +111,7 @@ export function calculateInvoiceFromSite(
     companyName,
     companyGst: site.gstNumber || '',
     clientName: site.organizationName,
-    clientAddress: `${site.addressLine1}, ${site.addressLine2 ? site.addressLine2 + ', ' : ''}${site.addressLine3}`,
+    clientAddress: [site.addressLine1, site.addressLine2, site.addressLine3].filter(Boolean).join(', '),
     invoiceDate: new Date().toISOString().split('T')[0],
     periodFrom,
     periodTo,

@@ -184,7 +184,7 @@ export default function InvoiceView() {
                 <h4 className="font-semibold mb-2">Bill To:</h4>
                 <div className="text-muted-foreground">
                   <p className="font-medium text-foreground">{invoice.clientName}</p>
-                  <p>{invoice.clientAddress}</p>
+                  <p>{invoice.clientAddress.split(', ').filter(Boolean).join(', ')}</p>
                 </div>
               </div>
 
