@@ -391,8 +391,8 @@ export default function InvoiceView() {
 
                 {/* Authorized Signatory */}
                 <div className="px-8 mb-8">
-                  <div className="flex justify-end">
-                    <div className="text-right space-y-4">
+                  <div className="flex justify-start">
+                    <div className="text-left space-y-4">
                       <div className="h-12 w-32 flex items-end justify-end">
                         {companySettings?.company_seal_image_url && (
                           <img src={companySettings.company_seal_image_url} alt="Company Seal" className="h-24 w-auto object-contain opacity-80 ml-auto" />
