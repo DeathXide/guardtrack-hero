@@ -288,13 +288,16 @@ export default function InvoiceView() {
                     
                     {invoice.gstType === 'RCM' && (
                       <>
-                        <div className="flex justify-between text-xs text-gray-600">
-                          <span>CGST ({(invoice.cgstRate || 0).toFixed(1)}%) - Reverse Charge:</span>
-                          <span className="font-medium">₹ 0.00</span>
-                        </div>
-                        <div className="flex justify-between text-xs text-gray-600">
-                          <span>SGST ({(invoice.sgstRate || 0).toFixed(1)}%) - Reverse Charge:</span>
-                          <span className="font-medium">₹ 0.00</span>
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mt-1">
+                          <div className="text-xs font-medium text-yellow-800 mb-1">Tax Payable by Recipient:</div>
+                          <div className="flex justify-between text-xs text-yellow-700">
+                            <span>CGST ({(invoice.cgstRate || 0).toFixed(1)}%):</span>
+                            <span className="font-medium">{formatCurrency((invoice.subtotal * (invoice.cgstRate || 0)) / 100)}</span>
+                          </div>
+                          <div className="flex justify-between text-xs text-yellow-700">
+                            <span>SGST ({(invoice.sgstRate || 0).toFixed(1)}%):</span>
+                            <span className="font-medium">{formatCurrency((invoice.subtotal * (invoice.sgstRate || 0)) / 100)}</span>
+                          </div>
                         </div>
                       </>
                     )}
@@ -359,9 +362,13 @@ export default function InvoiceView() {
               {/* RCM Notice */}
               {invoice.gstType === 'RCM' && (
                 <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="font-bold text-yellow-800 mb-2">REVERSE CHARGE MECHANISM ON SECURITY SERVICES</div>
+                  <div className="text-sm text-yellow-700 mb-2">
+                    AS PER NOTIFICATION NO.29/2018 –UNION TERRITORY TAX (RATE) W.E.F 01/01/2019
+                  </div>
                   <p className="text-sm text-yellow-800">
-                    <strong>Note:</strong> This invoice is under Reverse Charge Mechanism. 
-                    The recipient is liable to pay CGST ({(invoice.cgstRate || 0).toFixed(1)}%) and SGST ({(invoice.sgstRate || 0).toFixed(1)}%) directly to the government.
+                    <strong>Note:</strong> The recipient is liable to pay CGST ({(invoice.cgstRate || 0).toFixed(1)}%) and SGST ({(invoice.sgstRate || 0).toFixed(1)}%) 
+                    totaling {formatCurrency(((invoice.subtotal * (invoice.cgstRate || 0)) / 100) + ((invoice.subtotal * (invoice.sgstRate || 0)) / 100))} directly to the government.
                   </p>
                 </div>
               )}
