@@ -180,13 +180,20 @@ export default function InvoiceView() {
               {/* Header */}
               <div className="grid grid-cols-2 gap-8 mb-6 pb-4 border-b border-gray-200">
                 <div>
-                  <h2 className="text-2xl font-bold mb-1 text-gray-900">{invoice.companyName}</h2>
+                  <h2 className="text-2xl font-bold mb-1 text-gray-900">{companySettings?.company_name || invoice.companyName}</h2>
                   <div className="text-sm text-gray-600 space-y-1">
-                    {invoice.companyGst && (
-                      <p>GST: {invoice.companyGst}</p>
+                    {companySettings?.company_address_line1 && (
+                      <p>{[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}</p>
                     )}
-                    <p>Phone: +91 9876543210</p>
-                    <p>Email: info@company.com</p>
+                    {(companySettings?.gst_number || invoice.companyGst) && (
+                      <p>GST: {companySettings?.gst_number || invoice.companyGst}</p>
+                    )}
+                    {companySettings?.company_phone && (
+                      <p>Phone: {companySettings.company_phone}</p>
+                    )}
+                    {companySettings?.company_email && (
+                      <p>Email: {companySettings.company_email}</p>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">
