@@ -29,9 +29,12 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const formatLocal = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     
-    setPeriodFrom(firstDay.toISOString().split('T')[0]);
-    setPeriodTo(lastDay.toISOString().split('T')[0]);
+    setPeriodFrom(formatLocal(firstDay));
+    setPeriodTo(formatLocal(lastDay));
   }, []);
 
   const loadSites = async () => {
