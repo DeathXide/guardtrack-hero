@@ -8,30 +8,63 @@ export const generatePDF = async (elementId: string, filename: string) => {
       throw new Error('Element not found');
     }
 
-    // Generate canvas from HTML element
+    // Add print styles temporarily
+    const printStyles = document.createElement('style');
+    printStyles.innerHTML = `
+      @media print {
+        #${elementId} {
+          margin: 0 !important;
+          padding: 20mm !important;
+          background: white !important;
+          box-shadow: none !important;
+          border: none !important;
+          border-radius: 0 !important;
+        }
+        #${elementId} * {
+          -webkit-print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
+      }
+    `;
+    document.head.appendChild(printStyles);
+
+    // Generate canvas from HTML element with proper A4 scaling
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
       allowTaint: true,
+      width: element.scrollWidth,
+      height: element.scrollHeight,
+      backgroundColor: '#ffffff'
     });
 
-    // Calculate dimensions for A4
-    const imgData = canvas.toDataURL('image/png');
+    // Remove temporary styles
+    document.head.removeChild(printStyles);
+
+    // A4 dimensions in mm
+    const a4Width = 210;
+    const a4Height = 297;
+    const margin = 10; // 10mm margins on all sides
+    const contentWidth = a4Width - (2 * margin);
+    const contentHeight = a4Height - (2 * margin);
+
     const pdf = new jsPDF('p', 'mm', 'a4');
     
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgData = canvas.toDataURL('image/png');
     const imgWidth = canvas.width;
     const imgHeight = canvas.height;
     
-    // Calculate scaling to fit A4
-    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-    const scaledWidth = imgWidth * ratio;
-    const scaledHeight = imgHeight * ratio;
+    // Calculate scaling to fit within content area with margins
+    const scaleX = contentWidth / (imgWidth / 2); // Divide by 2 because of scale: 2
+    const scaleY = contentHeight / (imgHeight / 2);
+    const scale = Math.min(scaleX, scaleY);
     
-    // Center the image on the page
-    const x = (pdfWidth - scaledWidth) / 2;
-    const y = (pdfHeight - scaledHeight) / 2;
+    const scaledWidth = (imgWidth / 2) * scale;
+    const scaledHeight = (imgHeight / 2) * scale;
+    
+    // Center the content within margins
+    const x = margin + (contentWidth - scaledWidth) / 2;
+    const y = margin + (contentHeight - scaledHeight) / 2;
 
     pdf.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight);
     pdf.save(filename);
