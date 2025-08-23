@@ -31,17 +31,39 @@ export interface UpdateSlotData {
 }
 
 export const dailyAttendanceSlotsApi = {
-  // Generate slots for a specific site and date
-  async generateSlotsForDate(siteId: string, date: string) {
-    // First check if slots already exist for this date
+  // Generate slots for a specific site and date (force regeneration option)
+  async generateSlotsForDate(siteId: string, date: string, forceRegenerate = false) {
+    // Check if slots already exist for this date
     const { data: existingSlots } = await supabase
       .from('daily_attendance_slots')
       .select('*')
       .eq('site_id', siteId)
       .eq('attendance_date', date);
 
-    if (existingSlots && existingSlots.length > 0) {
+    if (existingSlots && existingSlots.length > 0 && !forceRegenerate) {
       return existingSlots;
+    }
+
+    // If force regenerate, delete existing slots first (but preserve attendance data)
+    if (forceRegenerate && existingSlots && existingSlots.length > 0) {
+      // Store existing assignments and attendance before deletion
+      const existingAssignments = existingSlots.map(slot => ({
+        role_type: slot.role_type,
+        slot_number: slot.slot_number,
+        shift_type: slot.shift_type,
+        assigned_guard_id: slot.assigned_guard_id,
+        is_present: slot.is_present,
+        pay_rate: slot.pay_rate
+      }));
+
+      // Delete existing slots
+      const { error: deleteError } = await supabase
+        .from('daily_attendance_slots')
+        .delete()
+        .eq('site_id', siteId)
+        .eq('attendance_date', date);
+
+      if (deleteError) throw deleteError;
     }
 
     // Get site staffing requirements
@@ -96,6 +118,59 @@ export const dailyAttendanceSlotsApi = {
       .select();
 
     if (insertError) throw insertError;
+
+    // If we had existing assignments and this is a regeneration, try to restore them
+    if (forceRegenerate && existingSlots && existingSlots.length > 0 && newSlots) {
+      const restoredSlots = await this.restoreAssignments(newSlots, existingSlots);
+      return restoredSlots;
+    }
+
+    return newSlots;
+  },
+
+  // Helper function to restore assignments after regeneration
+  async restoreAssignments(newSlots: any[], existingSlots: any[]) {
+    const updates = [];
+
+    for (const newSlot of newSlots) {
+      // Find matching slot from previous generation
+      const matchingOldSlot = existingSlots.find(oldSlot => 
+        oldSlot.role_type === newSlot.role_type &&
+        oldSlot.slot_number === newSlot.slot_number &&
+        oldSlot.shift_type === newSlot.shift_type
+      );
+
+      if (matchingOldSlot && matchingOldSlot.assigned_guard_id) {
+        updates.push({
+          id: newSlot.id,
+          assigned_guard_id: matchingOldSlot.assigned_guard_id,
+          is_present: matchingOldSlot.is_present,
+          pay_rate: matchingOldSlot.pay_rate || newSlot.pay_rate
+        });
+      }
+    }
+
+    // Apply updates if any
+    if (updates.length > 0) {
+      for (const update of updates) {
+        await supabase
+          .from('daily_attendance_slots')
+          .update({
+            assigned_guard_id: update.assigned_guard_id,
+            is_present: update.is_present,
+            pay_rate: update.pay_rate
+          })
+          .eq('id', update.id);
+      }
+
+      // Fetch and return updated slots
+      const { data: updatedSlots } = await supabase
+        .from('daily_attendance_slots')
+        .select('*')
+        .in('id', newSlots.map(s => s.id));
+
+      return updatedSlots || newSlots;
+    }
 
     return newSlots;
   },
@@ -242,7 +317,10 @@ export const dailyAttendanceSlotsApi = {
     return createdSlots;
   },
 
-  // Get slots by guard and date range
+  // Force regenerate slots for a date (useful when site requirements change)
+  async regenerateSlotsForDate(siteId: string, date: string) {
+    return this.generateSlotsForDate(siteId, date, true);
+  },
   async getSlotsByGuardAndDateRange(guardId: string, startDate: string, endDate: string) {
     const { data, error } = await supabase
       .from('daily_attendance_slots')

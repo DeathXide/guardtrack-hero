@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Calendar, MapPin, Users, Clock, UserPlus, Copy } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, UserPlus, Copy, RefreshCw, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,7 +64,9 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
         format(selectedDate, 'yyyy-MM-dd')
       );
     },
-    enabled: !!selectedSite
+    enabled: !!selectedSite,
+    staleTime: 0, // Always refetch when component mounts
+    gcTime: 5 * 60 * 1000 // Cache for 5 minutes
   });
 
   // Group slots by shift type and role
@@ -84,12 +86,14 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
     return grouped;
   }, [slots]);
 
-  // Assign guard mutation
+  // Assign guard mutation with better cache invalidation
   const assignGuardMutation = useMutation({
     mutationFn: ({ slotId, guardId }: { slotId: string; guardId: string }) =>
       dailyAttendanceSlotsApi.assignGuardToSlot(slotId, guardId),
     onSuccess: () => {
+      // Invalidate all related queries to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['guards'] });
       toast({ title: 'Guard assigned successfully' });
       setAllocationModal(prev => ({ ...prev, isOpen: false }));
     },
@@ -102,11 +106,12 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
     }
   });
 
-  // Unassign guard mutation
+  // Unassign guard mutation with better cache invalidation
   const unassignGuardMutation = useMutation({
     mutationFn: (slotId: string) => dailyAttendanceSlotsApi.unassignGuardFromSlot(slotId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['guards'] });
       toast({ title: 'Guard unassigned successfully' });
     }
   });
@@ -148,6 +153,29 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
     }
   });
 
+  // Regenerate slots mutation (when site requirements change)
+  const regenerateSlotsMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedSite) throw new Error('No site selected');
+      return dailyAttendanceSlotsApi.regenerateSlotsForDate(
+        selectedSite,
+        format(selectedDate, 'yyyy-MM-dd')
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['sites'] }); // Also refresh sites data
+      toast({ title: 'Slots regenerated successfully', description: 'Updated slots based on current site requirements' });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error regenerating slots',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
   const handleOpenAllocation = (slotId: string, shiftType: 'day' | 'night', roleType: string, isReplacement = false, originalGuardId?: string) => {
     setAllocationModal({
       isOpen: true,
@@ -178,6 +206,10 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
 
   const handleMarkAttendance = (slotId: string, isPresent: boolean) => {
     markAttendanceMutation.mutate({ slotId, isPresent });
+  };
+
+  const handleRegenerateSlots = () => {
+    regenerateSlotsMutation.mutate();
   };
 
   const handleCopyPreviousDay = () => {
@@ -364,6 +396,15 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
           <Button
             variant="outline"
             size="sm"
+            onClick={handleRegenerateSlots}
+            disabled={!selectedSite || regenerateSlotsMutation.isPending}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${regenerateSlotsMutation.isPending ? 'animate-spin' : ''}`} />
+            {regenerateSlotsMutation.isPending ? 'Updating...' : 'Refresh Slots'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleCopyPreviousDay}
             disabled={!selectedSite || copyPreviousDayMutation.isPending}
           >
@@ -372,6 +413,24 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Site Requirements Change Notice */}
+      {selectedSite && slots.length === 0 && !slotsLoading && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-2 text-amber-800">
+              <AlertCircle className="h-5 w-5" />
+              <div>
+                <p className="font-medium">No slots found for this date</p>
+                <p className="text-sm text-amber-700 mt-1">
+                  This might happen if the site's staffing requirements were recently updated. 
+                  Click "Refresh Slots" to generate slots based on current requirements.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Date and Site Selection */}
       <Card className="border-border">
