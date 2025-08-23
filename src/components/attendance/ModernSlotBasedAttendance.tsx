@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Calendar, MapPin, AlertCircle, Sun, Moon, Search, Filter } from 'lucide-react';
+import { Calendar, MapPin, AlertCircle, Sun, Moon, Search, Filter, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { sitesApi } from '@/lib/sitesApi';
 import { guardsApi } from '@/lib/guardsApi';
@@ -310,6 +311,11 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
     });
   };
 
+  const handleQuickMarkAttendance = (siteId: string) => {
+    setSelectedDate(new Date()); // Set to today
+    setSelectedSite(siteId);
+  };
+
   const handleGuardAssignment = (guardId: string) => {
     if (allocationModal.slotId) {
       assignGuardMutation.mutate({
@@ -418,6 +424,59 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
               Modern attendance management with enhanced user experience
             </p>
           </div>
+        </div>
+
+        {/* Sites Table for Quick Access */}
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Sites Overview
+            </CardTitle>
+            <CardDescription>
+              Click "Mark Attendance" to quickly start attendance marking for today
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Site Name</TableHead>
+                  <TableHead>Organization</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sites.map((site) => (
+                  <TableRow key={site.id}>
+                    <TableCell className="font-medium">{site.site_name}</TableCell>
+                    <TableCell>{site.organization_name}</TableCell>
+                    <TableCell className="max-w-xs truncate">{site.address}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{site.site_category}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        onClick={() => handleQuickMarkAttendance(site.id)}
+                        size="sm"
+                        variant="default"
+                        className="gap-2"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Mark Attendance
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Date and Site Selection */}
+        <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
           
           {/* Date and Site Selection */}
           <Card className="glass-card w-full lg:w-auto">
