@@ -310,6 +310,19 @@ export default function InvoiceView() {
                 </div>
               )}
 
+              {/* Authorized Signatory */}
+              <div className="mt-12 pt-8 border-t">
+                <div className="text-right">
+                  <div className="space-y-8">
+                    <div className="h-16"></div> {/* Space for signature */}
+                    <div>
+                      <p className="font-medium">For {invoice.companyName}</p>
+                      <p className="text-sm text-muted-foreground mt-1">Authorized Signatory</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* RCM Notice */}
               {invoice.gstType === 'RCM' && (
                 <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
