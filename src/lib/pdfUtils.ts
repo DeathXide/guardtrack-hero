@@ -44,7 +44,7 @@ export const generatePDF = async (elementId: string, filename: string) => {
     // A4 dimensions in mm
     const a4Width = 210;
     const a4Height = 297;
-    const margin = 10; // 10mm margins on all sides
+    const margin = 15; // Increased margins to 15mm to ensure border visibility
     const contentWidth = a4Width - (2 * margin);
     const contentHeight = a4Height - (2 * margin);
 
@@ -54,9 +54,9 @@ export const generatePDF = async (elementId: string, filename: string) => {
     const imgWidth = canvas.width;
     const imgHeight = canvas.height;
     
-    // Calculate scaling to fit within content area with margins
-    const scaleX = contentWidth / (imgWidth / 2); // Divide by 2 because of scale: 2
-    const scaleY = contentHeight / (imgHeight / 2);
+    // Calculate scaling with more conservative approach to prevent cutoff
+    const scaleX = (contentWidth * 0.95) / (imgWidth / 2); // 95% to leave some buffer
+    const scaleY = (contentHeight * 0.95) / (imgHeight / 2);
     const scale = Math.min(scaleX, scaleY);
     
     const scaledWidth = (imgWidth / 2) * scale;
