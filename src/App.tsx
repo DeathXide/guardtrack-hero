@@ -15,6 +15,7 @@ import Guards from "./pages/Guards";
 import Attendance from "./pages/Attendance";
 import Schedule from "./pages/Schedule";
 import Reports from "./pages/Reports";
+import CompanySettings from "./pages/CompanySettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/attendance" element={<DashboardLayout><Attendance /></DashboardLayout>} />
             <Route path="/schedule" element={<DashboardLayout><Schedule /></DashboardLayout>} />
             <Route path="/reports" element={<DashboardLayout><Reports /></DashboardLayout>} />
+            <Route path="/company-settings" element={<DashboardLayout><CompanySettings /></DashboardLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

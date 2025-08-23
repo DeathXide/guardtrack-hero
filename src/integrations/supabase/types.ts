@@ -195,6 +195,57 @@ export type Database = {
           },
         ]
       }
+      company_settings: {
+        Row: {
+          company_address_line1: string | null
+          company_address_line2: string | null
+          company_address_line3: string | null
+          company_email: string | null
+          company_logo_url: string | null
+          company_motto: string | null
+          company_name: string
+          company_phone: string | null
+          company_website: string | null
+          created_at: string
+          gst_number: string | null
+          id: string
+          pan_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_address_line1?: string | null
+          company_address_line2?: string | null
+          company_address_line3?: string | null
+          company_email?: string | null
+          company_logo_url?: string | null
+          company_motto?: string | null
+          company_name?: string
+          company_phone?: string | null
+          company_website?: string | null
+          created_at?: string
+          gst_number?: string | null
+          id?: string
+          pan_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_address_line1?: string | null
+          company_address_line2?: string | null
+          company_address_line3?: string | null
+          company_email?: string | null
+          company_logo_url?: string | null
+          company_motto?: string | null
+          company_name?: string
+          company_phone?: string | null
+          company_website?: string | null
+          created_at?: string
+          gst_number?: string | null
+          id?: string
+          pan_number?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_attendance_slots: {
         Row: {
           assigned_guard_id: string | null

@@ -9,6 +9,7 @@ import {
   MapPin,
   Shield,
   Users,
+  Settings,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -61,6 +62,12 @@ const navItems: NavItem[] = [
     href: '/reports',
     icon: Shield,
     roles: ['admin', 'supervisor'],
+  },
+  {
+    title: 'Company Settings',
+    href: '/company-settings',
+    icon: Settings,
+    roles: ['admin'],
   },
 ];
 
