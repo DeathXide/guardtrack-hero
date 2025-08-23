@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getInvoiceById, updateInvoice } from '@/lib/invoiceData';
 import { formatCurrency } from '@/lib/invoiceUtils';
+import { generatePDF } from '@/lib/pdfUtils';
 import { Invoice } from '@/types/invoice';
 import { toast } from 'sonner';
 
@@ -64,6 +65,16 @@ export default function InvoiceView() {
       case 'overdue': return 'destructive';
       case 'draft': return 'outline';
       default: return 'outline';
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      await generatePDF('invoice-content', `Invoice-${invoice?.invoiceNumber}.pdf`);
+      toast.success('PDF downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast.error('Failed to download PDF');
     }
   };
 
@@ -137,7 +148,7 @@ export default function InvoiceView() {
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleDownloadPDF}>
             <Download className="h-4 w-4 mr-2" />
             Download PDF
           </Button>
@@ -152,7 +163,7 @@ export default function InvoiceView() {
         {/* Invoice Content */}
         <div className="lg:col-span-2">
           <Card>
-            <CardContent className="p-8">
+            <CardContent id="invoice-content" className="p-8">
               {/* Header */}
               <div className="grid grid-cols-2 gap-8 mb-8">
                 <div>
@@ -343,7 +354,7 @@ export default function InvoiceView() {
                 <Send className="h-4 w-4 mr-2" />
                 Send via Email
               </Button>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={handleDownloadPDF}>
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
               </Button>
