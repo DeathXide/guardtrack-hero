@@ -182,9 +182,6 @@ export default function InvoiceView() {
                 <div>
                   <h2 className="text-2xl font-bold mb-1 text-gray-900">{companySettings?.company_name || invoice.companyName}</h2>
                   <div className="text-sm text-gray-600 space-y-1">
-                    {companySettings?.company_address_line1 && (
-                      <p>{[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}</p>
-                    )}
                     {(companySettings?.gst_number || invoice.companyGst) && (
                       <p>GST: {companySettings?.gst_number || invoice.companyGst}</p>
                     )}
@@ -399,6 +396,9 @@ export default function InvoiceView() {
               <div className="mt-6 pt-4 border-t border-gray-200 text-center">
                 <div className="text-xs text-gray-500 space-y-1">
                   <p>Thank you for your business!</p>
+                  {companySettings?.company_address_line1 && (
+                    <p>{[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}</p>
+                  )}
                   <p>
                     {companySettings?.company_phone && `Phone: ${companySettings.company_phone}`}
                     {companySettings?.company_phone && companySettings?.company_email && ' | '}
