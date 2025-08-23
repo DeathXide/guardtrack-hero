@@ -280,10 +280,12 @@ export default function InvoiceView() {
                               <TableCell className="text-center text-xs text-muted-foreground font-mono">
                                 {new Date(invoice.periodFrom).toLocaleDateString('en-GB', {
                                   day: '2-digit',
-                                  month: '2-digit'
+                                  month: '2-digit',
+                                  year: 'numeric'
                                 })} - {new Date(invoice.periodTo).toLocaleDateString('en-GB', {
                                   day: '2-digit',
-                                  month: '2-digit'
+                                  month: '2-digit',
+                                  year: 'numeric'
                                 })}
                               </TableCell>
                               <TableCell className="text-center text-sm font-medium">{item.quantity}</TableCell>
