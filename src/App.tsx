@@ -17,6 +17,8 @@ import Schedule from "./pages/Schedule";
 import Reports from "./pages/Reports";
 import Invoices from "./pages/Invoices";
 import InvoiceCreate from "./pages/InvoiceCreate";
+import InvoiceView from "./pages/InvoiceView";
+import InvoiceEdit from "./pages/InvoiceEdit";
 import CompanySettings from "./pages/CompanySettings";
 import NotFound from "./pages/NotFound";
 
@@ -38,6 +40,8 @@ const App = () => (
             <Route path="/schedule" element={<DashboardLayout><Schedule /></DashboardLayout>} />
             <Route path="/invoices" element={<DashboardLayout><Invoices /></DashboardLayout>} />
             <Route path="/invoices/create" element={<DashboardLayout><InvoiceCreate /></DashboardLayout>} />
+            <Route path="/invoices/:id" element={<DashboardLayout><InvoiceView /></DashboardLayout>} />
+            <Route path="/invoices/:id/edit" element={<DashboardLayout><InvoiceEdit /></DashboardLayout>} />
             <Route path="/reports" element={<DashboardLayout><Reports /></DashboardLayout>} />
             <Route path="/company-settings" element={<DashboardLayout><CompanySettings /></DashboardLayout>} />
             <Route path="*" element={<NotFound />} />
