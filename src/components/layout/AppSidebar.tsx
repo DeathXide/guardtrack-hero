@@ -10,6 +10,7 @@ import {
   Shield,
   Users,
   Settings,
+  FileText,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -55,6 +56,12 @@ const navItems: NavItem[] = [
     title: 'Guards',
     href: '/guards',
     icon: Users,
+    roles: ['admin', 'supervisor'],
+  },
+  {
+    title: 'Invoices',
+    href: '/invoices',
+    icon: FileText,
     roles: ['admin', 'supervisor'],
   },
   {

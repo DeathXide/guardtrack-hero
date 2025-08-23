@@ -15,6 +15,8 @@ import Guards from "./pages/Guards";
 import Attendance from "./pages/Attendance";
 import Schedule from "./pages/Schedule";
 import Reports from "./pages/Reports";
+import Invoices from "./pages/Invoices";
+import InvoiceCreate from "./pages/InvoiceCreate";
 import CompanySettings from "./pages/CompanySettings";
 import NotFound from "./pages/NotFound";
 
@@ -34,6 +36,8 @@ const App = () => (
             <Route path="/guards" element={<DashboardLayout><Guards /></DashboardLayout>} />
             <Route path="/attendance" element={<DashboardLayout><Attendance /></DashboardLayout>} />
             <Route path="/schedule" element={<DashboardLayout><Schedule /></DashboardLayout>} />
+            <Route path="/invoices" element={<DashboardLayout><Invoices /></DashboardLayout>} />
+            <Route path="/invoices/create" element={<DashboardLayout><InvoiceCreate /></DashboardLayout>} />
             <Route path="/reports" element={<DashboardLayout><Reports /></DashboardLayout>} />
             <Route path="/company-settings" element={<DashboardLayout><CompanySettings /></DashboardLayout>} />
             <Route path="*" element={<NotFound />} />
