@@ -43,7 +43,9 @@ const initialFormState: Omit<CreateSiteData, 'staffing_requirements'> & { staffi
   organization_name: "",
   gst_number: "",
   gst_type: "GST",
-  address: "",
+  address_line1: "",
+  address_line2: "",
+  address_line3: "",
   site_category: "",
   staffing_requirements: []
 };
@@ -165,7 +167,9 @@ export default function SitesNew() {
       organization_name: site.organization_name,
       gst_number: site.gst_number,
       gst_type: site.gst_type as 'GST' | 'NGST' | 'RCM' | 'PERSONAL',
-      address: site.address,
+      address_line1: site.address_line1 || "",
+      address_line2: site.address_line2 || "",
+      address_line3: site.address_line3 || "",
       site_category: site.site_category,
       staffing_requirements: site.staffing_requirements.map(req => ({
         role_type: req.role_type,
@@ -196,7 +200,7 @@ export default function SitesNew() {
   };
 
   const handleSubmit = () => {
-    if (!formData.site_name || !formData.organization_name || !formData.address) {
+    if (!formData.site_name || !formData.organization_name || !formData.address_line1) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -332,14 +336,34 @@ export default function SitesNew() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="address">Address *</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange("address", e.target.value)}
-                  placeholder="Enter complete address"
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="address_line1">Address Line 1 *</Label>
+                  <Input
+                    id="address_line1"
+                    value={formData.address_line1}
+                    onChange={(e) => handleInputChange("address_line1", e.target.value)}
+                    placeholder="Street address, building name, floor"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address_line2">Address Line 2</Label>
+                  <Input
+                    id="address_line2"
+                    value={formData.address_line2}
+                    onChange={(e) => handleInputChange("address_line2", e.target.value)}
+                    placeholder="Area, locality, neighborhood"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address_line3">Address Line 3</Label>
+                  <Input
+                    id="address_line3"
+                    value={formData.address_line3}
+                    onChange={(e) => handleInputChange("address_line3", e.target.value)}
+                    placeholder="City, state, pincode"
+                  />
+                </div>
               </div>
 
               <Separator />

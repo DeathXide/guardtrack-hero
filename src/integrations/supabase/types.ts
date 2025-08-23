@@ -506,6 +506,9 @@ export type Database = {
       sites: {
         Row: {
           address: string
+          address_line1: string | null
+          address_line2: string | null
+          address_line3: string | null
           created_at: string
           gst_number: string
           gst_type: string
@@ -517,6 +520,9 @@ export type Database = {
         }
         Insert: {
           address: string
+          address_line1?: string | null
+          address_line2?: string | null
+          address_line3?: string | null
           created_at?: string
           gst_number: string
           gst_type: string
@@ -528,6 +534,9 @@ export type Database = {
         }
         Update: {
           address?: string
+          address_line1?: string | null
+          address_line2?: string | null
+          address_line3?: string | null
           created_at?: string
           gst_number?: string
           gst_type?: string

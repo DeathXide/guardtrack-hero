@@ -7,6 +7,9 @@ export interface SiteDB {
   gst_number: string;
   gst_type: string; // This will be 'GST' | 'NGST' | 'RCM' | 'PERSONAL' but comes as string from DB
   address: string;
+  address_line1?: string;
+  address_line2?: string;
+  address_line3?: string;
   site_category: string;
   created_at: string;
   updated_at: string;
@@ -28,7 +31,9 @@ export interface CreateSiteData {
   organization_name: string;
   gst_number: string;
   gst_type: 'GST' | 'NGST' | 'RCM' | 'PERSONAL';
-  address: string;
+  address_line1: string;
+  address_line2?: string;
+  address_line3?: string;
   site_category: string;
   staffing_requirements: {
     role_type: string;
@@ -100,6 +105,11 @@ export const sitesApi = {
 
   // Create a new site with staffing requirements
   async createSite(siteData: CreateSiteData) {
+    // Combine address lines for backward compatibility
+    const fullAddress = [siteData.address_line1, siteData.address_line2, siteData.address_line3]
+      .filter(Boolean)
+      .join(', ');
+
     // First, create the site
     const { data: site, error: siteError } = await supabase
       .from('sites')
@@ -108,7 +118,10 @@ export const sitesApi = {
         organization_name: siteData.organization_name,
         gst_number: siteData.gst_number,
         gst_type: siteData.gst_type,
-        address: siteData.address,
+        address: fullAddress,
+        address_line1: siteData.address_line1,
+        address_line2: siteData.address_line2,
+        address_line3: siteData.address_line3,
         site_category: siteData.site_category
       })
       .select()
@@ -138,6 +151,11 @@ export const sitesApi = {
 
   // Update a site and its staffing requirements
   async updateSite(siteData: UpdateSiteData) {
+    // Combine address lines for backward compatibility
+    const fullAddress = [siteData.address_line1, siteData.address_line2, siteData.address_line3]
+      .filter(Boolean)
+      .join(', ');
+
     // Update the site
     const { data: site, error: siteError } = await supabase
       .from('sites')
@@ -146,7 +164,10 @@ export const sitesApi = {
         organization_name: siteData.organization_name,
         gst_number: siteData.gst_number,
         gst_type: siteData.gst_type,
-        address: siteData.address,
+        address: fullAddress,
+        address_line1: siteData.address_line1,
+        address_line2: siteData.address_line2,
+        address_line3: siteData.address_line3,
         site_category: siteData.site_category
       })
       .eq('id', siteData.id)
