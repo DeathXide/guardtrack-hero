@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Calendar, MapPin, Users, Clock, UserPlus, Copy, RefreshCw, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, UserPlus, Copy, RefreshCw, AlertCircle, Settings } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { sitesApi } from '@/lib/sitesApi';
 import { guardsApi } from '@/lib/guardsApi';
 import { dailyAttendanceSlotsApi, DailyAttendanceSlot } from '@/lib/dailyAttendanceSlotsApi';
 import SimpleGuardSelectionModal from './SimpleGuardSelectionModal';
+import TemporarySlotsManagementDialog from './TemporarySlotsManagementDialog';
 
 interface SlotBasedAttendanceMarkingProps {
   preselectedSiteId?: string;
@@ -31,6 +32,7 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
     isReplacement?: boolean;
     originalGuardId?: string;
   }>({ isOpen: false, slotId: '', shiftType: 'day', roleType: '', isReplacement: false });
+  const [temporarySlotsDialog, setTemporarySlotsDialog] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -67,6 +69,19 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
     enabled: !!selectedSite,
     staleTime: 0, // Always refetch when component mounts
     gcTime: 5 * 60 * 1000 // Cache for 5 minutes
+  });
+
+  // Fetch temporary slots
+  const { data: temporarySlots = [] } = useQuery({
+    queryKey: ['temporary-slots', selectedSite, format(selectedDate, 'yyyy-MM-dd')],
+    queryFn: () => {
+      if (!selectedSite) return [];
+      return dailyAttendanceSlotsApi.getTemporarySlots(
+        selectedSite,
+        format(selectedDate, 'yyyy-MM-dd')
+      );
+    },
+    enabled: !!selectedSite
   });
 
   // Group slots by shift type and role
@@ -232,9 +247,12 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
     const assignedGuard = guards.find(g => g.id === slot.assigned_guard_id);
     const isAbsent = slot.is_present === false;
     const isPresent = slot.is_present === true;
+    const isTemporary = slot.is_temporary;
     
     return (
-      <Card key={slot.id} className={`border-border ${isAbsent ? 'border-red-200 bg-red-50/50' : isPresent ? 'border-green-200 bg-green-50/50' : ''}`}>
+      <Card key={slot.id} className={`border-border ${
+        isTemporary ? 'border-amber-200 bg-amber-50/30' : ''
+      } ${isAbsent ? 'border-red-200 bg-red-50/50' : isPresent ? 'border-green-200 bg-green-50/50' : ''}`}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium">
@@ -244,6 +262,11 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
               <Badge variant="outline" className="text-xs">
                 {slot.role_type}
               </Badge>
+              {isTemporary && (
+                <Badge variant="outline" className="text-xs bg-amber-100">
+                  Temporary
+                </Badge>
+              )}
               {isAbsent && (
                 <Badge variant="destructive" className="text-xs">
                   Absent
@@ -411,6 +434,15 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
             <Copy className="h-4 w-4 mr-2" />
             Copy Yesterday
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTemporarySlotsDialog(true)}
+            disabled={!selectedSite}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Temporary Slots
+          </Button>
         </div>
       </div>
 
@@ -514,6 +546,14 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
         title={allocationModal.isReplacement ? 
           `Replace Guard - ${allocationModal.shiftType} shift (${allocationModal.roleType})` :
           `Assign Guard - ${allocationModal.shiftType} shift (${allocationModal.roleType})`}
+      />
+
+      <TemporarySlotsManagementDialog
+        isOpen={temporarySlotsDialog}
+        onClose={() => setTemporarySlotsDialog(false)}
+        siteId={selectedSite}
+        date={format(selectedDate, 'yyyy-MM-dd')}
+        temporarySlots={temporarySlots}
       />
     </div>
   );

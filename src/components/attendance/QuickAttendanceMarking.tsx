@@ -37,7 +37,7 @@ import { sitesApi } from '@/lib/sitesApi';
 import { guardsApi, type Guard } from '@/lib/guardsApi';
 import { shiftsApi } from '@/lib/shiftsApi';
 import { attendanceApi } from '@/lib/attendanceApi';
-import TemporarySlotsDialog from './TemporarySlotsDialog';
+
 
 interface QuickAttendanceMarkingProps {
   preselectedSiteId?: string;
@@ -898,13 +898,6 @@ const QuickAttendanceMarking: React.FC<QuickAttendanceMarkingProps> = ({ presele
         </DialogContent>
       </Dialog>
 
-      {/* Temporary Slots Dialog */}
-      <TemporarySlotsDialog
-        isOpen={temporarySlotsModal}
-        onClose={() => setTemporarySlotsModal(false)}
-        onCreateSlots={handleCreateTemporarySlots}
-        isLoading={createTemporarySlotsMutation.isPending}
-      />
     </div>
   );
 };

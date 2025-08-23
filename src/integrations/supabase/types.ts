@@ -202,6 +202,7 @@ export type Database = {
           created_at: string
           id: string
           is_present: boolean | null
+          is_temporary: boolean
           pay_rate: number | null
           role_type: string
           shift_type: string
@@ -215,6 +216,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_present?: boolean | null
+          is_temporary?: boolean
           pay_rate?: number | null
           role_type: string
           shift_type: string
@@ -228,6 +230,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_present?: boolean | null
+          is_temporary?: boolean
           pay_rate?: number | null
           role_type?: string
           shift_type?: string

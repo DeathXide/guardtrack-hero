@@ -10,6 +10,7 @@ export interface DailyAttendanceSlot {
   assigned_guard_id: string | null;
   is_present: boolean | null;
   pay_rate: number | null;
+  is_temporary: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -22,6 +23,7 @@ export interface CreateSlotData {
   slot_number: number;
   assigned_guard_id?: string;
   pay_rate?: number;
+  is_temporary?: boolean;
 }
 
 export interface UpdateSlotData {
@@ -341,6 +343,85 @@ export const dailyAttendanceSlotsApi = {
       .gte('attendance_date', startDate)
       .lte('attendance_date', endDate)
       .order('attendance_date');
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Create temporary slot
+  async createTemporarySlot(slotData: CreateSlotData) {
+    // Get the next slot number for this shift and role
+    const { data: existingSlots } = await supabase
+      .from('daily_attendance_slots')
+      .select('slot_number')
+      .eq('site_id', slotData.site_id)
+      .eq('attendance_date', slotData.attendance_date)
+      .eq('shift_type', slotData.shift_type)
+      .eq('role_type', slotData.role_type)
+      .order('slot_number', { ascending: false })
+      .limit(1);
+
+    const nextSlotNumber = existingSlots && existingSlots.length > 0 
+      ? existingSlots[0].slot_number + 1 
+      : 1;
+
+    const { data, error } = await supabase
+      .from('daily_attendance_slots')
+      .insert({
+        ...slotData,
+        slot_number: nextSlotNumber,
+        is_temporary: true
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Update temporary slot
+  async updateTemporarySlot(slotId: string, updateData: Partial<CreateSlotData>) {
+    const { data, error } = await supabase
+      .from('daily_attendance_slots')
+      .update(updateData)
+      .eq('id', slotId)
+      .eq('is_temporary', true)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Delete temporary slot
+  async deleteTemporarySlot(slotId: string) {
+    const { error } = await supabase
+      .from('daily_attendance_slots')
+      .delete()
+      .eq('id', slotId)
+      .eq('is_temporary', true);
+
+    if (error) throw error;
+  },
+
+  // Get temporary slots for a specific site and date
+  async getTemporarySlots(siteId: string, date: string) {
+    const { data, error } = await supabase
+      .from('daily_attendance_slots')
+      .select(`
+        *,
+        guards:assigned_guard_id (
+          id,
+          name,
+          badge_number
+        )
+      `)
+      .eq('site_id', siteId)
+      .eq('attendance_date', date)
+      .eq('is_temporary', true)
+      .order('shift_type')
+      .order('role_type')
+      .order('slot_number');
 
     if (error) throw error;
     return data || [];
