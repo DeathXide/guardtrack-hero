@@ -121,10 +121,18 @@ export const dailyAttendanceSlotsApi = {
 
     if (insertError) throw insertError;
 
+    if (!newSlots) return [];
+
     // If we had existing assignments and this is a regeneration, try to restore them
-    if (forceRegenerate && existingSlots && existingSlots.length > 0 && newSlots) {
+    if (forceRegenerate && existingSlots && existingSlots.length > 0) {
       const restoredSlots = await this.restoreAssignments(newSlots, existingSlots);
       return restoredSlots;
+    }
+
+    // If this is a new day (not regeneration), automatically assign guards from previous day
+    if (!forceRegenerate) {
+      const autoAssignedSlots = await this.autoAssignFromPreviousDay(newSlots, siteId, date);
+      return autoAssignedSlots;
     }
 
     return newSlots;
@@ -161,6 +169,72 @@ export const dailyAttendanceSlotsApi = {
             assigned_guard_id: update.assigned_guard_id,
             is_present: update.is_present,
             pay_rate: update.pay_rate
+          })
+          .eq('id', update.id);
+      }
+
+      // Fetch and return updated slots
+      const { data: updatedSlots } = await supabase
+        .from('daily_attendance_slots')
+        .select('*')
+        .in('id', newSlots.map(s => s.id));
+
+      return updatedSlots || newSlots;
+    }
+
+    return newSlots;
+  },
+
+  // Auto-assign guards from previous day (without marking present)
+  async autoAssignFromPreviousDay(newSlots: any[], siteId: string, currentDate: string) {
+    // Calculate previous day
+    const currentDateObj = new Date(currentDate);
+    const previousDateObj = new Date(currentDateObj);
+    previousDateObj.setDate(previousDateObj.getDate() - 1);
+    const previousDate = previousDateObj.toISOString().split('T')[0];
+
+    // Get previous day's slots with assignments
+    const { data: previousSlots, error: fetchError } = await supabase
+      .from('daily_attendance_slots')
+      .select('*')
+      .eq('site_id', siteId)
+      .eq('attendance_date', previousDate)
+      .not('assigned_guard_id', 'is', null);
+
+    if (fetchError || !previousSlots || previousSlots.length === 0) {
+      return newSlots;
+    }
+
+    const updates = [];
+
+    for (const newSlot of newSlots) {
+      // Find matching slot from previous day
+      const matchingPreviousSlot = previousSlots.find(prevSlot => 
+        prevSlot.role_type === newSlot.role_type &&
+        prevSlot.slot_number === newSlot.slot_number &&
+        prevSlot.shift_type === newSlot.shift_type
+      );
+
+      if (matchingPreviousSlot && matchingPreviousSlot.assigned_guard_id) {
+        updates.push({
+          id: newSlot.id,
+          assigned_guard_id: matchingPreviousSlot.assigned_guard_id,
+          pay_rate: matchingPreviousSlot.pay_rate || newSlot.pay_rate,
+          is_temporary: matchingPreviousSlot.is_temporary || false
+          // Note: is_present remains null - guards are assigned but not marked present
+        });
+      }
+    }
+
+    // Apply auto-assignments if any
+    if (updates.length > 0) {
+      for (const update of updates) {
+        await supabase
+          .from('daily_attendance_slots')
+          .update({
+            assigned_guard_id: update.assigned_guard_id,
+            pay_rate: update.pay_rate,
+            is_temporary: update.is_temporary
           })
           .eq('id', update.id);
       }
