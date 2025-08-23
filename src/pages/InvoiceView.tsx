@@ -203,20 +203,43 @@ export default function InvoiceView() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Description</TableHead>
+                      <TableHead className="text-center">W.E.F</TableHead>
                       <TableHead className="text-center">Quantity</TableHead>
+                      <TableHead className="text-center">Man Days</TableHead>
                       <TableHead className="text-right">Rate</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoice.lineItems.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{item.description}</TableCell>
-                        <TableCell className="text-center">{item.quantity}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(item.ratePerSlot)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(item.lineTotal)}</TableCell>
-                      </TableRow>
-                    ))}
+                    {invoice.lineItems.map((item) => {
+                      // Calculate days in the billing period
+                      const fromDate = new Date(invoice.periodFrom);
+                      const toDate = new Date(invoice.periodTo);
+                      const timeDiff = toDate.getTime() - fromDate.getTime();
+                      const daysInPeriod = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+                      const manDays = daysInPeriod * item.quantity;
+
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.description}</TableCell>
+                          <TableCell className="text-center text-sm">
+                            {new Date(invoice.periodFrom).toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })} to {new Date(invoice.periodTo).toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
+                          </TableCell>
+                          <TableCell className="text-center">{item.quantity}</TableCell>
+                          <TableCell className="text-center">{manDays}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(item.ratePerSlot)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(item.lineTotal)}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
