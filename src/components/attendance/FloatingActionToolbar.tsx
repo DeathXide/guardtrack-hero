@@ -15,7 +15,8 @@ import {
   ChevronUp,
   ChevronDown,
   CheckCircle,
-  XCircle
+  XCircle,
+  Users
 } from 'lucide-react';
 
 interface FloatingActionToolbarProps {
@@ -24,12 +25,15 @@ interface FloatingActionToolbarProps {
   onOpenTemporarySlots: () => void;
   onBulkMarkPresent?: () => void;
   onBulkMarkAbsent?: () => void;
+  onMarkAllAttendance?: () => void;
   isLoading?: {
     copy?: boolean;
     regenerate?: boolean;
+    markAll?: boolean;
   };
   selectedCount?: number;
   disabled?: boolean;
+  allGuardsAssigned?: boolean;
 }
 
 const FloatingActionToolbar: React.FC<FloatingActionToolbarProps> = ({
@@ -38,9 +42,11 @@ const FloatingActionToolbar: React.FC<FloatingActionToolbarProps> = ({
   onOpenTemporarySlots,
   onBulkMarkPresent,
   onBulkMarkAbsent,
+  onMarkAllAttendance,
   isLoading = {},
   selectedCount = 0,
-  disabled = false
+  disabled = false,
+  allGuardsAssigned = false
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showBulkActions, setShowBulkActions] = useState(false);
@@ -71,6 +77,17 @@ const FloatingActionToolbar: React.FC<FloatingActionToolbarProps> = ({
       variant: 'outline' as const
     }
   ];
+
+  // Mark all attendance action (only show when all guards are assigned)
+  const markAllAction = allGuardsAssigned && onMarkAllAttendance ? {
+    key: 'mark-all',
+    icon: Users,
+    label: 'Mark All Present',
+    onClick: onMarkAllAttendance,
+    loading: isLoading.markAll,
+    variant: 'default' as const,
+    className: 'bg-green-600 hover:bg-green-700 text-white'
+  } : null;
 
   const bulkActions = [
     {
@@ -138,6 +155,28 @@ const FloatingActionToolbar: React.FC<FloatingActionToolbarProps> = ({
           {isExpanded && (
             <div className="bg-background/95 backdrop-blur-md rounded-lg border border-border/50 shadow-lg p-2 animate-slide-in">
               <div className="flex flex-col gap-1">
+                {/* Mark All Attendance (priority button when all guards assigned) */}
+                {markAllAction && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant={markAllAction.variant}
+                        onClick={markAllAction.onClick}
+                        disabled={disabled || markAllAction.loading}
+                        className={`h-10 px-4 justify-start ${markAllAction.className || ''}`}
+                      >
+                        <markAllAction.icon className={`h-4 w-4 mr-2 ${markAllAction.loading ? 'animate-spin' : ''}`} />
+                        <span className="text-sm font-medium">{markAllAction.label}</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">
+                      Mark all assigned guards as present
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                
+                {/* Regular Actions */}
                 {primaryActions.map((action) => {
                   const Icon = action.icon;
                   return (

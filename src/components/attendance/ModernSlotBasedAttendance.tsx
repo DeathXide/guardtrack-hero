@@ -265,6 +265,37 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
     }
   });
 
+  const markAllAttendanceMutation = useMutation({
+    mutationFn: async () => {
+      const assignedSlots = slots.filter(slot => slot.assigned_guard_id && slot.is_present === null);
+      
+      if (assignedSlots.length === 0) {
+        throw new Error('No assigned guards without attendance records found');
+      }
+
+      // Mark all assigned guards as present
+      const promises = assignedSlots.map(slot => 
+        dailyAttendanceSlotsApi.markAttendance(slot.id, true)
+      );
+      
+      return Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
+      toast({ 
+        title: 'All attendance marked successfully',
+        description: 'All assigned guards have been marked as present'
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error marking attendance',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
   // Event handlers
   const handleOpenAllocation = (slotId: string, shiftType: 'day' | 'night', roleType: string, isReplacement = false, originalGuardId?: string) => {
     setAllocationModal({
@@ -296,6 +327,14 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
       !assignedGuardIds.includes(guard.id)
     );
   };
+
+  // Check if all guards are assigned (all slots have guards and no attendance marked yet)
+  const allGuardsAssigned = useMemo(() => {
+    if (slots.length === 0) return false;
+    const assignedSlots = slots.filter(slot => slot.assigned_guard_id);
+    const unattendedSlots = slots.filter(slot => slot.assigned_guard_id && slot.is_present === null);
+    return assignedSlots.length === slots.length && unattendedSlots.length > 0;
+  }, [slots]);
 
   const renderShiftSection = (shiftType: 'day' | 'night') => {
     const shiftSlots = groupedSlots[shiftType];
@@ -544,9 +583,12 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
             onCopyPreviousDay={() => copyPreviousDayMutation.mutate()}
             onRegenerateSlots={() => regenerateSlotsMutation.mutate()}
             onOpenTemporarySlots={() => setTemporarySlotsDialog(true)}
+            onMarkAllAttendance={() => markAllAttendanceMutation.mutate()}
+            allGuardsAssigned={allGuardsAssigned}
             isLoading={{
               copy: copyPreviousDayMutation.isPending,
-              regenerate: regenerateSlotsMutation.isPending
+              regenerate: regenerateSlotsMutation.isPending,
+              markAll: markAllAttendanceMutation.isPending
             }}
             disabled={!selectedSite}
           />
