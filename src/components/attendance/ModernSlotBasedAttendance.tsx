@@ -46,6 +46,7 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
   }>({ isOpen: false, slotId: '', shiftType: 'day', roleType: '', isReplacement: false });
   
   const [temporarySlotsDialog, setTemporarySlotsDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'attendance'>('overview');
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -314,6 +315,7 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
   const handleQuickMarkAttendance = (siteId: string) => {
     setSelectedDate(new Date()); // Set to today
     setSelectedSite(siteId);
+    setActiveTab('attendance'); // Switch to attendance tab
   };
 
   const handleGuardAssignment = (guardId: string) => {
@@ -426,149 +428,113 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
           </div>
         </div>
 
-        {/* Sites Table for Quick Access */}
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
+        {/* Main Tabs */}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'overview' | 'attendance')} className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="overview" className="text-sm">
+              <MapPin className="h-4 w-4 mr-2" />
               Sites Overview
-            </CardTitle>
-            <CardDescription>
-              Click "Mark Attendance" to quickly start attendance marking for today
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Site Name</TableHead>
-                  <TableHead>Organization</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sites.map((site) => (
-                  <TableRow key={site.id}>
-                    <TableCell className="font-medium">{site.site_name}</TableCell>
-                    <TableCell>{site.organization_name}</TableCell>
-                    <TableCell className="max-w-xs truncate">{site.address}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{site.site_category}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        onClick={() => handleQuickMarkAttendance(site.id)}
-                        size="sm"
-                        variant="default"
-                        className="gap-2"
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                        Mark Attendance
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+            </TabsTrigger>
+            <TabsTrigger value="attendance" className="text-sm">
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Mark Attendance
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Date and Site Selection */}
-        <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
-          
-          {/* Date and Site Selection */}
-          <Card className="glass-card w-full lg:w-auto">
-            <CardContent className="p-6">
-              <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
-                <div className="space-y-3 flex-1 sm:min-w-[220px]">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Date
-                  </label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="justify-start text-left font-normal min-w-[220px]">
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {format(selectedDate, 'PPP')}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={(date) => date && setSelectedDate(date)}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                
-                <div className="space-y-3 flex-1 sm:min-w-[220px]">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Site
-                  </label>
-                  <Select value={selectedSite} onValueChange={setSelectedSite}>
-                    <SelectTrigger className="min-w-[220px]">
-                      <MapPin className="mr-2 h-4 w-4" />
-                      <SelectValue placeholder="Select a site" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sites.map(site => (
-                        <SelectItem key={site.id} value={site.id}>
-                          {site.site_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {selectedSite && (
-          <>
-            {/* Stats Cards */}
-            <AttendanceStatsCards slots={slots} />
-
-            {/* Filters and Search */}
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
             <Card className="glass-card">
-              <CardContent className="p-4">
-                <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-                  <div className="flex flex-col sm:flex-row gap-3 flex-1">
-                    <div className="relative flex-1 max-w-sm">
-                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search slots, guards, or roles..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9"
-                      />
-                    </div>
-                    
-                    <Select value={roleFilter} onValueChange={setRoleFilter}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="All Roles" />
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Sites Overview
+                </CardTitle>
+                <CardDescription>
+                  Click "Mark Attendance" to quickly start attendance marking for today
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Site Name</TableHead>
+                      <TableHead>Organization</TableHead>
+                      <TableHead>Address</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sites.map((site) => (
+                      <TableRow key={site.id}>
+                        <TableCell className="font-medium">{site.site_name}</TableCell>
+                        <TableCell>{site.organization_name}</TableCell>
+                        <TableCell className="max-w-xs truncate">{site.address}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{site.site_category}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            onClick={() => handleQuickMarkAttendance(site.id)}
+                            size="sm"
+                            variant="default"
+                            className="gap-2"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                            Mark Attendance
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Attendance Marking Tab */}
+          <TabsContent value="attendance" className="space-y-6">
+            {/* Date and Site Selection */}
+            <Card className="glass-card w-full lg:w-auto">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+                  <div className="space-y-3 flex-1 sm:min-w-[220px]">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Date
+                    </label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="justify-start text-left font-normal min-w-[220px]">
+                          <Calendar className="mr-2 h-4 w-4" />
+                          {format(selectedDate, 'PPP')}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={(date) => date && setSelectedDate(date)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  
+                  <div className="space-y-3 flex-1 sm:min-w-[220px]">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Site
+                    </label>
+                    <Select value={selectedSite} onValueChange={setSelectedSite}>
+                      <SelectTrigger className="min-w-[220px]">
+                        <MapPin className="mr-2 h-4 w-4" />
+                        <SelectValue placeholder="Select a site" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Roles</SelectItem>
-                        {uniqueRoles.map((role) => (
-                          <SelectItem key={role} value={role}>{role}</SelectItem>
+                        {sites.map(site => (
+                          <SelectItem key={site.id} value={site.id}>
+                            {site.site_name}
+                          </SelectItem>
                         ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="All Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="assigned">Assigned</SelectItem>
-                        <SelectItem value="present">Present</SelectItem>
-                        <SelectItem value="absent">Absent</SelectItem>
-                        <SelectItem value="empty">Empty</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -576,68 +542,119 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
               </CardContent>
             </Card>
 
-            {/* Main Content */}
-            {slotsLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <Card key={i} className="animate-pulse">
-                    <CardContent className="p-4">
-                      <div className="space-y-3">
-                        <div className="h-4 bg-muted rounded"></div>
-                        <div className="h-10 bg-muted rounded"></div>
-                        <div className="h-8 bg-muted rounded"></div>
+            {selectedSite && (
+              <>
+                {/* Stats Cards */}
+                <AttendanceStatsCards slots={slots} />
+
+                {/* Filters and Search */}
+                <Card className="glass-card">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                      <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                        <div className="relative flex-1 max-w-sm">
+                          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search slots, guards, or roles..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-9"
+                          />
+                        </div>
+                        
+                        <Select value={roleFilter} onValueChange={setRoleFilter}>
+                          <SelectTrigger className="w-40">
+                            <SelectValue placeholder="All Roles" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Roles</SelectItem>
+                            {uniqueRoles.map((role) => (
+                              <SelectItem key={role} value={role}>{role}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger className="w-40">
+                            <SelectValue placeholder="All Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="assigned">Assigned</SelectItem>
+                            <SelectItem value="present">Present</SelectItem>
+                            <SelectItem value="absent">Absent</SelectItem>
+                            <SelectItem value="empty">Empty</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Main Content */}
+                {slotsLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <Card key={i} className="animate-pulse">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="h-4 bg-muted rounded"></div>
+                            <div className="h-10 bg-muted rounded"></div>
+                            <div className="h-8 bg-muted rounded"></div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : slots.length === 0 ? (
+                  <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+                    <CardContent className="py-8">
+                      <div className="flex items-center gap-3 text-amber-800 dark:text-amber-200">
+                        <AlertCircle className="h-5 w-5" />
+                        <div>
+                          <p className="font-medium">No slots found for this date</p>
+                          <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                            This might happen if the site's staffing requirements were recently updated. 
+                            Click "Refresh Slots" to generate slots based on current requirements.
+                          </p>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
-            ) : slots.length === 0 ? (
-              <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-                <CardContent className="py-8">
-                  <div className="flex items-center gap-3 text-amber-800 dark:text-amber-200">
-                    <AlertCircle className="h-5 w-5" />
-                    <div>
-                      <p className="font-medium">No slots found for this date</p>
-                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                        This might happen if the site's staffing requirements were recently updated. 
-                        Click "Refresh Slots" to generate slots based on current requirements.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Tabs value={activeShift} onValueChange={(value) => setActiveShift(value as 'all' | 'day' | 'night')} className="space-y-6">
-                <TabsList className="grid w-full max-w-md grid-cols-3">
-                  <TabsTrigger value="all" className="text-sm">
-                    All ({shiftCounts.all})
-                  </TabsTrigger>
-                  <TabsTrigger value="day" className="text-sm">
-                    <Sun className="h-4 w-4 mr-1" />
-                    Day ({shiftCounts.day})
-                  </TabsTrigger>
-                  <TabsTrigger value="night" className="text-sm">
-                    <Moon className="h-4 w-4 mr-1" />
-                    Night ({shiftCounts.night})
-                  </TabsTrigger>
-                </TabsList>
+                ) : (
+                  <Tabs value={activeShift} onValueChange={(value) => setActiveShift(value as 'all' | 'day' | 'night')} className="space-y-6">
+                    <TabsList className="grid w-full max-w-md grid-cols-3">
+                      <TabsTrigger value="all" className="text-sm">
+                        All ({shiftCounts.all})
+                      </TabsTrigger>
+                      <TabsTrigger value="day" className="text-sm">
+                        <Sun className="h-4 w-4 mr-1" />
+                        Day ({shiftCounts.day})
+                      </TabsTrigger>
+                      <TabsTrigger value="night" className="text-sm">
+                        <Moon className="h-4 w-4 mr-1" />
+                        Night ({shiftCounts.night})
+                      </TabsTrigger>
+                    </TabsList>
 
-                <TabsContent value="all" className="space-y-8">
-                  {renderShiftSection('day')}
-                  {renderShiftSection('night')}
-                </TabsContent>
+                    <TabsContent value="all" className="space-y-8">
+                      {renderShiftSection('day')}
+                      {renderShiftSection('night')}
+                    </TabsContent>
 
-                <TabsContent value="day" className="space-y-8">
-                  {renderShiftSection('day')}
-                </TabsContent>
+                    <TabsContent value="day" className="space-y-8">
+                      {renderShiftSection('day')}
+                    </TabsContent>
 
-                <TabsContent value="night" className="space-y-8">
-                  {renderShiftSection('night')}
-                </TabsContent>
-              </Tabs>
+                    <TabsContent value="night" className="space-y-8">
+                      {renderShiftSection('night')}
+                    </TabsContent>
+                  </Tabs>
+                )}
+              </>
             )}
-          </>
-        )}
+          </TabsContent>
+        </Tabs>
 
         {/* Floating Action Toolbar */}
         {selectedSite && (
