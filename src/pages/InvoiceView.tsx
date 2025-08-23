@@ -182,6 +182,9 @@ export default function InvoiceView() {
                 <div className="flex justify-between items-start">
                   <div className="space-y-3">
                     <h1 className="text-3xl font-light text-foreground tracking-wide">{companySettings?.company_name || invoice.companyName}</h1>
+                    {companySettings?.company_motto && (
+                      <p className="text-sm italic text-muted-foreground mt-1">{companySettings.company_motto}</p>
+                    )}
                     <div className="text-sm text-muted-foreground space-y-1 font-mono">
                       {(companySettings?.gst_number || invoice.companyGst) && <p>GST: {companySettings?.gst_number || invoice.companyGst}</p>}
                       {companySettings?.company_address_line1 && (
