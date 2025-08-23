@@ -189,7 +189,7 @@ export const paymentsApi = {
         .select('is_present, shift_type')
         .eq('assigned_guard_id', guardId)
         .gte('attendance_date', `${month}-01`)
-        .lt('attendance_date', `${month}-32`) // This will get all days in the month
+        .lte('attendance_date', `${month}-31`) // Get all days in the month
     ]);
 
     if (paymentsResult.error) throw paymentsResult.error;
