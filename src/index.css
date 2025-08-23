@@ -161,6 +161,11 @@
   ::-webkit-scrollbar-thumb {
     @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/30 transition-colors;
   }
+  
+  /* Fix for html2canvas with Tailwind CSS - https://github.com/niklasvh/html2canvas/issues/2775 */
+  img {
+    display: initial;
+  }
 }
 
 @layer components {
