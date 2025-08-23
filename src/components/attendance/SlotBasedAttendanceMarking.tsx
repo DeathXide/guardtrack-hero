@@ -28,7 +28,9 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
     slotId: string;
     shiftType: 'day' | 'night';
     roleType: string;
-  }>({ isOpen: false, slotId: '', shiftType: 'day', roleType: '' });
+    isReplacement?: boolean;
+    originalGuardId?: string;
+  }>({ isOpen: false, slotId: '', shiftType: 'day', roleType: '', isReplacement: false });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -146,12 +148,14 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
     }
   });
 
-  const handleOpenAllocation = (slotId: string, shiftType: 'day' | 'night', roleType: string) => {
+  const handleOpenAllocation = (slotId: string, shiftType: 'day' | 'night', roleType: string, isReplacement = false, originalGuardId?: string) => {
     setAllocationModal({
       isOpen: true,
       slotId,
       shiftType,
-      roleType
+      roleType,
+      isReplacement,
+      originalGuardId
     });
   };
 
@@ -168,6 +172,10 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
     unassignGuardMutation.mutate(slotId);
   };
 
+  const handleReplaceGuard = (slotId: string, shiftType: 'day' | 'night', roleType: string, originalGuardId: string) => {
+    handleOpenAllocation(slotId, shiftType, roleType, true, originalGuardId);
+  };
+
   const handleMarkAttendance = (slotId: string, isPresent: boolean) => {
     markAttendanceMutation.mutate({ slotId, isPresent });
   };
@@ -176,19 +184,45 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
     copyPreviousDayMutation.mutate();
   };
 
+  // Filter available guards for replacement (exclude already assigned guards for same shift)
+  const getAvailableGuardsForSlot = (currentSlotId: string, shiftType: 'day' | 'night') => {
+    const assignedGuardIds = slots
+      .filter(slot => slot.shift_type === shiftType && slot.id !== currentSlotId && slot.assigned_guard_id)
+      .map(slot => slot.assigned_guard_id);
+    
+    return guards.filter(guard => 
+      guard.status === 'active' && 
+      !assignedGuardIds.includes(guard.id)
+    );
+  };
+
   const renderSlotCard = (slot: DailyAttendanceSlot) => {
     const assignedGuard = guards.find(g => g.id === slot.assigned_guard_id);
+    const isAbsent = slot.is_present === false;
+    const isPresent = slot.is_present === true;
     
     return (
-      <Card key={slot.id} className="border-border">
+      <Card key={slot.id} className={`border-border ${isAbsent ? 'border-red-200 bg-red-50/50' : isPresent ? 'border-green-200 bg-green-50/50' : ''}`}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium">
               Slot {slot.slot_number}
             </CardTitle>
-            <Badge variant="outline" className="text-xs">
-              {slot.role_type}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                {slot.role_type}
+              </Badge>
+              {isAbsent && (
+                <Badge variant="destructive" className="text-xs">
+                  Absent
+                </Badge>
+              )}
+              {isPresent && (
+                <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-300">
+                  Present
+                </Badge>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -201,36 +235,65 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
                     Badge: {assignedGuard.badge_number}
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleUnassignGuard(slot.id)}
-                  className="text-xs"
-                >
-                  Remove
-                </Button>
+                {!isAbsent && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleUnassignGuard(slot.id)}
+                    className="text-xs"
+                  >
+                    Remove
+                  </Button>
+                )}
               </div>
               
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant={slot.is_present === true ? "default" : "outline"}
-                  onClick={() => handleMarkAttendance(slot.id, true)}
-                  className="flex-1 text-xs"
-                  disabled={markAttendanceMutation.isPending}
-                >
-                  Present
-                </Button>
-                <Button
-                  size="sm"
-                  variant={slot.is_present === false ? "destructive" : "outline"}
-                  onClick={() => handleMarkAttendance(slot.id, false)}
-                  className="flex-1 text-xs"
-                  disabled={markAttendanceMutation.isPending}
-                >
-                  Absent
-                </Button>
-              </div>
+              {isAbsent ? (
+                <div className="space-y-2">
+                  <div className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                    This guard is marked absent. You can replace them with another guard.
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleReplaceGuard(slot.id, slot.shift_type, slot.role_type, assignedGuard.id)}
+                      className="flex-1 text-xs"
+                    >
+                      Replace Guard
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleMarkAttendance(slot.id, true)}
+                      className="flex-1 text-xs"
+                      disabled={markAttendanceMutation.isPending}
+                    >
+                      Mark Present
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant={isPresent ? "default" : "outline"}
+                    onClick={() => handleMarkAttendance(slot.id, true)}
+                    className="flex-1 text-xs"
+                    disabled={markAttendanceMutation.isPending}
+                  >
+                    Present
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={isAbsent ? "destructive" : "outline"}
+                    onClick={() => handleMarkAttendance(slot.id, false)}
+                    className="flex-1 text-xs"
+                    disabled={markAttendanceMutation.isPending}
+                  >
+                    Absent
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <Button
@@ -385,9 +448,13 @@ const SlotBasedAttendanceMarking: React.FC<SlotBasedAttendanceMarkingProps> = ({
       <SimpleGuardSelectionModal
         isOpen={allocationModal.isOpen}
         onClose={() => setAllocationModal(prev => ({ ...prev, isOpen: false }))}
-        guards={guards}
+        guards={allocationModal.isReplacement ? 
+          getAvailableGuardsForSlot(allocationModal.slotId, allocationModal.shiftType) : 
+          guards}
         onGuardSelect={handleGuardAssignment}
-        title={`Assign Guard - ${allocationModal.shiftType} shift (${allocationModal.roleType})`}
+        title={allocationModal.isReplacement ? 
+          `Replace Guard - ${allocationModal.shiftType} shift (${allocationModal.roleType})` :
+          `Assign Guard - ${allocationModal.shiftType} shift (${allocationModal.roleType})`}
       />
     </div>
   );
