@@ -164,52 +164,58 @@ export default function InvoiceView() {
         {/* Invoice Content */}
         <div className="lg:col-span-2">
           <Card>
-            <CardContent id="invoice-content" className="p-8">
+            <CardContent id="invoice-content" className="p-8 font-sans bg-white print:bg-white">
               {/* Header */}
-              <div className="grid grid-cols-2 gap-8 mb-8">
+              <div className="grid grid-cols-2 gap-8 mb-6 pb-4 border-b border-gray-200">
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">{invoice.companyName}</h2>
-                  {invoice.companyGst && (
-                    <p className="text-muted-foreground">GST: {invoice.companyGst}</p>
-                  )}
+                  <h2 className="text-2xl font-bold mb-1 text-gray-900">{invoice.companyName}</h2>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    {invoice.companyGst && (
+                      <p>GST: {invoice.companyGst}</p>
+                    )}
+                    <p>Phone: +91 9876543210</p>
+                    <p>Email: info@company.com</p>
+                  </div>
                 </div>
                 <div className="text-right">
-                  <h3 className="text-xl font-semibold">INVOICE</h3>
-                  <p className="text-muted-foreground">#{invoice.invoiceNumber}</p>
-                  <p className="text-muted-foreground">Date: {new Date(invoice.invoiceDate).toLocaleDateString()}</p>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">INVOICE</h3>
+                  <div className="text-sm space-y-1">
+                    <p><span className="font-medium">Invoice No:</span> #{invoice.invoiceNumber}</p>
+                    <p><span className="font-medium">Date:</span> {new Date(invoice.invoiceDate).toLocaleDateString()}</p>
+                  </div>
                 </div>
               </div>
 
-              {/* Bill To */}
-              <div className="mb-8">
-                <h4 className="font-semibold mb-2">Bill To:</h4>
-                <div className="text-muted-foreground">
-                  <p className="font-medium text-foreground">{invoice.clientName}</p>
-                  <p>{invoice.clientAddress.split(', ').filter(Boolean).join(', ')}</p>
+              {/* Client Info Section */}
+              <div className="grid grid-cols-2 gap-8 mb-6">
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-2">Bill To:</h4>
+                  <div className="text-sm text-gray-700">
+                    <p className="font-medium text-gray-900">{invoice.clientName}</p>
+                    <p>{invoice.clientAddress.split(', ').filter(Boolean).join(', ')}</p>
+                  </div>
                 </div>
-              </div>
-
-              {/* Service Period */}
-              <div className="mb-8">
-                <h4 className="font-semibold mb-2">Service Period:</h4>
-                <p className="text-muted-foreground">
-                  {new Date(invoice.periodFrom).toLocaleDateString()} - {new Date(invoice.periodTo).toLocaleDateString()}
-                </p>
-                <p className="text-muted-foreground">Site: {invoice.siteName}</p>
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-2">Service Details:</h4>
+                  <div className="text-sm text-gray-700 space-y-1">
+                    <p><span className="font-medium">Period:</span> {new Date(invoice.periodFrom).toLocaleDateString()} - {new Date(invoice.periodTo).toLocaleDateString()}</p>
+                    <p><span className="font-medium">Site:</span> {invoice.siteName}</p>
+                  </div>
+                </div>
               </div>
 
               {/* Line Items */}
-              <div className="mb-8">
+              <div className="mb-6">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-center w-16">S.No</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead className="text-center">W.E.F</TableHead>
-                      <TableHead className="text-center">Quantity</TableHead>
-                      <TableHead className="text-center">Man Days</TableHead>
-                      <TableHead className="text-right">Rate</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
+                    <TableRow className="bg-gray-50 border-b border-gray-200">
+                      <TableHead className="text-center w-16 font-bold text-gray-900">S.No</TableHead>
+                      <TableHead className="font-bold text-gray-900">Description</TableHead>
+                      <TableHead className="text-center font-bold text-gray-900">W.E.F</TableHead>
+                      <TableHead className="text-center font-bold text-gray-900">Quantity</TableHead>
+                      <TableHead className="text-center font-bold text-gray-900">Man Days</TableHead>
+                      <TableHead className="text-right font-bold text-gray-900">Rate</TableHead>
+                      <TableHead className="text-right font-bold text-gray-900">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -222,10 +228,10 @@ export default function InvoiceView() {
                       const manDays = daysInPeriod * item.quantity;
 
                       return (
-                        <TableRow key={item.id}>
-                          <TableCell className="text-center">{index + 1}</TableCell>
-                          <TableCell>{item.description}</TableCell>
-                          <TableCell className="text-center text-sm">
+                        <TableRow key={item.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
+                          <TableCell className="text-center text-sm">{index + 1}</TableCell>
+                          <TableCell className="text-sm">{item.description}</TableCell>
+                          <TableCell className="text-center text-xs text-gray-600">
                             {new Date(invoice.periodFrom).toLocaleDateString('en-GB', {
                               day: '2-digit',
                               month: '2-digit',
@@ -236,10 +242,10 @@ export default function InvoiceView() {
                               year: 'numeric'
                             })}
                           </TableCell>
-                          <TableCell className="text-center">{item.quantity}</TableCell>
-                          <TableCell className="text-center">{manDays}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(item.ratePerSlot)}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(item.lineTotal)}</TableCell>
+                          <TableCell className="text-center text-sm">{item.quantity}</TableCell>
+                          <TableCell className="text-center text-sm">{manDays}</TableCell>
+                          <TableCell className="text-right text-sm font-medium">{formatCurrency(item.ratePerSlot)}</TableCell>
+                          <TableCell className="text-right text-sm font-medium">{formatCurrency(item.lineTotal)}</TableCell>
                         </TableRow>
                       );
                     })}
@@ -248,62 +254,64 @@ export default function InvoiceView() {
               </div>
 
               {/* Totals */}
-              <div className="border-t pt-4">
+              <div className="border-t border-gray-200 pt-4">
                 <div className="flex justify-end">
-                  <div className="w-80 space-y-2">
+                  <div className="w-80 space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
-                      <span>{formatCurrency(invoice.subtotal)}</span>
+                      <span className="font-medium">{formatCurrency(invoice.subtotal)}</span>
                     </div>
                     
                     {/* GST Breakdown */}
                     {invoice.gstType === 'GST' && (
                       <>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between text-xs text-gray-600">
                           <span>CGST ({(invoice.cgstRate || 0).toFixed(1)}%):</span>
-                          <span>{formatCurrency(invoice.cgstAmount || 0)}</span>
+                          <span className="font-medium">{formatCurrency(invoice.cgstAmount || 0)}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between text-xs text-gray-600">
                           <span>SGST ({(invoice.sgstRate || 0).toFixed(1)}%):</span>
-                          <span>{formatCurrency(invoice.sgstAmount || 0)}</span>
+                          <span className="font-medium">{formatCurrency(invoice.sgstAmount || 0)}</span>
                         </div>
                       </>
                     )}
                     
                     {invoice.gstType === 'IGST' && (
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-xs text-gray-600">
                         <span>IGST ({(invoice.igstRate || 0).toFixed(1)}%):</span>
-                        <span>{formatCurrency(invoice.igstAmount || 0)}</span>
+                        <span className="font-medium">{formatCurrency(invoice.igstAmount || 0)}</span>
                       </div>
                     )}
                     
                     {invoice.gstType === 'RCM' && (
                       <>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between text-xs text-gray-600">
                           <span>CGST ({(invoice.cgstRate || 0).toFixed(1)}%) - Reverse Charge:</span>
-                          <span>₹ 0.00</span>
+                          <span className="font-medium">₹ 0.00</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between text-xs text-gray-600">
                           <span>SGST ({(invoice.sgstRate || 0).toFixed(1)}%) - Reverse Charge:</span>
-                          <span>₹ 0.00</span>
+                          <span className="font-medium">₹ 0.00</span>
                         </div>
                       </>
                     )}
                     
                     {(invoice.gstType === 'NGST' || invoice.gstType === 'PERSONAL') && (
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-xs text-gray-600">
                         <span>GST ({(invoice.gstRate || 0).toFixed(1)}%):</span>
-                        <span>{formatCurrency(invoice.gstAmount || 0)}</span>
+                        <span className="font-medium">{formatCurrency(invoice.gstAmount || 0)}</span>
                       </div>
                     )}
                     
-                    <div className="flex justify-between font-bold text-lg border-t pt-2">
-                      <span>Total Amount:</span>
-                      <span>{formatCurrency(invoice.totalAmount || 0)}</span>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
+                      <div className="flex justify-between font-bold text-lg text-blue-900">
+                        <span>Total Amount:</span>
+                        <span>{formatCurrency(invoice.totalAmount || 0)}</span>
+                      </div>
                     </div>
                     
-                    <div className="mt-2 pt-2 border-t">
-                      <p className="text-sm font-medium">
+                    <div className="mt-3 pt-2 border-t border-gray-200">
+                      <p className="text-xs font-medium text-gray-700">
                         Amount in Words: <span className="font-normal">{numberToWords(invoice.totalAmount || 0)}</span>
                       </p>
                     </div>
@@ -320,15 +328,28 @@ export default function InvoiceView() {
               )}
 
               {/* Authorized Signatory */}
-              <div className="mt-12 pt-8 border-t">
-                <div className="text-right">
-                  <div className="space-y-8">
-                    <div className="h-16"></div> {/* Space for signature */}
-                    <div>
-                      <p className="font-medium">For {invoice.companyName}</p>
-                      <p className="text-sm text-muted-foreground mt-1">Authorized Signatory</p>
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <div className="flex justify-between items-end">
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-blue-600 italic">"Your Service is Our Priority"</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="space-y-6">
+                      <div className="h-12 w-32 border border-dashed border-gray-300 rounded text-xs text-gray-400 flex items-center justify-center">Company Seal</div>
+                      <div>
+                        <p className="font-medium text-gray-900">For {invoice.companyName}</p>
+                        <p className="text-sm text-gray-600 mt-1">Authorized Signatory</p>
+                      </div>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="mt-6 pt-4 border-t border-gray-200 text-center">
+                <div className="text-xs text-gray-500 space-y-1">
+                  <p>Thank you for your business!</p>
+                  <p>Phone: +91 9876543210 | Email: info@company.com | Website: www.company.com</p>
                 </div>
               </div>
 
