@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, Calendar, Building2, Wand2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,15 +24,15 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
   const [loading, setLoading] = useState(false);
   const [sitesLoaded, setSitesLoaded] = useState(false);
 
-  // Set default period to current month
-  useState(() => {
+  // Set default period to current month on component mount
+  useEffect(() => {
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     
     setPeriodFrom(firstDay.toISOString().split('T')[0]);
     setPeriodTo(lastDay.toISOString().split('T')[0]);
-  });
+  }, []);
 
   const loadSites = async () => {
     try {
