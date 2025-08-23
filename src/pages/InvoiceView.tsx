@@ -391,9 +391,9 @@ export default function InvoiceView() {
 
                 {/* Payment Terms */}
                 <div className="px-4 mb-6">
-                  <div className="bg-orange-50/30 border border-orange-200 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-orange-900 mb-3">Payment Terms</h4>
-                    <div className="space-y-2 text-sm text-orange-800">
+                  <div className="bg-muted/20 border border-border/50 rounded p-3">
+                    <h4 className="text-xs font-medium text-muted-foreground mb-2">Payment Terms</h4>
+                    <div className="space-y-1 text-xs text-muted-foreground">
                       <p>Kindly release the payment towards the bill on or before the 3rd of this month.</p>
                       <p>Interest at 24% per annum will be charged on all outstanding amounts beyond the due date.</p>
                     </div>
