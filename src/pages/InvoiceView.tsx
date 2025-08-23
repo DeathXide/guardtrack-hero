@@ -176,9 +176,9 @@ export default function InvoiceView() {
         {/* Invoice Content */}
         <div className="lg:col-span-2">
           <Card className="border border-border shadow-sm">
-            <CardContent id="invoice-content" className="p-0 font-sans bg-white w-[210mm] mx-auto border border-border box-border min-h-[297mm] flex flex-col">
+            <CardContent id="invoice-content" className="p-0 font-sans bg-white w-[794px] mx-auto border border-border box-border min-h-[1123px] flex flex-col">
               {/* Header */}
-              <div className="bg-gradient-to-r from-slate-50 to-gray-50 p-8 mb-8">
+              <div className="bg-gradient-to-r from-slate-50 to-gray-50 p-4 mb-6">
                 <div className="flex justify-between items-start">
                   <div className="space-y-3">
                     <h1 className="text-3xl font-light text-foreground tracking-wide">{companySettings?.company_name || invoice.companyName}</h1>
@@ -228,7 +228,7 @@ export default function InvoiceView() {
               </div>
 
               {/* Client Info */}
-              <div className="px-8 mb-8">
+              <div className="px-4 mb-6">
                 <div className="bg-accent/50 rounded-lg p-4 max-w-md">
                   <div className="flex items-center gap-2 mb-2">
                     <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -252,7 +252,7 @@ export default function InvoiceView() {
               {/* Content Area - flex-grow to push footer down */}
               <div className="flex-1">
                 {/* Line Items */}
-                <div className="px-8 mb-8">
+                <div className="px-4 mb-6">
                   <div className="overflow-hidden rounded-lg border border-border">
                     <Table>
                       <TableHeader>
@@ -299,7 +299,7 @@ export default function InvoiceView() {
                 </div>
 
                 {/* Totals */}
-                <div className="px-8 mb-8">
+                <div className="px-4 mb-6">
                   <div className={`flex ${invoice.gstType === 'RCM' ? 'justify-between items-start gap-8' : 'justify-end'}`}>
                     {/* RCM Notice - Subtle Design */}
                     {invoice.gstType === 'RCM' && (
@@ -390,7 +390,7 @@ export default function InvoiceView() {
                 </div>
 
                 {/* Authorized Signatory */}
-                <div className="px-8 mb-8">
+                <div className="px-4 mb-6">
                   <div className="flex justify-start">
                     <div className="text-left space-y-4">
                       <div className="h-12 w-32 flex items-end justify-end">
@@ -408,7 +408,7 @@ export default function InvoiceView() {
 
                 {/* Notes */}
                 {invoice.notes && (
-                  <div className="px-8 mb-8">
+                  <div className="px-4 mb-6">
                     <div className="bg-accent/30 rounded-lg p-4">
                       <h4 className="text-sm font-medium text-muted-foreground mb-2">Notes</h4>
                       <p className="text-sm text-foreground leading-relaxed">{invoice.notes}</p>
