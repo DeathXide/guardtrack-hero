@@ -384,6 +384,23 @@ export default function InvoiceView() {
                   </div>
                 </div>
 
+                {/* Authorized Signatory */}
+                <div className="px-8 mb-8">
+                  <div className="flex justify-end">
+                    <div className="text-right space-y-4">
+                      <div className="h-12 w-32 flex items-end justify-end">
+                        {companySettings?.company_seal_image_url && (
+                          <img src={companySettings.company_seal_image_url} alt="Company Seal" className="h-24 w-auto object-contain opacity-80 ml-auto" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">For {invoice.companyName}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Authorized Signatory</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Notes */}
                 {invoice.notes && (
                   <div className="px-8 mb-8">
@@ -395,27 +412,13 @@ export default function InvoiceView() {
                 )}
               </div>
 
-              {/* Footer - Authorized Signatory - Now always at bottom */}
+              {/* Footer - Simple footer */}
               <div className="mt-auto px-8 py-6 border-t border-border bg-accent/20">
-                <div className="flex justify-between items-end">
-                  <div className="text-xs text-muted-foreground">
-                    <p className="mb-1">Thank you for your business!</p>
-                    {companySettings?.company_address_line1 && (
-                      <p>{[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}</p>
-                    )}
-                  </div>
-                  
-                  <div className="text-right space-y-4">
-                    <div className="h-12 w-32 flex items-end justify-end">
-                      {companySettings?.company_seal_image_url && (
-                        <img src={companySettings.company_seal_image_url} alt="Company Seal" className="h-10 w-auto object-contain opacity-80" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">For {invoice.companyName}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Authorized Signatory</p>
-                    </div>
-                  </div>
+                <div className="text-xs text-muted-foreground">
+                  <p className="mb-1">Thank you for your business!</p>
+                  {companySettings?.company_address_line1 && (
+                    <p>{[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}</p>
+                  )}
                 </div>
               </div>
 
