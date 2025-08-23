@@ -64,6 +64,7 @@ export default function SitesNew() {
   const [selectedSiteId, setSelectedSiteId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState(initialFormState);
+  const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -136,6 +137,10 @@ export default function SitesNew() {
 
   const handleInputChange = (field: keyof typeof formData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear validation error when user starts typing
+    if (validationErrors.has(field)) {
+      setValidationErrors(prev => new Set([...prev].filter(error => error !== field)));
+    }
   };
 
   const addStaffingSlot = () => {
@@ -197,28 +202,25 @@ export default function SitesNew() {
     setIsEditMode(false);
     setSelectedSiteId("");
     setFormData(initialFormState);
+    setValidationErrors(new Set());
   };
 
   const handleSubmit = () => {
     // Validate required fields
-    const errors: string[] = [];
+    const errors = new Set<string>();
     
-    if (!formData.site_name.trim()) errors.push("Site Name");
-    if (!formData.organization_name.trim()) errors.push("Organization Name");
-    if (!formData.address_line1.trim()) errors.push("Address Line 1");
-    if (!formData.site_category) errors.push("Site Category");
+    if (!formData.site_name.trim()) errors.add("site_name");
+    if (!formData.organization_name.trim()) errors.add("organization_name");
+    if (!formData.address_line1.trim()) errors.add("address_line1");
+    if (!formData.site_category) errors.add("site_category");
     
     // GST number is required only when GST type is "GST"
     if (formData.gst_type === "GST" && !formData.gst_number.trim()) {
-      errors.push("GST Number (required for GST type)");
+      errors.add("gst_number");
     }
 
-    if (errors.length > 0) {
-      toast({
-        title: "Validation Error",
-        description: `Please fill in the following required fields: ${errors.join(", ")}`,
-        variant: "destructive",
-      });
+    if (errors.size > 0) {
+      setValidationErrors(errors);
       return;
     }
 
@@ -291,6 +293,7 @@ export default function SitesNew() {
                     value={formData.site_name}
                     onChange={(e) => handleInputChange("site_name", e.target.value)}
                     placeholder="Enter site name"
+                    className={validationErrors.has("site_name") ? "border-destructive" : ""}
                   />
                 </div>
 
@@ -301,16 +304,18 @@ export default function SitesNew() {
                     value={formData.organization_name}
                     onChange={(e) => handleInputChange("organization_name", e.target.value)}
                     placeholder="Enter organization name"
+                    className={validationErrors.has("organization_name") ? "border-destructive" : ""}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="gst_number">GST Number *</Label>
+                  <Label htmlFor="gst_number">GST Number {formData.gst_type === "GST" ? "*" : ""}</Label>
                   <Input
                     id="gst_number"
                     value={formData.gst_number}
                     onChange={(e) => handleInputChange("gst_number", e.target.value)}
                     placeholder="Enter GST number"
+                    className={validationErrors.has("gst_number") ? "border-destructive" : ""}
                   />
                 </div>
 
@@ -332,12 +337,12 @@ export default function SitesNew() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="site_category">Site Category</Label>
+                  <Label htmlFor="site_category">Site Category *</Label>
                   <Select
                     value={formData.site_category}
                     onValueChange={(value) => handleInputChange("site_category", value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={validationErrors.has("site_category") ? "border-destructive" : ""}>
                       <SelectValue placeholder="Select site category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -357,6 +362,7 @@ export default function SitesNew() {
                     value={formData.address_line1}
                     onChange={(e) => handleInputChange("address_line1", e.target.value)}
                     placeholder="Street address, building name, floor"
+                    className={validationErrors.has("address_line1") ? "border-destructive" : ""}
                   />
                 </div>
                 <div className="space-y-2">
