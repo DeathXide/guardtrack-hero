@@ -6,10 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { fetchSites } from '@/lib/localService';
+import { fetchSitesWithStaffing, fetchCompanySettings, convertSiteToInvoiceFormat, SiteWithStaffing, CompanySettings } from '@/lib/supabaseInvoiceApi';
 import { createInvoice } from '@/lib/invoiceData';
 import { calculateInvoiceFromSite, formatCurrency } from '@/lib/invoiceUtils';
-import { Site } from '@/types';
 import { toast } from 'sonner';
 
 interface AutoGenerateInvoicesProps {
@@ -17,11 +16,11 @@ interface AutoGenerateInvoicesProps {
 }
 
 export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerateInvoicesProps) {
-  const [sites, setSites] = useState<Site[]>([]);
+  const [sites, setSites] = useState<SiteWithStaffing[]>([]);
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   const [selectedSites, setSelectedSites] = useState<Set<string>>(new Set());
   const [periodFrom, setPeriodFrom] = useState('');
   const [periodTo, setPeriodTo] = useState('');
-  const [companyName, setCompanyName] = useState('SecureGuard Services Pvt Ltd');
   const [loading, setLoading] = useState(false);
   const [sitesLoaded, setSitesLoaded] = useState(false);
 
@@ -37,19 +36,25 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
 
   const loadSites = async () => {
     try {
-      const data = await fetchSites();
-      setSites(data);
+      // Load both sites and company settings
+      const [sitesData, companyData] = await Promise.all([
+        fetchSitesWithStaffing(),
+        fetchCompanySettings()
+      ]);
+      
+      setSites(sitesData);
+      setCompanySettings(companyData);
       setSitesLoaded(true);
       
-      if (data.length === 0) {
+      if (sitesData.length === 0) {
         toast.info('No sites found. Please create some sites first.');
       } else {
         // Select all sites by default
-        setSelectedSites(new Set(data.map(site => site.id)));
+        setSelectedSites(new Set(sitesData.map(site => site.id)));
       }
     } catch (error) {
-      console.error('Error loading sites:', error);
-      toast.error('Failed to load sites');
+      console.error('Error loading data:', error);
+      toast.error('Failed to load sites and company data');
     }
   };
 
@@ -82,28 +87,55 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
       return;
     }
 
+    if (!companySettings) {
+      toast.error('Company settings not found. Please configure company settings first.');
+      return;
+    }
+
     setLoading(true);
     try {
       const selectedSiteData = sites.filter(site => selectedSites.has(site.id));
       let createdCount = 0;
 
-      for (const site of selectedSiteData) {
-        // Check if site has staffing slots
-        if (!site.staffingSlots || site.staffingSlots.length === 0) {
-          console.warn(`Skipping site ${site.name} - no staffing slots defined`);
+      for (const siteData of selectedSiteData) {
+        // Check if site has staffing requirements
+        if (!siteData.staffing_requirements || siteData.staffing_requirements.length === 0) {
+          console.warn(`Skipping site ${siteData.site_name} - no staffing requirements defined`);
           continue;
         }
 
         // Calculate total slots to ensure there's something to bill
-        const totalSlots = site.staffingSlots.reduce((sum, slot) => sum + slot.daySlots + slot.nightSlots, 0);
+        const totalSlots = siteData.staffing_requirements.reduce((sum, req) => sum + req.day_slots + req.night_slots, 0);
         if (totalSlots === 0) {
-          console.warn(`Skipping site ${site.name} - no slots configured`);
+          console.warn(`Skipping site ${siteData.site_name} - no slots configured`);
           continue;
         }
 
-        const invoiceData = calculateInvoiceFromSite(site, periodFrom, periodTo, companyName);
-        const newInvoice = createInvoice({
+        // Convert to our Site format for invoice calculation
+        const site = convertSiteToInvoiceFormat(siteData);
+        
+        const invoiceData = calculateInvoiceFromSite(
+          site, 
+          periodFrom, 
+          periodTo, 
+          companySettings.company_name
+        );
+        
+        // Add company details to invoice
+        const enhancedInvoiceData = {
           ...invoiceData,
+          companyGst: companySettings.gst_number || '',
+          companyPhone: companySettings.company_phone || '',
+          companyEmail: companySettings.company_email || '',
+          companyAddress: [
+            companySettings.company_address_line1,
+            companySettings.company_address_line2,
+            companySettings.company_address_line3
+          ].filter(Boolean).join(', ')
+        };
+        
+        const newInvoice = createInvoice({
+          ...enhancedInvoiceData,
           status: 'draft'
         });
         
@@ -114,7 +146,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
         toast.success(`Created ${createdCount} invoice(s) successfully`);
         onInvoicesCreated();
       } else {
-        toast.warning('No invoices were created. Please ensure sites have staffing slots configured.');
+        toast.warning('No invoices were created. Please ensure sites have staffing requirements configured.');
       }
     } catch (error) {
       console.error('Error generating invoices:', error);
@@ -134,10 +166,10 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
     }
   };
 
-  const calculateSiteTotal = (site: Site) => {
-    if (!site.staffingSlots) return 0;
-    return site.staffingSlots.reduce((sum, slot) => {
-      return sum + (slot.daySlots * slot.budgetPerSlot) + (slot.nightSlots * slot.budgetPerSlot);
+  const calculateSiteTotal = (site: SiteWithStaffing) => {
+    if (!site.staffing_requirements) return 0;
+    return site.staffing_requirements.reduce((sum, req) => {
+      return sum + (req.day_slots * Number(req.budget_per_slot)) + (req.night_slots * Number(req.budget_per_slot));
     }, 0);
   };
 
@@ -154,7 +186,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
           <div className="text-center py-8">
             <Button onClick={loadSites} className="gap-2">
               <Building2 className="h-4 w-4" />
-              Load Sites
+              Load Sites & Company Data
             </Button>
           </div>
         ) : (
@@ -163,7 +195,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
               <Alert>
                 <FileText className="h-4 w-4" />
                 <AlertDescription>
-                  No sites found. Please create some sites first before generating invoices.
+                  No sites found. Please create some sites with staffing requirements first before generating invoices.
                 </AlertDescription>
               </Alert>
             ) : (
@@ -195,13 +227,31 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="companyName">Company Name</Label>
-                    <Input
-                      id="companyName"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="Your company name"
-                    />
+                    <Label className="text-base font-semibold">Company Information</Label>
+                    <div className="p-4 bg-muted rounded-lg space-y-2">
+                      {companySettings ? (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="font-medium">Company:</span>
+                            <span>{companySettings.company_name}</span>
+                          </div>
+                          {companySettings.gst_number && (
+                            <div className="flex justify-between">
+                              <span className="font-medium">GST Number:</span>
+                              <span>{companySettings.gst_number}</span>
+                            </div>
+                          )}
+                          {companySettings.company_phone && (
+                            <div className="flex justify-between">
+                              <span className="font-medium">Phone:</span>
+                              <span>{companySettings.company_phone}</span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">Loading company settings...</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -223,7 +273,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
                     {sites.map((site) => {
                       const isSelected = selectedSites.has(site.id);
                       const siteTotal = calculateSiteTotal(site);
-                      const hasStaffing = site.staffingSlots && site.staffingSlots.length > 0;
+                      const hasStaffing = site.staffing_requirements && site.staffing_requirements.length > 0;
 
                       return (
                         <div
@@ -236,25 +286,25 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
                           <div className="flex items-start justify-between">
                             <div className="space-y-1 flex-1">
                               <div className="flex items-center gap-2">
-                                <h4 className="font-medium">{site.name}</h4>
+                                <h4 className="font-medium">{site.site_name}</h4>
                                 {isSelected && <Badge variant="secondary">Selected</Badge>}
                                 {!hasStaffing && <Badge variant="destructive">No Staffing</Badge>}
                               </div>
-                              <p className="text-sm text-muted-foreground">{site.organizationName}</p>
+                              <p className="text-sm text-muted-foreground">{site.organization_name}</p>
                               <div className="flex items-center gap-4 text-sm">
-                                <Badge variant="outline">{getGstTypeDescription(site.gstType)}</Badge>
+                                <Badge variant="outline">{getGstTypeDescription(site.gst_type)}</Badge>
                                 {hasStaffing && (
                                   <span className="text-muted-foreground">
                                     Estimated: {formatCurrency(siteTotal)}
                                   </span>
                                 )}
                               </div>
-                              {hasStaffing && site.staffingSlots && (
+                              {hasStaffing && site.staffing_requirements && (
                                 <div className="text-xs text-muted-foreground">
-                                  {site.staffingSlots.map((slot, index) => (
+                                  {site.staffing_requirements.map((req, index) => (
                                     <span key={index}>
-                                      {slot.role}: {slot.daySlots}D + {slot.nightSlots}N
-                                      {index < site.staffingSlots!.length - 1 ? ' | ' : ''}
+                                      {req.role_type}: {req.day_slots}D + {req.night_slots}N
+                                      {index < site.staffing_requirements!.length - 1 ? ' | ' : ''}
                                     </span>
                                   ))}
                                 </div>
@@ -271,7 +321,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
                 <div className="pt-4 border-t">
                   <Button 
                     onClick={generateInvoices} 
-                    disabled={selectedSites.size === 0 || loading}
+                    disabled={selectedSites.size === 0 || loading || !companySettings}
                     className="w-full gap-2"
                     size="lg"
                   >
