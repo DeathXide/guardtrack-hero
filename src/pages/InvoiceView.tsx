@@ -405,7 +405,7 @@ export default function InvoiceView() {
                   <div className="text-right space-y-4">
                     <div className="h-12 w-32 flex items-end justify-end">
                       {companySettings?.company_seal_image_url && (
-                        <img src={companySettings.company_seal_image_url} alt="Company Seal" className="h-24 w-auto object-contain opacity-80" />
+                        <img src={companySettings.company_seal_image_url} alt="Company Seal" className="h-10 w-auto object-contain opacity-80" />
                       )}
                     </div>
                     <div>
