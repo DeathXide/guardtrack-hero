@@ -222,6 +222,23 @@ export default function InvoiceView() {
                         </div>
                         <span className="font-mono">{new Date(invoice.invoiceDate).toLocaleDateString()}</span>
                       </div>
+                      <div className="flex justify-between items-center gap-8">
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          <span>Period:</span>
+                        </div>
+                        <span className="font-mono text-xs">
+                          {new Date(invoice.periodFrom).toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          })} - {new Date(invoice.periodTo).toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -259,7 +276,6 @@ export default function InvoiceView() {
                         <TableRow className="bg-muted/50 hover:bg-muted/50">
                           <TableHead className="text-center w-12 font-medium text-xs">No.</TableHead>
                           <TableHead className="font-medium text-xs min-w-[200px]">Description</TableHead>
-                          <TableHead className="text-center font-medium text-xs w-24">Period</TableHead>
                           <TableHead className="text-center font-medium text-xs w-16">Qty</TableHead>
                           <TableHead className="text-center font-medium text-xs w-20">Days</TableHead>
                           <TableHead className="text-right font-medium text-xs w-24">Rate</TableHead>
@@ -277,17 +293,6 @@ export default function InvoiceView() {
                             <TableRow key={item.id} className={index % 2 === 0 ? "bg-background" : "bg-muted/20"}>
                               <TableCell className="text-center text-sm text-muted-foreground">{index + 1}</TableCell>
                               <TableCell className="text-sm font-medium">{item.description}</TableCell>
-                              <TableCell className="text-center text-xs text-muted-foreground font-mono">
-                                {new Date(invoice.periodFrom).toLocaleDateString('en-GB', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  year: 'numeric'
-                                })} - {new Date(invoice.periodTo).toLocaleDateString('en-GB', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  year: 'numeric'
-                                })}
-                              </TableCell>
                               <TableCell className="text-center text-sm font-medium">{item.quantity}</TableCell>
                               <TableCell className="text-center text-sm font-medium">{manDays}</TableCell>
                               <TableCell className="text-right text-sm font-mono">{formatCurrency(item.ratePerSlot)}</TableCell>
