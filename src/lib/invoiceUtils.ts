@@ -63,23 +63,26 @@ export function calculateGST(amount: number, gstType: string): {
   };
 }
 
-export function generateInvoiceNumber(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+export async function generateInvoiceNumber(): Promise<string> {
+  const { supabase } = await import('@/integrations/supabase/client');
   
-  return `INV-${year}${month}${day}-${random}`;
+  const { data, error } = await supabase.rpc('get_next_invoice_number');
+  
+  if (error) {
+    console.error('Error generating invoice number:', error);
+    throw new Error('Failed to generate invoice number');
+  }
+  
+  return data;
 }
 
-export function calculateInvoiceFromSite(
+export async function calculateInvoiceFromSite(
   site: Site,
   periodFrom: string,
   periodTo: string,
   companySettings?: { company_name: string; gst_number?: string },
   invoiceDate?: string
-): Omit<Invoice, 'id' | 'created_at' | 'status'> {
+): Promise<Omit<Invoice, 'id' | 'created_at' | 'status'>> {
   const lineItems: InvoiceLineItem[] = [];
   let subtotal = 0;
 
@@ -106,7 +109,7 @@ export function calculateInvoiceFromSite(
   const gstCalculation = calculateGST(subtotal, site.gstType);
 
   return {
-    invoiceNumber: generateInvoiceNumber(),
+    invoiceNumber: await generateInvoiceNumber(),
     siteId: site.id,
     siteName: site.name,
     siteGst: site.gstNumber,

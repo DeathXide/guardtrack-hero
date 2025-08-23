@@ -115,7 +115,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
           gst_number: companySettings.gst_number
         };
 
-        const invoiceData = calculateInvoiceFromSite(
+        const invoiceData = await calculateInvoiceFromSite(
           site, 
           periodFrom, 
           periodTo, 

@@ -86,9 +86,9 @@ export default function InvoiceCreate() {
     }
   };
 
-  const generatePreview = (site: Site, periodFrom: string, periodTo: string, invoiceDate?: string) => {
+  const generatePreview = async (site: Site, periodFrom: string, periodTo: string, invoiceDate?: string) => {
     try {
-      const invoiceData = calculateInvoiceFromSite(site, periodFrom, periodTo, companySettings, invoiceDate);
+      const invoiceData = await calculateInvoiceFromSite(site, periodFrom, periodTo, companySettings, invoiceDate);
       setPreview(invoiceData);
     } catch (error) {
       console.error('Error generating preview:', error);
