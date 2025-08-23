@@ -214,10 +214,7 @@ export default function SitesNew() {
     if (!formData.address_line1.trim()) errors.add("address_line1");
     if (!formData.site_category) errors.add("site_category");
     
-    // GST number is required only when GST type is "GST"
-    if (formData.gst_type === "GST" && !formData.gst_number.trim()) {
-      errors.add("gst_number");
-    }
+    // GST number is no longer required for any GST type
 
     if (errors.size > 0) {
       setValidationErrors(errors);
@@ -309,7 +306,7 @@ export default function SitesNew() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="gst_number">GST Number {formData.gst_type === "GST" ? "*" : ""}</Label>
+                  <Label htmlFor="gst_number">GST Number</Label>
                   <Input
                     id="gst_number"
                     value={formData.gst_number}
