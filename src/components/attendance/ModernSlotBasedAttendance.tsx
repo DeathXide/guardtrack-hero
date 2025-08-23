@@ -423,13 +423,13 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
           <Card className="glass-card w-full lg:w-auto">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
-                <div className="space-y-3">
+                <div className="space-y-3 flex-1 sm:min-w-[220px]">
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Date
                   </label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="justify-start text-left font-normal min-w-[180px]">
+                      <Button variant="outline" className="justify-start text-left font-normal min-w-[220px]">
                         <Calendar className="mr-2 h-4 w-4" />
                         {format(selectedDate, 'PPP')}
                       </Button>
