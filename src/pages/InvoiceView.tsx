@@ -28,6 +28,16 @@ export default function InvoiceView() {
       loadInvoice(id);
       loadCompanySettings();
     }
+
+    // Listen for messages from parent window (for bulk download)
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.action === 'downloadPDF') {
+        handleDownloadPDF();
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, [id]);
   const loadInvoice = async (invoiceId: string) => {
     setLoading(true);

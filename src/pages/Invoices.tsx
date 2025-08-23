@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, FileText, Eye, Edit, Trash2, Wand2 } from 'lucide-react';
+import { Plus, Search, Filter, FileText, Eye, Edit, Trash2, Wand2, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,9 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import AutoGenerateInvoices from '@/components/invoices/AutoGenerateInvoices';
 import { fetchInvoicesFromDB, deleteInvoiceFromDB, updateInvoiceInDB } from '@/lib/supabaseInvoiceApiNew';
 import { formatCurrency } from '@/lib/invoiceUtils';
+import { generatePDF } from '@/lib/pdfUtils';
 import { Invoice } from '@/types/invoice';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import JSZip from 'jszip';
 
 export default function Invoices() {
   const navigate = useNavigate();
@@ -21,6 +23,7 @@ export default function Invoices() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [autoGenerateOpen, setAutoGenerateOpen] = useState(false);
+  const [bulkDownloading, setBulkDownloading] = useState(false);
 
   useEffect(() => {
     loadInvoices();
@@ -66,6 +69,51 @@ export default function Invoices() {
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('Failed to update status');
+    }
+  };
+
+  // Simplified bulk download using new tabs approach
+  const handleSimpleBulkDownload = async () => {
+    if (filteredInvoices.length === 0) {
+      toast.error('No invoices to download');
+      return;
+    }
+
+    setBulkDownloading(true);
+    toast.success(`Starting download of ${filteredInvoices.length} invoices. This may take a moment...`);
+
+    try {
+      for (let i = 0; i < filteredInvoices.length; i++) {
+        const invoice = filteredInvoices[i];
+        
+        // Open invoice in new tab and trigger download
+        const newWindow = window.open(`/invoices/${invoice.id}`, '_blank');
+        
+        // Wait a bit for the page to load
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        if (newWindow) {
+          // Trigger PDF download in the new window
+          newWindow.postMessage({ action: 'downloadPDF' }, '*');
+          
+          // Close the window after a short delay
+          setTimeout(() => {
+            newWindow.close();
+          }, 3000);
+        }
+        
+        // Small delay between downloads to avoid overwhelming the browser
+        if (i < filteredInvoices.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      toast.success(`Download initiated for ${filteredInvoices.length} invoices`);
+    } catch (error) {
+      console.error('Error during bulk download:', error);
+      toast.error('Failed to download some invoices');
+    } finally {
+      setBulkDownloading(false);
     }
   };
 
@@ -124,6 +172,17 @@ export default function Invoices() {
           <p className="text-muted-foreground">Manage your billing and invoices</p>
         </div>
         <div className="flex items-center gap-2">
+          {filteredInvoices.length > 0 && (
+            <Button 
+              variant="outline" 
+              onClick={handleSimpleBulkDownload}
+              disabled={bulkDownloading}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {bulkDownloading ? 'Downloading...' : `Download All (${filteredInvoices.length})`}
+            </Button>
+          )}
           <Dialog open={autoGenerateOpen} onOpenChange={setAutoGenerateOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" className="gap-2">
