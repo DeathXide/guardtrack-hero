@@ -13,21 +13,22 @@ import { numberToWords } from '@/lib/numberToWords';
 import { companyApi } from '@/lib/companyApi';
 import { Invoice } from '@/types/invoice';
 import { toast } from 'sonner';
-
 export default function InvoiceView() {
-  const { id } = useParams<{ id: string }>();
+  const {
+    id
+  } = useParams<{
+    id: string;
+  }>();
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [companySettings, setCompanySettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     if (id) {
       loadInvoice(id);
       loadCompanySettings();
     }
   }, [id]);
-
   const loadInvoice = (invoiceId: string) => {
     setLoading(true);
     try {
@@ -46,7 +47,6 @@ export default function InvoiceView() {
       setLoading(false);
     }
   };
-
   const loadCompanySettings = async () => {
     try {
       const data = await companyApi.getCompanySettings();
@@ -55,12 +55,12 @@ export default function InvoiceView() {
       console.error('Error loading company settings:', error);
     }
   };
-
   const handleStatusChange = async (newStatus: string) => {
     if (!invoice) return;
-
     try {
-      const updatedInvoice = updateInvoice(invoice.id, { status: newStatus as any });
+      const updatedInvoice = updateInvoice(invoice.id, {
+        status: newStatus as any
+      });
       if (updatedInvoice) {
         setInvoice(updatedInvoice);
         toast.success('Invoice status updated');
@@ -70,17 +70,20 @@ export default function InvoiceView() {
       toast.error('Failed to update status');
     }
   };
-
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'paid': return 'default';
-      case 'sent': return 'secondary';
-      case 'overdue': return 'destructive';
-      case 'draft': return 'outline';
-      default: return 'outline';
+      case 'paid':
+        return 'default';
+      case 'sent':
+        return 'secondary';
+      case 'overdue':
+        return 'destructive';
+      case 'draft':
+        return 'outline';
+      default:
+        return 'outline';
     }
   };
-
   const handleDownloadPDF = async () => {
     try {
       await generatePDF('invoice-content', `Invoice-${invoice?.invoiceNumber}.pdf`);
@@ -90,32 +93,32 @@ export default function InvoiceView() {
       toast.error('Failed to download PDF');
     }
   };
-
   const getGstTypeDescription = (gstType: string) => {
     switch (gstType) {
-      case 'GST': return 'Intra-State GST';
-      case 'IGST': return 'Inter-State GST';
-      case 'NGST': return 'No GST';
-      case 'RCM': return 'Reverse Charge Mechanism';
-      case 'PERSONAL': return 'Personal Billing';
-      default: return gstType;
+      case 'GST':
+        return 'Intra-State GST';
+      case 'IGST':
+        return 'Inter-State GST';
+      case 'NGST':
+        return 'No GST';
+      case 'RCM':
+        return 'Reverse Charge Mechanism';
+      case 'PERSONAL':
+        return 'Personal Billing';
+      default:
+        return gstType;
     }
   };
-
   if (loading) {
-    return (
-      <div className="container mx-auto p-6">
+    return <div className="container mx-auto p-6">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-muted rounded w-1/4"></div>
           <div className="h-96 bg-muted rounded"></div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   if (!invoice) {
-    return (
-      <div className="container mx-auto p-6">
+    return <div className="container mx-auto p-6">
         <div className="text-center py-12">
           <h2 className="text-2xl font-bold mb-4">Invoice Not Found</h2>
           <Button onClick={() => navigate('/invoices')}>
@@ -123,12 +126,9 @@ export default function InvoiceView() {
             Back to Invoices
           </Button>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="container mx-auto p-6 space-y-6">
+  return <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => navigate('/invoices')}>
@@ -182,15 +182,9 @@ export default function InvoiceView() {
                 <div>
                   <h2 className="text-2xl font-bold mb-1 text-gray-900">{companySettings?.company_name || invoice.companyName}</h2>
                   <div className="text-sm text-gray-600 space-y-1">
-                    {(companySettings?.gst_number || invoice.companyGst) && (
-                      <p>GST: {companySettings?.gst_number || invoice.companyGst}</p>
-                    )}
-                    {companySettings?.company_phone && (
-                      <p>Phone: {companySettings.company_phone}</p>
-                    )}
-                    {companySettings?.company_email && (
-                      <p>Email: {companySettings.company_email}</p>
-                    )}
+                    {(companySettings?.gst_number || invoice.companyGst) && <p>GST: {companySettings?.gst_number || invoice.companyGst}</p>}
+                    {companySettings?.company_phone && <p>Phone: {companySettings.company_phone}</p>}
+                    {companySettings?.company_email && <p>Email: {companySettings.company_email}</p>}
                   </div>
                 </div>
                 <div className="text-right">
@@ -216,9 +210,7 @@ export default function InvoiceView() {
                   <div className="text-sm text-gray-700 space-y-1">
                     <p><span className="font-medium">Period:</span> {new Date(invoice.periodFrom).toLocaleDateString()} - {new Date(invoice.periodTo).toLocaleDateString()}</p>
                     <p><span className="font-medium">Site:</span> {invoice.siteName}</p>
-                    {invoice.siteGst && (
-                      <p><span className="font-medium">Site GST:</span> {invoice.siteGst}</p>
-                    )}
+                    {invoice.siteGst && <p><span className="font-medium">Site GST:</span> {invoice.siteGst}</p>}
                   </div>
                 </div>
               </div>
@@ -239,35 +231,32 @@ export default function InvoiceView() {
                   </TableHeader>
                   <TableBody>
                     {invoice.lineItems.map((item, index) => {
-                      // Calculate days in the billing period
-                      const fromDate = new Date(invoice.periodFrom);
-                      const toDate = new Date(invoice.periodTo);
-                      const timeDiff = toDate.getTime() - fromDate.getTime();
-                      const daysInPeriod = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
-                      const manDays = daysInPeriod * item.quantity;
-
-                      return (
-                        <TableRow key={item.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
+                    // Calculate days in the billing period
+                    const fromDate = new Date(invoice.periodFrom);
+                    const toDate = new Date(invoice.periodTo);
+                    const timeDiff = toDate.getTime() - fromDate.getTime();
+                    const daysInPeriod = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+                    const manDays = daysInPeriod * item.quantity;
+                    return <TableRow key={item.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
                           <TableCell className="text-center text-sm">{index + 1}</TableCell>
                           <TableCell className="text-sm">{item.description}</TableCell>
                           <TableCell className="text-center text-xs text-gray-600">
                             {new Date(invoice.periodFrom).toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric'
-                            })} to {new Date(invoice.periodTo).toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric'
-                            })}
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })} to {new Date(invoice.periodTo).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })}
                           </TableCell>
                           <TableCell className="text-center text-sm">{item.quantity}</TableCell>
                           <TableCell className="text-center text-sm">{manDays}</TableCell>
                           <TableCell className="text-right text-sm font-medium">{formatCurrency(item.ratePerSlot)}</TableCell>
                           <TableCell className="text-right text-sm font-medium">{formatCurrency(item.lineTotal)}</TableCell>
-                        </TableRow>
-                      );
-                    })}
+                        </TableRow>;
+                  })}
                   </TableBody>
                 </Table>
               </div>
@@ -276,8 +265,7 @@ export default function InvoiceView() {
               <div className="border-t border-gray-200 pt-4">
                 <div className={`flex ${invoice.gstType === 'RCM' ? 'justify-between items-start gap-6' : 'justify-end'}`}>
                   {/* RCM Notice - Left Side */}
-                  {invoice.gstType === 'RCM' && (
-                    <div className="flex-1 max-w-md">
+                  {invoice.gstType === 'RCM' && <div className="flex-1 max-w-md">
                       <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <div className="font-bold text-yellow-800 mb-2 text-sm">REVERSE CHARGE MECHANISM ON SECURITY SERVICES</div>
                         <div className="text-xs text-yellow-700 mb-2">
@@ -285,11 +273,10 @@ export default function InvoiceView() {
                         </div>
                         <p className="text-xs text-yellow-800">
                           <strong>Note:</strong> The recipient is liable to pay CGST ({(invoice.cgstRate || 0).toFixed(1)}%) and SGST ({(invoice.sgstRate || 0).toFixed(1)}%) 
-                          totaling {formatCurrency(((invoice.subtotal * (invoice.cgstRate || 0)) / 100) + ((invoice.subtotal * (invoice.sgstRate || 0)) / 100))} directly to the government.
+                          totaling {formatCurrency(invoice.subtotal * (invoice.cgstRate || 0) / 100 + invoice.subtotal * (invoice.sgstRate || 0) / 100)} directly to the government.
                         </p>
                       </div>
-                    </div>
-                  )}
+                    </div>}
                   
                   {/* Totals Section - Right Side */}
                   <div className="w-80 space-y-2 text-sm">
@@ -299,8 +286,7 @@ export default function InvoiceView() {
                     </div>
                     
                     {/* GST Breakdown */}
-                    {invoice.gstType === 'GST' && (
-                      <>
+                    {invoice.gstType === 'GST' && <>
                         <div className="flex justify-between text-xs text-gray-600">
                           <span>CGST ({(invoice.cgstRate || 0).toFixed(1)}%):</span>
                           <span className="font-medium">{formatCurrency(invoice.cgstAmount || 0)}</span>
@@ -309,38 +295,31 @@ export default function InvoiceView() {
                           <span>SGST ({(invoice.sgstRate || 0).toFixed(1)}%):</span>
                           <span className="font-medium">{formatCurrency(invoice.sgstAmount || 0)}</span>
                         </div>
-                      </>
-                    )}
+                      </>}
                     
-                    {invoice.gstType === 'IGST' && (
-                      <div className="flex justify-between text-xs text-gray-600">
+                    {invoice.gstType === 'IGST' && <div className="flex justify-between text-xs text-gray-600">
                         <span>IGST ({(invoice.igstRate || 0).toFixed(1)}%):</span>
                         <span className="font-medium">{formatCurrency(invoice.igstAmount || 0)}</span>
-                      </div>
-                    )}
+                      </div>}
                     
-                    {invoice.gstType === 'RCM' && (
-                      <>
+                    {invoice.gstType === 'RCM' && <>
                         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mt-1">
                           <div className="text-xs font-medium text-yellow-800 mb-1">Tax Payable by Recipient:</div>
                           <div className="flex justify-between text-xs text-yellow-700">
                             <span>CGST ({(invoice.cgstRate || 0).toFixed(1)}%):</span>
-                            <span className="font-medium">{formatCurrency((invoice.subtotal * (invoice.cgstRate || 0)) / 100)}</span>
+                            <span className="font-medium">{formatCurrency(invoice.subtotal * (invoice.cgstRate || 0) / 100)}</span>
                           </div>
                           <div className="flex justify-between text-xs text-yellow-700">
                             <span>SGST ({(invoice.sgstRate || 0).toFixed(1)}%):</span>
-                            <span className="font-medium">{formatCurrency((invoice.subtotal * (invoice.sgstRate || 0)) / 100)}</span>
+                            <span className="font-medium">{formatCurrency(invoice.subtotal * (invoice.sgstRate || 0) / 100)}</span>
                           </div>
                         </div>
-                      </>
-                    )}
+                      </>}
                     
-                    {(invoice.gstType === 'NGST' || invoice.gstType === 'PERSONAL') && (
-                      <div className="flex justify-between text-xs text-gray-600">
+                    {(invoice.gstType === 'NGST' || invoice.gstType === 'PERSONAL') && <div className="flex justify-between text-xs text-gray-600">
                         <span>GST ({(invoice.gstRate || 0).toFixed(1)}%):</span>
                         <span className="font-medium">{formatCurrency(invoice.gstAmount || 0)}</span>
-                      </div>
-                    )}
+                      </div>}
                     
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
                       <div className="flex justify-between font-bold text-lg text-blue-900">
@@ -359,30 +338,18 @@ export default function InvoiceView() {
               </div>
 
               {/* Notes */}
-              {invoice.notes && (
-                <div className="mt-8 pt-4 border-t">
+              {invoice.notes && <div className="mt-8 pt-4 border-t">
                   <h4 className="font-semibold mb-2">Notes:</h4>
                   <p className="text-muted-foreground">{invoice.notes}</p>
-                </div>
-              )}
+                </div>}
 
               {/* Authorized Signatory */}
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <div className="flex justify-between items-end">
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-blue-600 italic">"Your Service is Our Priority"</p>
-                  </div>
+                  
                   <div className="text-right">
                     <div className="space-y-6">
-                      {companySettings?.company_seal_image_url ? (
-                        <img 
-                          src={companySettings.company_seal_image_url} 
-                          alt="Company Seal" 
-                          className="h-12 w-32 object-contain"
-                        />
-                      ) : (
-                        <div className="h-12 w-32"></div>
-                      )}
+                      {companySettings?.company_seal_image_url ? <img src={companySettings.company_seal_image_url} alt="Company Seal" className="h-12 w-32 object-contain" /> : <div className="h-12 w-32"></div>}
                       <div>
                         <p className="font-medium text-gray-900">For {invoice.companyName}</p>
                         <p className="text-sm text-gray-600 mt-1">Authorized Signatory</p>
@@ -396,9 +363,7 @@ export default function InvoiceView() {
               <div className="mt-6 pt-4 border-t border-gray-200 text-center">
                 <div className="text-xs text-gray-500 space-y-1">
                   <p>Thank you for your business!</p>
-                  {companySettings?.company_address_line1 && (
-                    <p>{[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}</p>
-                  )}
+                  {companySettings?.company_address_line1 && <p>{[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}</p>}
                   <p>
                     {companySettings?.company_phone && `Phone: ${companySettings.company_phone}`}
                     {companySettings?.company_phone && companySettings?.company_email && ' | '}
@@ -411,21 +376,17 @@ export default function InvoiceView() {
 
 
               {/* GST Type Information */}
-              {invoice.gstType === 'GST' && (
-                <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              {invoice.gstType === 'GST' && <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-800">
                     <strong>Tax Details:</strong> Intra-state supply - CGST ({(invoice.cgstRate || 0).toFixed(1)}%) + SGST ({(invoice.sgstRate || 0).toFixed(1)}%) = Total GST ({(invoice.gstRate || 0).toFixed(1)}%)
                   </p>
-                </div>
-              )}
+                </div>}
 
-              {invoice.gstType === 'IGST' && (
-                <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg">
+              {invoice.gstType === 'IGST' && <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg">
                   <p className="text-sm text-green-800">
                     <strong>Tax Details:</strong> Inter-state supply - IGST ({(invoice.igstRate || 0).toFixed(1)}%)
                   </p>
-                </div>
-              )}
+                </div>}
             </CardContent>
           </Card>
         </div>
@@ -479,6 +440,5 @@ export default function InvoiceView() {
           </Card>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 }
