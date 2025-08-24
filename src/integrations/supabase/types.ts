@@ -694,6 +694,7 @@ export type Database = {
           personal_billing_name: string | null
           site_category: string
           site_name: string
+          status: string
           updated_at: string
         }
         Insert: {
@@ -709,6 +710,7 @@ export type Database = {
           personal_billing_name?: string | null
           site_category: string
           site_name: string
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -724,6 +726,7 @@ export type Database = {
           personal_billing_name?: string | null
           site_category?: string
           site_name?: string
+          status?: string
           updated_at?: string
         }
         Relationships: []
