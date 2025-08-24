@@ -1,13 +1,29 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.0'
-import JSZip from 'https://esm.sh/jszip@3.10.1'
+import { Invoice } from '@/types/invoice';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+export interface CompanySettings {
+  company_name?: string;
+  company_motto?: string;
+  gst_number?: string;
+  company_address_line1?: string;
+  company_address_line2?: string;
+  company_address_line3?: string;
+  company_phone?: string;
+  company_email?: string;
+  company_seal_image_url?: string;
 }
 
-// Utility functions (copied from shared template to match exactly)
+// SVG icon constants that match Lucide React icons
+const ICONS = {
+  phone: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  mail: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
+  mapPin: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+  building2: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v8h20v-8a2 2 0 0 0-2-2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>',
+  hash: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg>',
+  calendar: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>',
+  info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>'
+};
+
+// Currency formatter
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-IN', { 
     style: 'currency', 
@@ -15,6 +31,7 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+// Number to words converter
 function numberToWords(num: number): string {
   const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
   const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
@@ -43,18 +60,7 @@ function numberToWords(num: number): string {
   return result.trim() + ' Rupees Only';
 }
 
-// SVG icon constants that match Lucide React icons
-const ICONS = {
-  phone: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
-  mail: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
-  mapPin: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
-  building2: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v8h20v-8a2 2 0 0 0-2-2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>',
-  hash: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg>',
-  calendar: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>',
-  info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>'
-};
-
-function generateInvoiceHTML(invoice: any, companySettings?: any): string {
+export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanySettings): string {
   // Calculate man days for line items
   const fromDate = new Date(invoice.periodFrom);
   const toDate = new Date(invoice.periodTo);
@@ -658,7 +664,7 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
               </tr>
             </thead>
             <tbody>
-              ${invoice.lineItems.map((item: any, index: number) => {
+              ${invoice.lineItems.map((item, index) => {
                 const manDays = daysInPeriod * item.quantity;
                 return `
                   <tr>
@@ -803,146 +809,3 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
 </html>
   `;
 }
-
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  try {
-    console.log('Starting bulk PDF generation...');
-    
-    const { invoiceIds } = await req.json();
-    
-    if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0) {
-      throw new Error('No invoice IDs provided');
-    }
-
-    console.log(`Processing ${invoiceIds.length} invoices...`);
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Fetch all invoices
-    const { data: invoices, error: invoicesError } = await supabase
-      .from('invoices')
-      .select('*')
-      .in('id', invoiceIds);
-
-    if (invoicesError) {
-      throw new Error(`Failed to fetch invoices: ${invoicesError.message}`);
-    }
-
-    if (!invoices || invoices.length === 0) {
-      throw new Error('No invoices found');
-    }
-
-    console.log(`Fetched ${invoices.length} invoices from database`);
-
-    // Fetch company settings
-    const { data: companySettings, error: companyError } = await supabase
-      .from('company_settings')
-      .select('*')
-      .limit(1)
-      .single();
-
-    if (companyError) {
-      console.warn('Failed to fetch company settings:', companyError.message);
-    }
-
-    console.log('Fetched company settings');
-
-    // Create ZIP file
-    const zip = new JSZip();
-
-    // Generate HTML for each invoice
-    for (const invoice of invoices) {
-      try {
-        console.log(`Processing invoice ${invoice.invoice_number}...`);
-        
-        // Convert database record to expected format
-        const invoiceData = {
-          id: invoice.id,
-          invoiceNumber: invoice.invoice_number,
-          siteId: invoice.site_id,
-          siteName: invoice.site_name,
-          siteGst: invoice.site_gst,
-          companyName: invoice.company_name,
-          companyGst: invoice.company_gst,
-          clientName: invoice.client_name,
-          clientAddress: invoice.client_address,
-          invoiceDate: invoice.invoice_date,
-          periodFrom: invoice.period_from,
-          periodTo: invoice.period_to,
-          lineItems: invoice.line_items,
-          subtotal: parseFloat(invoice.subtotal),
-          gstType: invoice.gst_type,
-          gstRate: parseFloat(invoice.gst_rate),
-          gstAmount: parseFloat(invoice.gst_amount),
-          cgstRate: parseFloat(invoice.cgst_rate),
-          cgstAmount: parseFloat(invoice.cgst_amount),
-          sgstRate: parseFloat(invoice.sgst_rate),
-          sgstAmount: parseFloat(invoice.sgst_amount),
-          igstRate: parseFloat(invoice.igst_rate),
-          igstAmount: parseFloat(invoice.igst_amount),
-          totalAmount: parseFloat(invoice.total_amount),
-          status: invoice.status,
-          notes: invoice.notes,
-          created_at: invoice.created_at,
-        };
-
-        // Generate HTML
-        const html = generateInvoiceHTML(invoiceData, companySettings);
-        
-        // Add HTML file to ZIP
-        const filename = `invoice-${invoice.invoice_number}.html`;
-        zip.file(filename, html);
-        
-        console.log(`Generated HTML for invoice ${invoice.invoice_number}`);
-      } catch (error) {
-        console.error(`Error processing invoice ${invoice.invoice_number}:`, error);
-        // Continue with other invoices even if one fails
-      }
-    }
-
-    console.log('Generating ZIP file...');
-
-    // Generate ZIP file
-    const zipBlob = await zip.generateAsync({ 
-      type: 'uint8array',
-      compression: 'DEFLATE',
-      compressionOptions: { level: 6 }
-    });
-
-    console.log(`ZIP file generated successfully. Size: ${zipBlob.length} bytes`);
-
-    // Return ZIP file
-    return new Response(zipBlob, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="invoices-${new Date().toISOString().split('T')[0]}.zip"`,
-        'Content-Length': zipBlob.length.toString(),
-      },
-    });
-
-  } catch (error) {
-    console.error('Error in bulk PDF generation:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: error.message || 'An unexpected error occurred',
-        details: error.stack 
-      }), 
-      { 
-        status: 500, 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
-    );
-  }
-})
