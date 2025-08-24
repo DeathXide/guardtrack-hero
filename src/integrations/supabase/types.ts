@@ -858,6 +858,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      profile_is_admin: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       gender_type: "male" | "female" | "other"
