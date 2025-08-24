@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Plus, Search, Edit, Trash2, MapPin, Building, CreditCard, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -60,7 +61,8 @@ const initialStaffingSlot = {
   role_type: "",
   budget_per_slot: 0,
   day_slots: 0,
-  night_slots: 0
+  night_slots: 0,
+  description: ""
 };
 
 export default function SitesNew() {
@@ -196,7 +198,8 @@ export default function SitesNew() {
         role_type: req.role_type,
         budget_per_slot: req.budget_per_slot,
         day_slots: req.day_slots,
-        night_slots: req.night_slots
+        night_slots: req.night_slots,
+        description: req.description || ""
       }))
     });
     setSelectedSiteId(site.id);
@@ -507,6 +510,14 @@ export default function SitesNew() {
                           </Button>
                         </div>
                       </div>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <Label>Service Description (Optional)</Label>
+                      <Textarea
+                        value={slot.description || ""}
+                        onChange={(e) => updateStaffingSlot(index, "description", e.target.value)}
+                        placeholder="Describe the service scope for this role (will appear on invoices)"
+                      />
                     </div>
                   </Card>
                 ))}
