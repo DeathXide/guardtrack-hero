@@ -11,6 +11,7 @@ interface CompanySettings {
   company_address_line3?: string;
   company_phone?: string;
   company_email?: string;
+  company_seal_image_url?: string;
 }
 
 export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanySettings): string {
@@ -122,7 +123,10 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
   <title>Invoice ${invoice.invoiceNumber}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; 
+      background: white;
+    }
     .invoice-container { 
       width: 794px; 
       margin: 0 auto; 
@@ -130,6 +134,8 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
       min-height: 1123px; 
       display: flex; 
       flex-direction: column;
+      padding: 0;
+      box-sizing: border-box;
     }
   </style>
 </head>
@@ -138,16 +144,16 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
     <!-- Header -->
     <div style="background: linear-gradient(to right, #f8fafc, #f1f5f9); padding: 16px; margin-bottom: 24px;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-        <div style="flex: 1;">
-          <h1 style="font-size: 32px; font-weight: 300; color: #0f172a; letter-spacing: 0.05em; margin-bottom: 12px;">
+        <div style="margin-right: 24px;">
+          <h1 style="font-size: 48px; font-weight: 300; color: #0f172a; letter-spacing: 0.02em; margin-bottom: 12px;">
             ${companySettings?.company_name || invoice.companyName}
           </h1>
           ${companySettings?.company_motto ? `
-            <p style="font-size: 14px; font-style: italic; color: #64748b; margin-bottom: 12px;">
+            <p style="font-size: 14px; font-style: italic; color: #64748b; margin-top: 4px; margin-bottom: 12px;">
               ${companySettings.company_motto}
             </p>
           ` : ''}
-          <div style="font-size: 14px; color: #64748b; font-family: monospace;">
+          <div style="color: #64748b; font-family: monospace; margin-bottom: 4px;">
             ${(companySettings?.gst_number || invoice.companyGst) ? `
               <p style="margin-bottom: 4px;">GST: ${companySettings?.gst_number || invoice.companyGst}</p>
             ` : ''}
@@ -208,7 +214,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
 
     <!-- Client Info -->
     <div style="padding: 0 16px; margin-bottom: 24px;">
-      <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; max-width: 448px;">
+      <div style="background-color: rgba(249, 250, 251, 0.5); border-radius: 8px; padding: 16px; max-width: 448px;">
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
           🏢 <h3 style="font-size: 14px; font-weight: 500; color: #64748b;">BILL TO</h3>
         </div>
@@ -233,7 +239,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
         <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
           <table style="width: 100%; border-collapse: collapse;">
             <thead>
-              <tr style="background-color: #f8fafc;">
+              <tr style="background-color: rgba(248, 250, 252, 0.5);">
                 <th style="padding: 12px 8px; text-align: center; font-weight: 500; font-size: 12px; color: #374151; width: 48px;">No.</th>
                 <th style="padding: 12px 8px; text-align: left; font-weight: 500; font-size: 12px; color: #374151; min-width: 200px;">Description</th>
                 <th style="padding: 12px 8px; text-align: center; font-weight: 500; font-size: 12px; color: #374151; width: 64px;">Qty</th>
@@ -263,49 +269,62 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
               
               ${gstBreakdownHTML()}
               
-              <div style="background-color: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin-top: 16px;">
+              <div style="background-color: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; padding: 16px; margin-top: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span style="font-weight: 500; color: #1d4ed8;">Total Amount</span>
-                  <span style="font-size: 20px; font-family: monospace; font-weight: bold; color: #1d4ed8;">${formatCurrency(invoice.totalAmount || 0)}</span>
+                  <span style="font-weight: 500; color: rgb(59, 130, 246);">Total Amount</span>
+                  <span style="font-size: 20px; font-family: monospace; font-weight: bold; color: rgb(59, 130, 246);">${formatCurrency(invoice.totalAmount || 0)}</span>
                 </div>
               </div>
               
-              <div style="margin-top: 16px; padding: 12px; background-color: #f8fafc; border-radius: 6px;">
-                <p style="font-size: 12px; color: #475569; font-weight: 500; margin-bottom: 4px;">Amount in Words:</p>
-                <p style="font-size: 12px; color: #334155; font-style: italic; text-transform: capitalize;">
-                  ${numberToWords(Math.round(invoice.totalAmount || 0))} only
+              <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                <p style="font-size: 12px; color: #64748b; font-weight: 500;">
+                  Amount in Words: <span style="font-weight: 400; font-style: italic;">${numberToWords(invoice.totalAmount || 0)}</span>
                 </p>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Footer -->
-    <div style="margin-top: auto; padding: 16px; border-top: 2px solid #e2e8f0;">
-      <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-        <div style="max-width: 50%;">
-          <h4 style="font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">Payment Terms & Conditions:</h4>
-          <ul style="font-size: 12px; color: #64748b; line-height: 1.4; padding-left: 16px;">
-            <li style="margin-bottom: 4px;">Payment due within 30 days of invoice date</li>
-            <li style="margin-bottom: 4px;">Services are subject to satisfactory performance</li>
-            <li style="margin-bottom: 4px;">All disputes subject to local jurisdiction</li>
-            <li>Thank you for your business</li>
-          </ul>
-        </div>
-        <div style="text-align: center;">
-          <div style="margin-bottom: 40px;">
-            <div style="width: 150px; height: 60px; border: 1px dashed #cbd5e1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px;">
-              [Company Seal]
-            </div>
-          </div>
-          <div style="border-top: 1px solid #cbd5e1; padding-top: 8px; width: 180px;">
-            <p style="font-size: 12px; font-weight: 500; color: #374151;">Authorized Signatory</p>
-            <p style="font-size: 11px; color: #64748b;">${companySettings?.company_name || invoice.companyName}</p>
+      <!-- Payment Terms -->
+      <div style="padding: 0 16px; margin-bottom: 24px;">
+        <div style="background-color: rgba(248, 250, 252, 0.2); border: 1px solid rgba(226, 232, 240, 0.5); border-radius: 6px; padding: 12px;">
+          <h4 style="font-size: 12px; font-weight: 500; color: #64748b; margin-bottom: 8px;">Payment Terms</h4>
+          <div style="font-size: 12px; color: #64748b; line-height: 1.4;">
+            <p style="margin-bottom: 4px;">Kindly release the payment towards the bill on or before the 3rd of this month.</p>
+            <p>Interest at 24% per annum will be charged on all outstanding amounts beyond the due date.</p>
           </div>
         </div>
       </div>
+
+      <!-- Authorized Signatory -->
+      <div style="padding: 0 16px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: flex-start;">
+          <div style="text-align: left;">
+            <div style="margin-bottom: 16px;">
+              <p style="font-size: 14px; font-weight: 500; color: #0f172a;">For ${invoice.companyName}</p>
+            </div>
+            <div style="height: 48px; width: 128px; display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: 16px;">
+              ${companySettings?.company_seal_image_url ? `
+                <img src="${companySettings.company_seal_image_url}" alt="Company Seal" style="height: 96px; width: auto; object-fit: contain; opacity: 0.8; margin-left: auto;" />
+              ` : ''}
+            </div>
+            <div>
+              <p style="font-size: 12px; color: #64748b; margin-top: 4px;">Authorized Signatory</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      ${invoice.notes ? `
+        <!-- Notes -->
+        <div style="padding: 0 16px; margin-bottom: 24px;">
+          <div style="background-color: rgba(249, 250, 251, 0.3); border-radius: 8px; padding: 16px;">
+            <h4 style="font-size: 14px; font-weight: 500; color: #64748b; margin-bottom: 8px;">Notes</h4>
+            <p style="font-size: 14px; color: #0f172a; line-height: 1.5;">${invoice.notes}</p>
+          </div>
+        </div>
+      ` : ''}
     </div>
   </div>
 </body>
