@@ -7,7 +7,7 @@ export async function getUtilityChargesForSite(siteId: string): Promise<SiteUtil
     .select('*')
     .eq('site_id', siteId)
     .eq('is_active', true)
-    .order('utility_type', { ascending: true });
+    .order('created_at', { ascending: true });
 
   if (error) {
     console.error('Error fetching utility charges:', error);
