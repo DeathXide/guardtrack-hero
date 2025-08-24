@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { sitesApi, CreateSiteData, UpdateSiteData, SiteDB, StaffingRequirementDB } from "@/lib/sitesApi";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { companyApi } from "@/lib/companyApi";
+import SitesTable from '@/components/sites/SitesTable';
+import UtilityChargesFormSection from '@/components/sites/UtilityChargesFormSection';
 
 const GST_TYPES = ['GST', 'NGST', 'RCM', 'PERSONAL'] as const;
 const SITE_STATUS_OPTIONS = ['active', 'inactive', 'temp'] as const;
@@ -508,6 +510,16 @@ export default function SitesNew() {
                     </div>
                   </Card>
                 ))}
+              </div>
+
+              <Separator />
+
+              {/* Utility Charges - visible in both create and edit; adding requires saved site */}
+              <div className="pt-2">
+                <UtilityChargesFormSection 
+                  siteId={isEditMode ? selectedSiteId : null}
+                  siteName={formData.site_name || 'New Site'}
+                />
               </div>
             </div>
 
