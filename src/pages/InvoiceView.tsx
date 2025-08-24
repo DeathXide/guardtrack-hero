@@ -317,7 +317,16 @@ export default function InvoiceView() {
                                  </>
                                ) : (
                                  <>
-                                   <TableCell className="text-sm font-medium">{item.description}</TableCell>
+                                    <TableCell className="text-sm font-medium">
+                                      <div className="space-y-1">
+                                        <div>{item.description}</div>
+                                        {item.customDescription && (
+                                          <div className="text-xs text-muted-foreground font-normal leading-relaxed">
+                                            {item.customDescription}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </TableCell>
                                    <TableCell className="text-center text-sm font-medium">{item.quantity}</TableCell>
                                    <TableCell className="text-center text-sm font-medium">
                                      {item.rateType === 'monthly' ? '-' : daysInPeriod * item.quantity}

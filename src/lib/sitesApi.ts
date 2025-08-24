@@ -24,6 +24,7 @@ export interface StaffingRequirementDB {
   budget_per_slot: number;
   day_slots: number;
   night_slots: number;
+  description?: string;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +45,7 @@ export interface CreateSiteData {
     budget_per_slot: number;
     day_slots: number;
     night_slots: number;
+    description?: string;
   }[];
 }
 
@@ -142,7 +144,8 @@ export const sitesApi = {
         role_type: req.role_type,
         budget_per_slot: req.budget_per_slot,
         day_slots: req.day_slots,
-        night_slots: req.night_slots
+        night_slots: req.night_slots,
+        description: req.description
       }));
 
       const { error: staffingError } = await supabase
@@ -199,7 +202,8 @@ export const sitesApi = {
         role_type: req.role_type,
         budget_per_slot: req.budget_per_slot,
         day_slots: req.day_slots,
-        night_slots: req.night_slots
+        night_slots: req.night_slots,
+        description: req.description
       }));
 
       const { error: staffingError } = await supabase

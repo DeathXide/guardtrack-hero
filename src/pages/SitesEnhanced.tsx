@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -71,7 +72,8 @@ const SitesEnhanced = () => {
       daySlots: 0,
       nightSlots: 0,
       budgetPerSlot: 0,
-      rateType: 'monthly'
+      rateType: 'monthly',
+      description: ''
     };
     setNewSite({
       ...newSite,
@@ -582,30 +584,44 @@ const SitesEnhanced = () => {
                              </div>
                            </div>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">Day Slots</Label>
-                              <Input 
-                                type="number" 
-                                min="0" 
-                                placeholder="Number of day shifts"
-                                value={slot.daySlots}
-                                onChange={e => updateStaffingSlot(index, 'daySlots', parseInt(e.target.value) || 0)}
-                                className="h-11"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">Night Slots</Label>
-                              <Input 
-                                type="number" 
-                                min="0" 
-                                placeholder="Number of night shifts"
-                                value={slot.nightSlots}
-                                onChange={e => updateStaffingSlot(index, 'nightSlots', parseInt(e.target.value) || 0)}
-                                className="h-11"
-                              />
-                            </div>
-                          </div>
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <div className="space-y-2">
+                               <Label className="text-sm font-medium">Day Slots</Label>
+                               <Input 
+                                 type="number" 
+                                 min="0" 
+                                 placeholder="Number of day shifts"
+                                 value={slot.daySlots}
+                                 onChange={e => updateStaffingSlot(index, 'daySlots', parseInt(e.target.value) || 0)}
+                                 className="h-11"
+                               />
+                             </div>
+                             <div className="space-y-2">
+                               <Label className="text-sm font-medium">Night Slots</Label>
+                               <Input 
+                                 type="number" 
+                                 min="0" 
+                                 placeholder="Number of night shifts"
+                                 value={slot.nightSlots}
+                                 onChange={e => updateStaffingSlot(index, 'nightSlots', parseInt(e.target.value) || 0)}
+                                 className="h-11"
+                               />
+                             </div>
+                           </div>
+                           
+                           <div className="space-y-2">
+                             <Label className="text-sm font-medium">Service Description (Optional)</Label>
+                             <Textarea 
+                               placeholder="e.g., Armed security with 5+ years experience, CCTV monitoring skills..."
+                               value={slot.description || ''}
+                               onChange={e => updateStaffingSlot(index, 'description', e.target.value)}
+                               className="min-h-[80px] resize-none"
+                               rows={3}
+                             />
+                             <p className="text-xs text-muted-foreground">
+                               This description will appear below the role in generated invoices
+                             </p>
+                           </div>
                         </div>
                       ))}
                     </div>

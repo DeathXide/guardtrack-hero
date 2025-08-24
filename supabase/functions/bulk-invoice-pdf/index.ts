@@ -676,7 +676,10 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
                   return `
                     <tr>
                       <td class="row-number">${index + 1}</td>
-                      <td class="description">${item.description}</td>
+                       <td class="description">
+                         ${item.description}
+                         ${item.customDescription ? `<br><span style="font-size: 11px; color: #666; font-weight: normal;">${item.customDescription}</span>` : ''}
+                       </td>
                       <td class="quantity">${item.quantity}</td>
                       <td class="days">${manDays}</td>
                       <td class="rate">${formatCurrency(rate)}</td>

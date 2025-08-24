@@ -766,6 +766,7 @@ export type Database = {
           budget_per_slot: number
           created_at: string
           day_slots: number
+          description: string | null
           id: string
           night_slots: number
           rate_type: string
@@ -777,6 +778,7 @@ export type Database = {
           budget_per_slot: number
           created_at?: string
           day_slots?: number
+          description?: string | null
           id?: string
           night_slots?: number
           rate_type?: string
@@ -788,6 +790,7 @@ export type Database = {
           budget_per_slot?: number
           created_at?: string
           day_slots?: number
+          description?: string | null
           id?: string
           night_slots?: number
           rate_type?: string

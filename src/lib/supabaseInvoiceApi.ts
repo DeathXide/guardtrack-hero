@@ -20,6 +20,7 @@ export interface SiteWithStaffing {
     night_slots: number;
     budget_per_slot: number;
     rate_type: string;
+    description?: string;
   }>;
 }
 
@@ -59,7 +60,8 @@ export async function fetchSitesWithStaffing(): Promise<SiteWithStaffing[]> {
         day_slots,
         night_slots,
         budget_per_slot,
-        rate_type
+        rate_type,
+        description
       )
     `);
 
@@ -94,7 +96,8 @@ export function convertSiteToInvoiceFormat(site: SiteWithStaffing): Site {
     daySlots: req.day_slots,
     nightSlots: req.night_slots,
     budgetPerSlot: Number(req.budget_per_slot),
-    rateType: (req.rate_type || 'monthly') as 'monthly' | 'shift'
+    rateType: (req.rate_type || 'monthly') as 'monthly' | 'shift',
+    description: req.description
   }));
 
   return {

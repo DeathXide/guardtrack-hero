@@ -9,6 +9,7 @@ export interface InvoiceLineItem {
   monthlyRate?: number;
   lineTotal: number;
   description?: string;
+  customDescription?: string;
   utilityType?: string;
 }
 

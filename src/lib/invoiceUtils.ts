@@ -142,7 +142,8 @@ export async function calculateInvoiceFromSite(
         ratePerSlot,
         monthlyRate,
         lineTotal,
-        description
+        description,
+        customDescription: slot.description
       });
       subtotal += lineTotal;
     }

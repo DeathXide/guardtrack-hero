@@ -16,6 +16,7 @@ export interface StaffingSlot {
   nightSlots: number;
   budgetPerSlot: number;
   rateType: 'monthly' | 'shift';
+  description?: string;
 }
 
 export interface Site {
