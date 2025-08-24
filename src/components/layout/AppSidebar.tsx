@@ -80,11 +80,11 @@ const navItems: NavItem[] = [
 
 export function AppSidebar() {
   const location = useLocation();
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const { state } = useSidebar();
   
-  const filteredNavItems = user 
-    ? navItems.filter(item => item.roles.includes(user.role))
+  const filteredNavItems = profile 
+    ? navItems.filter(item => item.roles.includes(profile.role as 'admin' | 'supervisor' | 'guard'))
     : [];
   
   const isCollapsed = state === 'collapsed';

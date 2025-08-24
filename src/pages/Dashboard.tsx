@@ -23,7 +23,7 @@ import RecentActivity from '@/components/dashboard/RecentActivity';
 import QuickActions from '@/components/dashboard/QuickActions';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [selectedDay, setSelectedDay] = useState<'today' | 'yesterday'>('today');
   const [isLoading, setIsLoading] = useState(true);
   
@@ -92,7 +92,7 @@ const Dashboard = () => {
   return (
     <div className="space-y-8 animate-fade-in">
       <DashboardHeader 
-        userRole={user?.role}
+        userRole={profile?.role as 'admin' | 'supervisor' | 'guard'}
         selectedDay={selectedDay}
         setSelectedDay={setSelectedDay}
       />

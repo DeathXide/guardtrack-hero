@@ -23,7 +23,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 const Header: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   
   const toggleTheme = () => {
@@ -105,15 +105,20 @@ const Header: React.FC = () => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full" aria-label="User menu">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                  {profile?.avatar_url ? (
+                    <AvatarImage src={profile.avatar_url} alt="Avatar" />
+                  ) : (
+                    <AvatarFallback>{getInitials(profile?.full_name || user?.email || 'U')}</AvatarFallback>
+                  )}
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>
-                <div>{user.name}</div>
-                <div className="text-xs text-muted-foreground">{user.email}</div>
+                <div className="flex flex-col">
+                  <span>{profile?.full_name || user?.email}</span>
+                  <span className="text-xs text-muted-foreground capitalize">{profile?.role || 'User'}</span>
+                </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
@@ -121,8 +126,9 @@ const Header: React.FC = () => {
                 Profile
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout}>
-                Log out
+              <DropdownMenuItem onClick={signOut} className="text-red-600">
+                <User className="mr-2 h-4 w-4" />
+                Sign Out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

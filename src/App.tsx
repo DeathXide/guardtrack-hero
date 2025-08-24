@@ -9,6 +9,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import Header from "@/components/layout/Header";
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import SitesNew from "./pages/SitesNew";
 import SiteDetail from "./pages/SiteDetail";
@@ -23,6 +24,7 @@ import InvoiceEdit from "./pages/InvoiceEdit";
 import CustomInvoiceForm from "./components/invoices/CustomInvoiceForm";
 import CompanySettings from "./pages/CompanySettings";
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -35,19 +37,20 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
-            <Route path="/sites" element={<DashboardLayout><SitesNew /></DashboardLayout>} />
-            <Route path="/sites/:id" element={<DashboardLayout><SiteDetail /></DashboardLayout>} />
-            <Route path="/guards" element={<DashboardLayout><Guards /></DashboardLayout>} />
-            <Route path="/attendance" element={<DashboardLayout><Attendance /></DashboardLayout>} />
-            <Route path="/schedule" element={<DashboardLayout><Schedule /></DashboardLayout>} />
-            <Route path="/invoices" element={<DashboardLayout><Invoices /></DashboardLayout>} />
-            <Route path="/invoices/create" element={<DashboardLayout><InvoiceCreate /></DashboardLayout>} />
-            <Route path="/invoices/create-custom" element={<DashboardLayout><CustomInvoiceForm /></DashboardLayout>} />
-            <Route path="/invoices/:id" element={<DashboardLayout><InvoiceView /></DashboardLayout>} />
-            <Route path="/invoices/:id/edit" element={<DashboardLayout><InvoiceEdit /></DashboardLayout>} />
-            <Route path="/reports" element={<DashboardLayout><Reports /></DashboardLayout>} />
-            <Route path="/company-settings" element={<DashboardLayout><CompanySettings /></DashboardLayout>} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/sites" element={<ProtectedRoute><DashboardLayout><SitesNew /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/sites/:id" element={<ProtectedRoute><DashboardLayout><SiteDetail /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/guards" element={<ProtectedRoute><DashboardLayout><Guards /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/attendance" element={<ProtectedRoute><DashboardLayout><Attendance /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/schedule" element={<ProtectedRoute><DashboardLayout><Schedule /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/invoices" element={<ProtectedRoute><DashboardLayout><Invoices /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/invoices/create" element={<ProtectedRoute><DashboardLayout><InvoiceCreate /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/invoices/create-custom" element={<ProtectedRoute><DashboardLayout><CustomInvoiceForm /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/invoices/:id" element={<ProtectedRoute><DashboardLayout><InvoiceView /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/invoices/:id/edit" element={<ProtectedRoute><DashboardLayout><InvoiceEdit /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><DashboardLayout><Reports /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/company-settings" element={<ProtectedRoute><DashboardLayout><CompanySettings /></DashboardLayout></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -3,21 +3,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { users } from '@/lib/data';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageLoader } from '@/components/ui/loader';
 
 const Index = () => {
-  // All hooks must be called at the top level, before any conditional logic
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const { isAuthenticated } = useAuth();
 
   // Simulate loading delay
   React.useEffect(() => {
@@ -37,21 +29,6 @@ const Index = () => {
     return <PageLoader text="Loading dashboard..." />;
   }
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    
-    try {
-      await login(email, password);
-      navigate('/dashboard');
-    } catch (error) {
-      setError((error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-secondary/30 p-4">
       <div className="w-full max-w-md space-y-8 animate-fade-in">
@@ -67,75 +44,24 @@ const Index = () => {
         
         <Card className="glass-card shadow-lg">
           <CardHeader>
-            <CardTitle>Sign in</CardTitle>
+            <CardTitle>Welcome to SecureGuard</CardTitle>
             <CardDescription>
-              Enter your credentials to access your account
+              Secure attendance management system for your organization
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <a href="#" className="text-sm text-primary hover:underline">
-                    Forgot password?
-                  </a>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              
-              {error && (
-                <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
-                  {error}
-                </div>
-              )}
-              
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={loading}
-              >
-                {loading ? 'Signing in...' : 'Sign in'}
-              </Button>
-            </form>
+          <CardContent className="space-y-4">
+            <Button 
+              onClick={() => navigate('/auth')} 
+              className="w-full"
+            >
+              Get Started
+            </Button>
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                Sign in or create an account to access the dashboard
+              </p>
+            </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <div className="text-sm text-muted-foreground text-center">
-              For demo purposes, use one of these accounts:
-            </div>
-            <div className="grid grid-cols-1 gap-2 w-full text-sm">
-              {users.map((user) => (
-                <Button
-                  key={user.id}
-                  variant="outline"
-                  type="button"
-                  onClick={() => setEmail(user.email)}
-                  className="justify-start"
-                >
-                  <span className="truncate">{user.email}</span>
-                  <span className="ml-auto opacity-70">({user.role})</span>
-                </Button>
-              ))}
-            </div>
-          </CardFooter>
         </Card>
       </div>
     </div>
