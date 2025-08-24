@@ -29,6 +29,8 @@ interface CustomSiteData {
 interface LineItem {
   id: string;
   description: string;
+  shiftType: 'day' | 'night';
+  rateType: 'monthly' | 'shift';
   quantity: number;
   rate: number;
   total: number;
@@ -56,7 +58,7 @@ export default function CustomInvoiceForm() {
   });
   
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: '1', description: '', quantity: 1, rate: 0, total: 0 }
+    { id: '1', description: '', shiftType: 'day', rateType: 'shift', quantity: 1, rate: 0, total: 0 }
   ]);
   
   const [loading, setLoading] = useState(false);
@@ -65,6 +67,8 @@ export default function CustomInvoiceForm() {
     const newItem: LineItem = {
       id: (lineItems.length + 1).toString(),
       description: '',
+      shiftType: 'day',
+      rateType: 'shift',
       quantity: 1,
       rate: 0,
       total: 0
@@ -124,8 +128,8 @@ export default function CustomInvoiceForm() {
       const invoiceLineItems = lineItems.map(item => ({
         id: item.id,
         role: 'Custom Service' as const,
-        shiftType: 'day' as const,
-        rateType: 'shift' as const,
+        shiftType: item.shiftType,
+        rateType: item.rateType,
         quantity: item.quantity,
         manDays: item.quantity,
         ratePerSlot: item.rate,
@@ -329,50 +333,78 @@ export default function CustomInvoiceForm() {
               
               <div className="space-y-3">
                 {lineItems.map((item, index) => (
-                  <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
-                    <div className="col-span-5">
-                      <Label>Description</Label>
-                      <Input
-                        value={item.description}
-                        onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
-                        placeholder="Service description"
-                      />
+                  <div key={item.id} className="space-y-3 p-4 border rounded-lg">
+                    <div className="grid grid-cols-12 gap-3">
+                      <div className="col-span-6">
+                        <Label>Description</Label>
+                        <Input
+                          value={item.description}
+                          onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
+                          placeholder="Service description"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label>Shift Type</Label>
+                        <Select value={item.shiftType} onValueChange={(value) => updateLineItem(item.id, 'shiftType', value)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="day">Day Shift</SelectItem>
+                            <SelectItem value="night">Night Shift</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-3">
+                        <Label>Rate Type</Label>
+                        <Select value={item.rateType} onValueChange={(value) => updateLineItem(item.id, 'rateType', value)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="shift">Per Shift</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="col-span-2">
-                      <Label>Qty</Label>
-                      <Input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => updateLineItem(item.id, 'quantity', Number(e.target.value))}
-                        min="1"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label>Rate</Label>
-                      <Input
-                        type="number"
-                        value={item.rate}
-                        onChange={(e) => updateLineItem(item.id, 'rate', Number(e.target.value))}
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label>Total</Label>
-                      <Input value={formatCurrency(item.total)} disabled />
-                    </div>
-                    <div className="col-span-1">
-                      {lineItems.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeLineItem(item.id)}
-                          className="text-destructive"
-                        >
-                          ×
-                        </Button>
-                      )}
+                    <div className="grid grid-cols-12 gap-3 items-end">
+                      <div className="col-span-3">
+                        <Label>Quantity</Label>
+                        <Input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateLineItem(item.id, 'quantity', Number(e.target.value))}
+                          min="1"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label>Rate</Label>
+                        <Input
+                          type="number"
+                          value={item.rate}
+                          onChange={(e) => updateLineItem(item.id, 'rate', Number(e.target.value))}
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label>Total</Label>
+                        <Input value={formatCurrency(item.total)} disabled />
+                      </div>
+                      <div className="col-span-3 flex justify-end">
+                        {lineItems.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeLineItem(item.id)}
+                            className="text-destructive"
+                          >
+                            Remove Item
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -437,6 +469,7 @@ export default function CustomInvoiceForm() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Description</TableHead>
+                          <TableHead>Type</TableHead>
                           <TableHead>Qty</TableHead>
                           <TableHead>Rate</TableHead>
                           <TableHead>Total</TableHead>
@@ -448,6 +481,12 @@ export default function CustomInvoiceForm() {
                           .map((item) => (
                           <TableRow key={item.id}>
                             <TableCell>{item.description}</TableCell>
+                            <TableCell>
+                              <div className="text-xs">
+                                <div>{item.shiftType === 'day' ? 'Day' : 'Night'} Shift</div>
+                                <div>{item.rateType === 'shift' ? 'Per Shift' : 'Monthly'}</div>
+                              </div>
+                            </TableCell>
                             <TableCell>{item.quantity}</TableCell>
                             <TableCell>{formatCurrency(item.rate)}</TableCell>
                             <TableCell>{formatCurrency(item.total)}</TableCell>

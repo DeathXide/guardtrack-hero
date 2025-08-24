@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, FileText, Eye, Edit, Trash2, Wand2, Download } from 'lucide-react';
+import { Plus, Search, Filter, FileText, Eye, Edit, Trash2, Wand2, Download, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,10 @@ export default function Invoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [loading, setLoading] = useState(true);
   const [autoGenerateOpen, setAutoGenerateOpen] = useState(false);
   const [bulkDownloading, setBulkDownloading] = useState(false);
@@ -135,7 +139,12 @@ export default function Invoices() {
     
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
     
-    return matchesSearch && matchesStatus;
+    // Filter by selected month
+    const invoiceMonth = new Date(invoice.periodFrom);
+    const invoiceMonthKey = `${invoiceMonth.getFullYear()}-${String(invoiceMonth.getMonth() + 1).padStart(2, '0')}`;
+    const matchesMonth = invoiceMonthKey === selectedMonth;
+    
+    return matchesSearch && matchesStatus && matchesMonth;
   });
 
   const getStatusBadgeVariant = (status: string) => {
@@ -199,19 +208,13 @@ export default function Invoices() {
               <DialogHeader>
                 <DialogTitle>Auto Generate Invoices</DialogTitle>
               </DialogHeader>
-              <AutoGenerateInvoices onInvoicesCreated={handleInvoicesCreated} />
+              <AutoGenerateInvoices onInvoicesCreated={handleInvoicesCreated} selectedMonth={selectedMonth} />
             </DialogContent>
           </Dialog>
-          <div className="flex items-center gap-2">
-            <Button onClick={() => navigate('/invoices/create')} variant="outline" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Create Invoice
-            </Button>
-            <Button onClick={() => navigate('/invoices/create-custom')} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Create Custom
-            </Button>
-          </div>
+          <Button onClick={() => navigate('/invoices/create-custom')} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create Custom Invoice
+          </Button>
         </div>
       </div>
 
@@ -268,6 +271,26 @@ export default function Invoices() {
                 className="pl-10"
               />
             </div>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-full sm:w-48">
+                <Calendar className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Select month" />
+              </SelectTrigger>
+              <SelectContent>
+                {/* Generate last 12 months */}
+                {Array.from({ length: 12 }, (_, i) => {
+                  const date = new Date();
+                  date.setMonth(date.getMonth() - i);
+                  const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                  const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+                  return (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-48">
                 <Filter className="h-4 w-4 mr-2" />

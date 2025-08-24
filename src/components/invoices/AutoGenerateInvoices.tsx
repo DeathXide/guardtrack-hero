@@ -7,15 +7,16 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { fetchSitesWithStaffing, fetchCompanySettings, convertSiteToInvoiceFormat, SiteWithStaffing, CompanySettings } from '@/lib/supabaseInvoiceApi';
-import { createInvoiceInDB } from '@/lib/supabaseInvoiceApiNew';
+import { createInvoiceInDB, checkSiteHasInvoiceForMonth } from '@/lib/supabaseInvoiceApiNew';
 import { calculateInvoiceFromSite, formatCurrency } from '@/lib/invoiceUtils';
 import { toast } from 'sonner';
 
 interface AutoGenerateInvoicesProps {
   onInvoicesCreated: () => void;
+  selectedMonth: string;
 }
 
-export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerateInvoicesProps) {
+export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth }: AutoGenerateInvoicesProps) {
   const [sites, setSites] = useState<SiteWithStaffing[]>([]);
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   const [selectedSites, setSelectedSites] = useState<Set<string>>(new Set());
@@ -24,18 +25,18 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
   const [loading, setLoading] = useState(false);
   const [sitesLoaded, setSitesLoaded] = useState(false);
 
-  // Set default period to current month on component mount
+  // Set default period based on selected month
   useEffect(() => {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
 
     const pad = (n: number) => String(n).padStart(2, '0');
     const formatLocal = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     
     setPeriodFrom(formatLocal(firstDay));
     setPeriodTo(formatLocal(lastDay));
-  }, []);
+  }, [selectedMonth]);
 
   const loadSites = async () => {
     try {
@@ -46,9 +47,21 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
       
       setCompanySettings(companyData);
       // Filter only active sites for auto-generation
-      const activeSites = sitesData.filter(site => !site.status || site.status === 'active');
-      setSites(activeSites);
-      setSelectedSites(new Set(activeSites.map(site => site.id))); // Select all active sites by default
+      let activeSites = sitesData.filter(site => !site.status || site.status === 'active');
+      
+      // Filter out sites that already have invoices for the selected month
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const sitesWithoutInvoices = [];
+      
+      for (const site of activeSites) {
+        const hasInvoice = await checkSiteHasInvoiceForMonth(site.id, year, month);
+        if (!hasInvoice) {
+          sitesWithoutInvoices.push(site);
+        }
+      }
+      
+      setSites(sitesWithoutInvoices);
+      setSelectedSites(new Set(sitesWithoutInvoices.map(site => site.id))); // Select all available sites by default
       setSitesLoaded(true);
     } catch (error) {
       console.error('Error loading data:', error);

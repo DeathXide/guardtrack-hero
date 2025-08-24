@@ -138,6 +138,23 @@ export async function deleteInvoiceFromDB(id: string): Promise<void> {
   }
 }
 
+export async function checkSiteHasInvoiceForMonth(siteId: string, year: number, month: number): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('id')
+    .eq('site_id', siteId)
+    .gte('period_from', `${year}-${String(month).padStart(2, '0')}-01`)
+    .lt('period_from', `${year}-${String(month + 1).padStart(2, '0')}-01`)
+    .limit(1);
+
+  if (error) {
+    console.error('Error checking invoice existence:', error);
+    return false;
+  }
+
+  return data && data.length > 0;
+}
+
 function convertDbRecordToInvoice(record: InvoiceRow): Invoice {
   return {
     id: record.id,
