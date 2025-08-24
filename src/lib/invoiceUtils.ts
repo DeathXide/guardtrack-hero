@@ -159,29 +159,21 @@ export async function calculateInvoiceFromSite(
   if (includeUtilities) {
     try {
       const utilityCharges = await getUtilityChargesForSite(site.id);
-      
       utilityCharges.forEach((utility) => {
-        const utilityRole = utility.utility_type === 'water' ? 'Water Bill' :
-                           utility.utility_type === 'electricity' ? 'Electricity Bill' :
-                           utility.utility_type === 'maintenance' ? 'Maintenance Charges' :
-                           'Other Utility';
-
-        const lineTotal = utility.monthly_amount;
-
+        const amount = Number((utility as any).amount) || 0;
+        const lineTotal = amount;
         lineItems.push({
           id: utility.id,
-          role: utilityRole as any,
-          shiftType: 'day', // Not applicable for utilities
+          role: 'Other Utility' as any,
+          shiftType: 'day',
           rateType: 'utility',
           quantity: 1,
           manDays: 1,
           ratePerSlot: 0,
-          monthlyRate: utility.monthly_amount,
+          monthlyRate: undefined,
           lineTotal,
-          description: utility.utility_name,
-          utilityType: utility.utility_type
+          description: (utility as any).description
         });
-        
         subtotal += lineTotal;
       });
     } catch (error) {

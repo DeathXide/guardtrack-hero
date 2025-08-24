@@ -26,11 +26,8 @@ const UtilityChargesManagement: React.FC<UtilityChargesManagementProps> = ({ sit
   const queryClient = useQueryClient();
 
   const initialFormState = {
-    utility_type: 'water' as const,
-    utility_name: '',
-    monthly_amount: 0,
-    billing_frequency: 'monthly' as const,
     description: '',
+    amount: 0,
   };
 
   const [formData, setFormData] = useState<Omit<CreateUtilityChargeData, 'site_id'>>(initialFormState);
@@ -48,7 +45,7 @@ const UtilityChargesManagement: React.FC<UtilityChargesManagementProps> = ({ sit
       queryClient.invalidateQueries({ queryKey: ['utility-charges', siteId] });
       toast({
         title: "Utility Charge Added",
-        description: `${formData.utility_name} has been successfully added`,
+        description: `${formData.description} has been successfully added`,
       });
       handleDialogClose();
     },
@@ -69,7 +66,7 @@ const UtilityChargesManagement: React.FC<UtilityChargesManagementProps> = ({ sit
       queryClient.invalidateQueries({ queryKey: ['utility-charges', siteId] });
       toast({
         title: "Utility Charge Updated",
-        description: `${formData.utility_name} has been successfully updated`,
+        description: `${formData.description} has been successfully updated`,
       });
       handleDialogClose();
     },
@@ -122,18 +119,15 @@ const UtilityChargesManagement: React.FC<UtilityChargesManagementProps> = ({ sit
   const handleInputChange = (field: keyof typeof formData, value: any) => {
     setFormData(prev => ({
       ...prev,
-      [field]: field === 'monthly_amount' ? parseFloat(value) || 0 : value
+      [field]: field === 'amount' ? parseFloat(value) || 0 : value
     }));
   };
 
   const handleEdit = (utility: SiteUtilityCharge) => {
     setSelectedUtility(utility);
     setFormData({
-      utility_type: utility.utility_type,
-      utility_name: utility.utility_name,
-      monthly_amount: utility.monthly_amount,
-      billing_frequency: utility.billing_frequency,
-      description: utility.description || '',
+      description: utility.description,
+      amount: utility.amount,
     });
     setIsEditMode(true);
     setIsDialogOpen(true);
@@ -151,10 +145,10 @@ const UtilityChargesManagement: React.FC<UtilityChargesManagementProps> = ({ sit
   };
 
   const handleSubmit = () => {
-    if (!formData.utility_name || formData.monthly_amount <= 0) {
+    if (!formData.description || formData.amount <= 0) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields",
+        description: "Please fill in description and amount",
         variant: "destructive"
       });
       return;
@@ -211,24 +205,16 @@ const UtilityChargesManagement: React.FC<UtilityChargesManagementProps> = ({ sit
             {utilityCharges.map((utility) => (
               <div key={utility.id} className="flex items-center justify-between p-3 border rounded-lg bg-card">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${getUtilityColor(utility.utility_type)}`}>
-                    {getUtilityIcon(utility.utility_type)}
+                  <div className={`p-2 rounded-lg bg-blue-500/10 text-blue-500 border-blue-500/20`}>
+                    <Package className="h-4 w-4" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{utility.utility_name}</span>
-                      <Badge variant="outline" className={getUtilityColor(utility.utility_type)}>
-                        {utility.utility_type}
-                      </Badge>
+                      <span className="font-medium">{utility.description}</span>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {formatCurrency(utility.monthly_amount)} / {utility.billing_frequency}
+                      {formatCurrency(utility.amount)}
                     </div>
-                    {utility.description && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {utility.description}
-                      </div>
-                    )}
                   </div>
                 </div>
                 <div className="flex gap-1">
@@ -264,69 +250,24 @@ const UtilityChargesManagement: React.FC<UtilityChargesManagementProps> = ({ sit
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="utility-type">Utility Type</Label>
-              <Select
-                value={formData.utility_type}
-                onValueChange={(value) => handleInputChange('utility_type', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select utility type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="water">Water</SelectItem>
-                  <SelectItem value="electricity">Electricity</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="utility-name">Utility Name</Label>
+              <Label htmlFor="description">Description *</Label>
               <Input
-                id="utility-name"
-                placeholder="e.g., Water Bill, Electricity Bill"
-                value={formData.utility_name}
-                onChange={(e) => handleInputChange('utility_name', e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="monthly-amount">Monthly Amount (₹)</Label>
-                <Input
-                  id="monthly-amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formData.monthly_amount}
-                  onChange={(e) => handleInputChange('monthly_amount', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="billing-frequency">Billing Frequency</Label>
-                <Select
-                  value={formData.billing_frequency}
-                  onValueChange={(value) => handleInputChange('billing_frequency', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="quarterly">Quarterly</SelectItem>
-                    <SelectItem value="annual">Annual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
                 id="description"
-                placeholder="Additional details about this utility charge"
+                placeholder="e.g., Water Bill, Electricity Bill, Maintenance Charges"
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
-                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount (₹) *</Label>
+              <Input
+                id="amount"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.amount}
+                onChange={(e) => handleInputChange('amount', e.target.value)}
               />
             </div>
           </div>
