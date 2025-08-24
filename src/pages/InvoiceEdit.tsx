@@ -199,35 +199,35 @@ export default function InvoiceEdit() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Form */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Invoice Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="periodFrom">Period From</Label>
-                  <Input
-                    id="periodFrom"
-                    type="date"
-                    value={formData.periodFrom}
-                    onChange={(e) => setFormData(prev => ({ ...prev, periodFrom: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="periodTo">Period To</Label>
-                  <Input
-                    id="periodTo"
-                    type="date"
-                    value={formData.periodTo}
-                    onChange={(e) => setFormData(prev => ({ ...prev, periodTo: e.target.value }))}
-                  />
-                </div>
+      <div className="space-y-6">
+        {/* Invoice Details Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Invoice Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="periodFrom">Period From</Label>
+                <Input
+                  id="periodFrom"
+                  type="date"
+                  value={formData.periodFrom}
+                  onChange={(e) => setFormData(prev => ({ ...prev, periodFrom: e.target.value }))}
+                />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="periodTo">Period To</Label>
+                <Input
+                  id="periodTo"
+                  type="date"
+                  value={formData.periodTo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, periodTo: e.target.value }))}
+                />
+              </div>
+            </div>
 
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as any }))}>
@@ -242,7 +242,6 @@ export default function InvoiceEdit() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
@@ -250,23 +249,25 @@ export default function InvoiceEdit() {
                   placeholder="Additional notes or terms..."
                   value={formData.notes}
                   onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  rows={3}
+                  rows={2}
                 />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Line Items</CardTitle>
-                <div className="flex gap-2">
-                  <Button onClick={() => addLineItem('service')} size="sm" variant="outline">Add Service</Button>
-                  <Button onClick={() => addLineItem('utility')} size="sm">Add Utility</Button>
-                </div>
+        {/* Line Items - Full Width */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Line Items</CardTitle>
+              <div className="flex gap-2">
+                <Button onClick={() => addLineItem('service')} size="sm" variant="outline">Add Service</Button>
+                <Button onClick={() => addLineItem('utility')} size="sm">Add Utility</Button>
               </div>
-            </CardHeader>
-            <CardContent>
+            </div>
+          </CardHeader>
+          <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -396,59 +397,58 @@ export default function InvoiceEdit() {
                 </TableBody>
               </Table>
             </CardContent>
-          </Card>
-        </div>
+        </Card>
 
-        {/* Preview */}
+        {/* Invoice Totals - Compact Summary */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calculator className="h-5 w-5" />
-              Invoice Totals
+              Invoice Summary
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span>{formatCurrency(subtotal)}</span>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span className="font-mono">{formatCurrency(subtotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>
+                    {invoice.gstType === 'RCM' ? 'GST (Reverse Charge)' : `GST (${gstRate}%)`}:
+                  </span>
+                  <span className="font-mono">{formatCurrency(gstAmount)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-lg border-t pt-3">
+                  <span>Total:</span>
+                  <span className="font-mono">{formatCurrency(totalAmount)}</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>
-                  {invoice.gstType === 'RCM' ? 'GST (Reverse Charge)' : `GST (${gstRate}%)`}:
-                </span>
-                <span>{formatCurrency(gstAmount)}</span>
-              </div>
-              <div className="flex justify-between font-bold text-lg border-t pt-3">
-                <span>Total:</span>
-                <span>{formatCurrency(totalAmount)}</span>
-              </div>
-            </div>
 
-            <div className="pt-4 border-t space-y-2">
-              <div className="text-sm text-muted-foreground">
+              <div className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex justify-between">
                   <span>Client:</span>
-                  <span>{invoice.clientName}</span>
+                  <span className="text-foreground">{invoice.clientName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Site:</span>
-                  <span>{invoice.siteName}</span>
+                  <span className="text-foreground">{invoice.siteName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>GST Type:</span>
-                  <span>{invoice.gstType}</span>
+                  <span className="text-foreground">{invoice.gstType}</span>
                 </div>
+                
+                {invoice.gstType === 'RCM' && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Note:</strong> Reverse Charge Mechanism - Client pays GST directly.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-
-            {invoice.gstType === 'RCM' && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
-                <p className="text-sm text-yellow-800">
-                  <strong>Note:</strong> Reverse Charge Mechanism - Client pays GST directly.
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
