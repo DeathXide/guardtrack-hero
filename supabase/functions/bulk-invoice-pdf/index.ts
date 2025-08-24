@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.0'
 import JSZip from 'https://esm.sh/jszip@3.10.1'
+import puppeteer from 'https://deno.land/x/puppeteer@16.2.0/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -855,57 +856,103 @@ serve(async (req) => {
 
     console.log('Fetched company settings');
 
+    // Initialize Puppeteer for PDF generation
+    console.log('Launching browser for PDF generation...');
+    const browser = await puppeteer.launch({
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu'
+      ]
+    });
+
     // Create ZIP file
     const zip = new JSZip();
 
-    // Generate HTML for each invoice
-    for (const invoice of invoices) {
-      try {
-        console.log(`Processing invoice ${invoice.invoice_number}...`);
-        
-        // Convert database record to expected format
-        const invoiceData = {
-          id: invoice.id,
-          invoiceNumber: invoice.invoice_number,
-          siteId: invoice.site_id,
-          siteName: invoice.site_name,
-          siteGst: invoice.site_gst,
-          companyName: invoice.company_name,
-          companyGst: invoice.company_gst,
-          clientName: invoice.client_name,
-          clientAddress: invoice.client_address,
-          invoiceDate: invoice.invoice_date,
-          periodFrom: invoice.period_from,
-          periodTo: invoice.period_to,
-          lineItems: invoice.line_items,
-          subtotal: parseFloat(invoice.subtotal),
-          gstType: invoice.gst_type,
-          gstRate: parseFloat(invoice.gst_rate),
-          gstAmount: parseFloat(invoice.gst_amount),
-          cgstRate: parseFloat(invoice.cgst_rate),
-          cgstAmount: parseFloat(invoice.cgst_amount),
-          sgstRate: parseFloat(invoice.sgst_rate),
-          sgstAmount: parseFloat(invoice.sgst_amount),
-          igstRate: parseFloat(invoice.igst_rate),
-          igstAmount: parseFloat(invoice.igst_amount),
-          totalAmount: parseFloat(invoice.total_amount),
-          status: invoice.status,
-          notes: invoice.notes,
-          created_at: invoice.created_at,
-        };
+    try {
+      // Generate PDF for each invoice
+      for (const invoice of invoices) {
+        try {
+          console.log(`Processing invoice ${invoice.invoice_number}...`);
+          
+          // Convert database record to expected format
+          const invoiceData = {
+            id: invoice.id,
+            invoiceNumber: invoice.invoice_number,
+            siteId: invoice.site_id,
+            siteName: invoice.site_name,
+            siteGst: invoice.site_gst,
+            companyName: invoice.company_name,
+            companyGst: invoice.company_gst,
+            clientName: invoice.client_name,
+            clientAddress: invoice.client_address,
+            invoiceDate: invoice.invoice_date,
+            periodFrom: invoice.period_from,
+            periodTo: invoice.period_to,
+            lineItems: invoice.line_items,
+            subtotal: parseFloat(invoice.subtotal),
+            gstType: invoice.gst_type,
+            gstRate: parseFloat(invoice.gst_rate),
+            gstAmount: parseFloat(invoice.gst_amount),
+            cgstRate: parseFloat(invoice.cgst_rate),
+            cgstAmount: parseFloat(invoice.cgst_amount),
+            sgstRate: parseFloat(invoice.sgst_rate),
+            sgstAmount: parseFloat(invoice.sgst_amount),
+            igstRate: parseFloat(invoice.igst_rate),
+            igstAmount: parseFloat(invoice.igst_amount),
+            totalAmount: parseFloat(invoice.total_amount),
+            status: invoice.status,
+            notes: invoice.notes,
+            created_at: invoice.created_at,
+          };
 
-        // Generate HTML
-        const html = generateInvoiceHTML(invoiceData, companySettings);
-        
-        // Add HTML file to ZIP
-        const filename = `invoice-${invoice.invoice_number}.html`;
-        zip.file(filename, html);
-        
-        console.log(`Generated HTML for invoice ${invoice.invoice_number}`);
-      } catch (error) {
-        console.error(`Error processing invoice ${invoice.invoice_number}:`, error);
-        // Continue with other invoices even if one fails
+          // Generate HTML
+          const html = generateInvoiceHTML(invoiceData, companySettings);
+          
+          // Create new page for PDF generation
+          const page = await browser.newPage();
+          await page.setContent(html, { waitUntil: 'networkidle0' });
+          
+          // Generate PDF
+          const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: {
+              top: '20px',
+              right: '20px',
+              bottom: '20px',
+              left: '20px'
+            }
+          });
+          
+          await page.close();
+          
+          // Create filename with site name and invoice number
+          // Clean up site name for filename (remove special characters)
+          const cleanSiteName = invoice.site_name
+            .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
+            .replace(/\s+/g, '_') // Replace spaces with underscores
+            .substring(0, 30); // Limit length
+          
+          const filename = `${cleanSiteName}_${invoice.invoice_number}.pdf`;
+          
+          // Add PDF file to ZIP
+          zip.file(filename, pdfBuffer);
+          
+          console.log(`Generated PDF for invoice ${invoice.invoice_number} as ${filename}`);
+        } catch (error) {
+          console.error(`Error processing invoice ${invoice.invoice_number}:`, error);
+          // Continue with other invoices even if one fails
+        }
       }
+    } finally {
+      // Always close the browser
+      await browser.close();
+      console.log('Browser closed');
     }
 
     console.log('Generating ZIP file...');
@@ -919,12 +966,12 @@ serve(async (req) => {
 
     console.log(`ZIP file generated successfully. Size: ${zipBlob.length} bytes`);
 
-    // Return ZIP file
+    // Return ZIP file with updated filename
     return new Response(zipBlob, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="invoices-${new Date().toISOString().split('T')[0]}.zip"`,
+        'Content-Disposition': `attachment; filename="invoice-pdfs-${new Date().toISOString().split('T')[0]}.zip"`,
         'Content-Length': zipBlob.length.toString(),
       },
     });
