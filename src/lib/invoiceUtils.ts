@@ -86,21 +86,57 @@ export async function calculateInvoiceFromSite(
   const lineItems: InvoiceLineItem[] = [];
   let subtotal = 0;
 
+  // Calculate days in the billing period
+  const fromDate = new Date(periodFrom);
+  const toDate = new Date(periodTo);
+  const timeDiff = toDate.getTime() - fromDate.getTime();
+  const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1; // +1 to include both start and end dates
+
   // Calculate line items from staffing slots - combine day and night for same role
   site.staffingSlots?.forEach((slot: StaffingSlot) => {
     const totalSlots = slot.daySlots + slot.nightSlots;
     
     if (totalSlots > 0) {
-      const lineTotal = totalSlots * slot.budgetPerSlot;
+      // Determine if this is monthly or shift-based billing
+      // If budgetPerSlot is high (>= 15000), treat as monthly rate
+      // Otherwise treat as daily shift rate
+      const isMonthlyRate = slot.budgetPerSlot >= 15000;
+      
+      let lineTotal: number;
+      let rateType: 'monthly' | 'shift';
+      let quantity: number;
+      let manDays: number;
+      let monthlyRate: number | undefined;
+      let ratePerSlot: number;
+
+      if (isMonthlyRate) {
+        // Monthly billing
+        rateType = 'monthly';
+        quantity = totalSlots;
+        manDays = daysDiff;
+        monthlyRate = slot.budgetPerSlot;
+        ratePerSlot = 0;
+        lineTotal = totalSlots * slot.budgetPerSlot;
+      } else {
+        // Shift-based billing
+        rateType = 'shift';
+        quantity = totalSlots;
+        manDays = daysDiff;
+        monthlyRate = undefined;
+        ratePerSlot = slot.budgetPerSlot;
+        lineTotal = totalSlots * daysDiff * slot.budgetPerSlot;
+      }
+
       lineItems.push({
         id: slot.id,
         role: slot.role,
         shiftType: 'day', // Not relevant anymore since we're combining
-        rateType: 'shift',
-        quantity: totalSlots,
-        manDays: 30, // Default to 30 man days for monthly billing
-        ratePerSlot: slot.budgetPerSlot,
-        lineTotal: lineTotal,
+        rateType,
+        quantity,
+        manDays,
+        ratePerSlot,
+        monthlyRate,
+        lineTotal,
         description: slot.role // Just show the role name
       });
       subtotal += lineTotal;
