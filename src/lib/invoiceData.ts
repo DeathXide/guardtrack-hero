@@ -19,7 +19,9 @@ export const mockInvoices: Invoice[] = [
         id: '1-day',
         role: 'Security Guard',
         shiftType: 'day',
+        rateType: 'shift',
         quantity: 10,
+        manDays: 30,
         ratePerSlot: 1500,
         lineTotal: 15000,
         description: 'Security Guard - Day Shift'
@@ -28,7 +30,9 @@ export const mockInvoices: Invoice[] = [
         id: '1-night',
         role: 'Security Guard',
         shiftType: 'night',
+        rateType: 'shift',
         quantity: 8,
+        manDays: 30,
         ratePerSlot: 1800,
         lineTotal: 14400,
         description: 'Security Guard - Night Shift'
@@ -37,7 +41,10 @@ export const mockInvoices: Invoice[] = [
         id: '2-day',
         role: 'Supervisor',
         shiftType: 'day',
+        rateType: 'monthly',
         quantity: 2,
+        manDays: 30,
+        monthlyRate: 45000,
         ratePerSlot: 2500,
         lineTotal: 5000,
         description: 'Supervisor - Day Shift'
@@ -75,7 +82,9 @@ export const mockInvoices: Invoice[] = [
         id: '3-day',
         role: 'Security Guard',
         shiftType: 'day',
+        rateType: 'shift',
         quantity: 15,
+        manDays: 30,
         ratePerSlot: 1400,
         lineTotal: 21000,
         description: 'Security Guard - Day Shift'
@@ -84,7 +93,9 @@ export const mockInvoices: Invoice[] = [
         id: '3-night',
         role: 'Security Guard',
         shiftType: 'night',
+        rateType: 'shift',
         quantity: 15,
+        manDays: 30,
         ratePerSlot: 1700,
         lineTotal: 25500,
         description: 'Security Guard - Night Shift'

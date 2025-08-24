@@ -63,9 +63,14 @@ export default function InvoiceEdit() {
     const newLineItems = [...lineItems];
     newLineItems[index] = { ...newLineItems[index], [field]: value };
     
-    // Recalculate line total if quantity or rate changes
-    if (field === 'quantity' || field === 'ratePerSlot') {
-      newLineItems[index].lineTotal = newLineItems[index].quantity * newLineItems[index].ratePerSlot;
+    // Recalculate line total based on rate type
+    const item = newLineItems[index];
+    if (field === 'quantity' || field === 'manDays' || field === 'ratePerSlot' || field === 'monthlyRate' || field === 'rateType') {
+      if (item.rateType === 'monthly' && item.monthlyRate) {
+        newLineItems[index].lineTotal = item.quantity * item.monthlyRate;
+      } else {
+        newLineItems[index].lineTotal = item.quantity * item.manDays * item.ratePerSlot;
+      }
     }
     
     setLineItems(newLineItems);
@@ -76,9 +81,11 @@ export default function InvoiceEdit() {
       id: Date.now().toString(),
       role: 'Security Guard',
       shiftType: 'day',
+      rateType: 'shift',
       quantity: 1,
+      manDays: 30,
       ratePerSlot: 1500,
-      lineTotal: 1500,
+      lineTotal: 45000,
       description: 'Security Guard - Day Shift'
     };
     setLineItems([...lineItems, newItem]);
@@ -240,7 +247,9 @@ export default function InvoiceEdit() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Description</TableHead>
+                    <TableHead>Rate Type</TableHead>
                     <TableHead>Qty</TableHead>
+                    <TableHead>Man Days</TableHead>
                     <TableHead>Rate</TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead></TableHead>
@@ -254,25 +263,63 @@ export default function InvoiceEdit() {
                           value={item.description || ''}
                           onChange={(e) => updateLineItem(index, 'description', e.target.value)}
                           placeholder="Description"
+                          className="min-w-40"
                         />
+                      </TableCell>
+                      <TableCell>
+                        <Select 
+                          value={item.rateType} 
+                          onValueChange={(value) => updateLineItem(index, 'rateType', value)}
+                        >
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="shift">Shift</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
                         <Input
                           type="number"
                           value={item.quantity}
                           onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                          className="w-20"
+                          className="w-16"
                         />
                       </TableCell>
                       <TableCell>
-                        <Input
-                          type="number"
-                          value={item.ratePerSlot}
-                          onChange={(e) => updateLineItem(index, 'ratePerSlot', parseFloat(e.target.value) || 0)}
-                          className="w-24"
-                        />
+                        {item.rateType === 'shift' ? (
+                          <Input
+                            type="number"
+                            value={item.manDays}
+                            onChange={(e) => updateLineItem(index, 'manDays', parseInt(e.target.value) || 0)}
+                            className="w-20"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground text-sm">N/A</span>
+                        )}
                       </TableCell>
-                      <TableCell>{formatCurrency(item.lineTotal)}</TableCell>
+                      <TableCell>
+                        {item.rateType === 'monthly' ? (
+                          <Input
+                            type="number"
+                            value={item.monthlyRate || 0}
+                            onChange={(e) => updateLineItem(index, 'monthlyRate', parseFloat(e.target.value) || 0)}
+                            className="w-24"
+                            placeholder="Monthly rate"
+                          />
+                        ) : (
+                          <Input
+                            type="number"
+                            value={item.ratePerSlot}
+                            onChange={(e) => updateLineItem(index, 'ratePerSlot', parseFloat(e.target.value) || 0)}
+                            className="w-24"
+                            placeholder="Per shift"
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium">{formatCurrency(item.lineTotal)}</TableCell>
                       <TableCell>
                         <Button
                           variant="ghost"

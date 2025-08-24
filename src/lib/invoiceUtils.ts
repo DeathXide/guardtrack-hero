@@ -96,7 +96,9 @@ export async function calculateInvoiceFromSite(
         id: slot.id,
         role: slot.role,
         shiftType: 'day', // Not relevant anymore since we're combining
+        rateType: 'shift',
         quantity: totalSlots,
+        manDays: 30, // Default to 30 man days for monthly billing
         ratePerSlot: slot.budgetPerSlot,
         lineTotal: lineTotal,
         description: slot.role // Just show the role name

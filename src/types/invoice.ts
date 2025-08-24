@@ -2,8 +2,11 @@ export interface InvoiceLineItem {
   id: string;
   role: 'Security Guard' | 'Supervisor' | 'Housekeeping';
   shiftType: 'day' | 'night';
+  rateType: 'monthly' | 'shift';
   quantity: number;
+  manDays: number;
   ratePerSlot: number;
+  monthlyRate?: number;
   lineTotal: number;
   description?: string;
 }
