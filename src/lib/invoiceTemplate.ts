@@ -568,7 +568,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
     <div class="header">
       <div class="company-info">
         <h1 class="company-name">${companySettings?.company_name || invoice.companyName}</h1>
-        ${companySettings?.company_motto ? `<p class="company-motto">${companySettings.company_motto}</p>` : ''}
+        ${!isPersonalBilling && companySettings?.company_motto ? `<p class="company-motto">${companySettings.company_motto}</p>` : ''}
         <div class="company-details">
           ${!isPersonalBilling && (companySettings?.gst_number || invoice.companyGst) ? `<div>GST: ${companySettings?.gst_number || invoice.companyGst}</div>` : ''}
           ${companySettings?.company_address_line1 ? `
