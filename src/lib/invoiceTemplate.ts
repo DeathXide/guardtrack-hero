@@ -672,7 +672,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
                     <td class="description">${item.description}</td>
                     <td class="quantity">${item.quantity}</td>
                     <td class="days">${manDays}</td>
-                    <td class="rate">${formatCurrency(item.ratePerSlot)}</td>
+                    <td class="rate">${formatCurrency(item.rateType === 'monthly' ? (item.monthlyRate || 0) : item.ratePerSlot)}</td>
                     <td class="amount">${formatCurrency(item.lineTotal)}</td>
                   </tr>
                 `;

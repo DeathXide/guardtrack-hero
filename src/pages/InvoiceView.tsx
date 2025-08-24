@@ -308,7 +308,7 @@ export default function InvoiceView() {
                               <TableCell className="text-sm font-medium">{item.description}</TableCell>
                               <TableCell className="text-center text-sm font-medium">{item.quantity}</TableCell>
                               <TableCell className="text-center text-sm font-medium">{manDays}</TableCell>
-                              <TableCell className="text-right text-sm font-mono">{formatCurrency(item.ratePerSlot)}</TableCell>
+                              <TableCell className="text-right text-sm font-mono">{formatCurrency(item.rateType === 'monthly' ? (item.monthlyRate || 0) : item.ratePerSlot)}</TableCell>
                               <TableCell className="text-right text-sm font-mono font-semibold">{formatCurrency(item.lineTotal)}</TableCell>
                             </TableRow>
                           );
