@@ -49,14 +49,15 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
       ]);
       
       setCompanySettings(companyData);
-      // Filter only active sites for auto-generation
-      let activeSites = sitesData.filter(site => !site.status || site.status === 'active');
+      
+      // Load all sites (don't filter by status here - let UI filters handle it)
+      const allSites = sitesData;
       
       // Filter out sites that already have invoices for the selected month
       const [year, month] = selectedMonth.split('-').map(Number);
       const sitesWithoutInvoices = [];
       
-      for (const site of activeSites) {
+      for (const site of allSites) {
         const hasInvoice = await checkSiteHasInvoiceForMonth(site.id, year, month);
         if (!hasInvoice) {
           sitesWithoutInvoices.push(site);
@@ -64,7 +65,8 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
       }
       
       setSites(sitesWithoutInvoices);
-      setSelectedSites(new Set(sitesWithoutInvoices.map(site => site.id))); // Select all available sites by default
+      // Don't auto-select all sites - let user choose with filters
+      setSelectedSites(new Set());
       setSitesLoaded(true);
     } catch (error) {
       console.error('Error loading data:', error);
