@@ -71,7 +71,7 @@ const SitesEnhanced = () => {
       daySlots: 0,
       nightSlots: 0,
       budgetPerSlot: 0,
-      rateType: 'shift'
+      rateType: 'monthly'
     };
     setNewSite({
       ...newSite,

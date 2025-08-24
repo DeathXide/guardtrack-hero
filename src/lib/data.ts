@@ -29,7 +29,7 @@ export let sites: Site[] = [
         daySlots: 4,
         nightSlots: 3,
         budgetPerSlot: 1500,
-        rateType: 'shift'
+        rateType: 'monthly'
       },
       {
         id: '2',
@@ -37,7 +37,7 @@ export let sites: Site[] = [
         daySlots: 1,
         nightSlots: 1,
         budgetPerSlot: 2500,
-        rateType: 'shift'
+        rateType: 'monthly'
       }
     ],
     created_at: '2024-08-01T00:00:00Z'
@@ -59,7 +59,7 @@ export let sites: Site[] = [
         daySlots: 6,
         nightSlots: 6,
         budgetPerSlot: 1400,
-        rateType: 'shift'
+        rateType: 'monthly'
       },
       {
         id: '4',
@@ -67,7 +67,7 @@ export let sites: Site[] = [
         daySlots: 2,
         nightSlots: 1,
         budgetPerSlot: 1200,
-        rateType: 'shift'
+        rateType: 'monthly'
       }
     ],
     created_at: '2024-08-01T00:00:00Z'
@@ -89,7 +89,7 @@ export let sites: Site[] = [
         daySlots: 2,
         nightSlots: 2,
         budgetPerSlot: 1600,
-        rateType: 'shift'
+        rateType: 'monthly'
       }
     ],
     created_at: '2024-08-01T00:00:00Z'

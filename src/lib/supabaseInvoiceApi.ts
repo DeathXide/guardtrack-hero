@@ -94,7 +94,7 @@ export function convertSiteToInvoiceFormat(site: SiteWithStaffing): Site {
     daySlots: req.day_slots,
     nightSlots: req.night_slots,
     budgetPerSlot: Number(req.budget_per_slot),
-    rateType: (req.rate_type || 'shift') as 'monthly' | 'shift'
+    rateType: (req.rate_type || 'monthly') as 'monthly' | 'shift'
   }));
 
   return {
