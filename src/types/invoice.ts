@@ -1,14 +1,15 @@
 export interface InvoiceLineItem {
   id: string;
-  role: 'Security Guard' | 'Supervisor' | 'Housekeeping' | 'Custom Service';
+  role: 'Security Guard' | 'Supervisor' | 'Housekeeping' | 'Custom Service' | 'Water Bill' | 'Electricity Bill' | 'Maintenance Charges' | 'Other Utility';
   shiftType: 'day' | 'night';
-  rateType: 'monthly' | 'shift';
+  rateType: 'monthly' | 'shift' | 'utility';
   quantity: number;
   manDays: number;
   ratePerSlot: number;
   monthlyRate?: number;
   lineTotal: number;
   description?: string;
+  utilityType?: string;
 }
 
 export interface Invoice {

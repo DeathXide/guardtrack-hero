@@ -680,6 +680,45 @@ export type Database = {
           },
         ]
       }
+      site_utility_charges: {
+        Row: {
+          billing_frequency: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          monthly_amount: number
+          site_id: string
+          updated_at: string
+          utility_name: string
+          utility_type: string
+        }
+        Insert: {
+          billing_frequency?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          monthly_amount?: number
+          site_id: string
+          updated_at?: string
+          utility_name: string
+          utility_type: string
+        }
+        Update: {
+          billing_frequency?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          monthly_amount?: number
+          site_id?: string
+          updated_at?: string
+          utility_name?: string
+          utility_type?: string
+        }
+        Relationships: []
+      }
       sites: {
         Row: {
           address: string

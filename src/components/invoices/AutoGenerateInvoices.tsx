@@ -27,6 +27,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
   const [periodTo, setPeriodTo] = useState('');
   const [loading, setLoading] = useState(false);
   const [sitesLoaded, setSitesLoaded] = useState(false);
+  const [includeUtilities, setIncludeUtilities] = useState(true);
 
   // Set default period based on selected month
   useEffect(() => {
@@ -156,7 +157,9 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
             site, 
             periodFrom, 
             periodTo, 
-            companyData
+            companyData,
+            undefined,
+            includeUtilities
           );
           
           const newInvoice = await createInvoiceInDB({
@@ -319,6 +322,25 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
                       </Select>
                     </div>
                   </div>
+                 </div>
+
+                {/* Utility Options */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="include-utilities"
+                      checked={includeUtilities}
+                      onChange={(e) => setIncludeUtilities(e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    <Label htmlFor="include-utilities" className="text-sm font-medium">
+                      Include utility charges (water, electricity, maintenance)
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    When enabled, predefined utility charges for each site will be automatically added to invoices
+                  </p>
                 </div>
 
                 {/* Sites Selection */}

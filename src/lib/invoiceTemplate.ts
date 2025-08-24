@@ -668,17 +668,32 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
             </thead>
             <tbody>
               ${invoice.lineItems.map((item, index) => {
-                const manDays = daysInPeriod * item.quantity;
-                return `
-                  <tr>
-                    <td class="row-number">${index + 1}</td>
-                    <td class="description">${item.description}</td>
-                    <td class="quantity">${item.quantity}</td>
-                    <td class="days">${manDays}</td>
-                    <td class="rate">${formatCurrency(item.rateType === 'monthly' ? (item.monthlyRate || 0) : item.ratePerSlot)}</td>
-                    <td class="amount">${formatCurrency(item.lineTotal)}</td>
-                  </tr>
-                `;
+                // Handle utility charges differently than staffing
+                if (item.rateType === 'utility') {
+                  return `
+                    <tr>
+                      <td class="row-number">${index + 1}</td>
+                      <td class="description">${item.description}</td>
+                      <td class="quantity">${item.quantity}</td>
+                      <td class="days">1 Month</td>
+                      <td class="rate">${formatCurrency(item.monthlyRate || 0)}</td>
+                      <td class="amount">${formatCurrency(item.lineTotal)}</td>
+                    </tr>
+                  `;
+                } else {
+                  // Regular staffing line items
+                  const manDays = daysInPeriod * item.quantity;
+                  return `
+                    <tr>
+                      <td class="row-number">${index + 1}</td>
+                      <td class="description">${item.description}</td>
+                      <td class="quantity">${item.quantity}</td>
+                      <td class="days">${manDays}</td>
+                      <td class="rate">${formatCurrency(item.rateType === 'monthly' ? (item.monthlyRate || 0) : item.ratePerSlot)}</td>
+                      <td class="amount">${formatCurrency(item.lineTotal)}</td>
+                    </tr>
+                  `;
+                }
               }).join('')}
             </tbody>
           </table>

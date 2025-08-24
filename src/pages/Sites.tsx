@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Building, Edit, Trash, User } from 'lucide-react';
+import { MapPin, Building, Edit, Trash, User, Settings } from 'lucide-react';
 import { Site } from '@/types';
 import { users } from '@/lib/data';
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchSites, createSite, updateSite, deleteSite, formatCurrency } from '@/lib/supabaseService';
 import { PageLoader } from '@/components/ui/loader';
+import UtilityChargesManagement from '@/components/sites/UtilityChargesManagement';
 
 const Sites = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -21,6 +22,8 @@ const Sites = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [utilityDialogOpen, setUtilityDialogOpen] = useState(false);
+  const [selectedSiteForUtility, setSelectedSiteForUtility] = useState<Site | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -140,6 +143,12 @@ const Sites = () => {
     setDeleteDialogOpen(true);
   };
 
+  // Open utility management dialog
+  const handleUtilityManagement = (site: Site) => {
+    setSelectedSiteForUtility(site);
+    setUtilityDialogOpen(true);
+  };
+
   // Confirm delete
   const confirmDelete = () => {
     if (selectedSiteId) {
@@ -252,6 +261,15 @@ const Sites = () => {
                 <div className="flex justify-between">
                   <CardTitle>{site.name}</CardTitle>
                   <div className="flex gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => handleUtilityManagement(site)}
+                      title="Manage Utility Charges"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
                     <Button 
                       variant="ghost" 
                       size="icon" 
@@ -394,6 +412,23 @@ const Sites = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={utilityDialogOpen} onOpenChange={setUtilityDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Utility Charges Management</DialogTitle>
+            <DialogDescription>
+              Configure utility charges for {selectedSiteForUtility?.name}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedSiteForUtility && (
+            <UtilityChargesManagement 
+              siteId={selectedSiteForUtility.id} 
+              siteName={selectedSiteForUtility.name}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

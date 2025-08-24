@@ -1,5 +1,6 @@
 import { Site, StaffingSlot } from '@/types';
 import { Invoice, InvoiceLineItem } from '@/types/invoice';
+import { getUtilityChargesForSite } from './utilityChargesApi';
 
 export const GST_RATES = {
   GST: 18, // Standard GST rate for security services (CGST 9% + SGST 9%)
@@ -81,7 +82,8 @@ export async function calculateInvoiceFromSite(
   periodFrom: string,
   periodTo: string,
   companySettings?: { company_name: string; gst_number?: string; personal_billing_names?: string[] },
-  invoiceDate?: string
+  invoiceDate?: string,
+  includeUtilities: boolean = true
 ): Promise<Omit<Invoice, 'id' | 'created_at' | 'status'>> {
   const lineItems: InvoiceLineItem[] = [];
   let subtotal = 0;
@@ -152,6 +154,41 @@ export async function calculateInvoiceFromSite(
       subtotal += lineTotal;
     }
   });
+
+  // Add utility charges if requested
+  if (includeUtilities) {
+    try {
+      const utilityCharges = await getUtilityChargesForSite(site.id);
+      
+      utilityCharges.forEach((utility) => {
+        const utilityRole = utility.utility_type === 'water' ? 'Water Bill' :
+                           utility.utility_type === 'electricity' ? 'Electricity Bill' :
+                           utility.utility_type === 'maintenance' ? 'Maintenance Charges' :
+                           'Other Utility';
+
+        const lineTotal = utility.monthly_amount;
+
+        lineItems.push({
+          id: utility.id,
+          role: utilityRole as any,
+          shiftType: 'day', // Not applicable for utilities
+          rateType: 'utility',
+          quantity: 1,
+          manDays: 1,
+          ratePerSlot: 0,
+          monthlyRate: utility.monthly_amount,
+          lineTotal,
+          description: utility.utility_name,
+          utilityType: utility.utility_type
+        });
+        
+        subtotal += lineTotal;
+      });
+    } catch (error) {
+      console.error('Error fetching utility charges:', error);
+      // Continue without utility charges if there's an error
+    }
+  }
 
   // Calculate GST with proper breakdown
   const gstCalculation = calculateGST(subtotal, site.gstType);
