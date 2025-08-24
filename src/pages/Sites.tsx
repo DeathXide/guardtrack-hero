@@ -371,15 +371,13 @@ const Sites = () => {
               </div>
             </div>
             
-            {/* Utility Charges Section - only show for existing sites */}
-            {isEditMode && newSite.id && (
-              <div className="pt-4 border-t">
-                <UtilityChargesFormSection 
-                  siteId={newSite.id} 
-                  siteName={newSite.name}
-                />
-              </div>
-            )}
+            {/* Utility Charges Section - show for both new and existing sites */}
+            <div className="pt-4 border-t">
+              <UtilityChargesFormSection 
+                siteId={isEditMode ? newSite.id : null} 
+                siteName={newSite.name || 'New Site'}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={handleDialogClose}>Cancel</Button>
