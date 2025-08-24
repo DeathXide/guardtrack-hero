@@ -665,19 +665,14 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
             </thead>
             <tbody>
               ${invoice.lineItems.map((item, index) => {
-                const daysForRow = item.rateType === 'shift'
-                  ? (item.manDays || daysInPeriod) * item.quantity
-                  : daysInPeriod * item.quantity;
-                const rateValue = item.rateType === 'monthly'
-                  ? (item.monthlyRate ?? (item.quantity ? item.lineTotal / item.quantity : 0))
-                  : (item.ratePerSlot ?? 0);
+                const manDays = daysInPeriod * item.quantity;
                 return `
                   <tr>
                     <td class="row-number">${index + 1}</td>
-                    <td class="description">${item.description || item.role}</td>
+                    <td class="description">${item.description}</td>
                     <td class="quantity">${item.quantity}</td>
-                    <td class="days">${daysForRow}</td>
-                    <td class="rate">${formatCurrency(rateValue)}</td>
+                    <td class="days">${manDays}</td>
+                    <td class="rate">${formatCurrency(item.ratePerSlot)}</td>
                     <td class="amount">${formatCurrency(item.lineTotal)}</td>
                   </tr>
                 `;
