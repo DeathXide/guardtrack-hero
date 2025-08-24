@@ -138,6 +138,8 @@ export default function InvoiceView() {
         </div>
       </div>;
   }
+  const isPersonal = invoice.gstType === 'PERSONAL';
+  const displayCompanyName = isPersonal ? invoice.companyName : (companySettings?.company_name || invoice.companyName);
   return <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -191,31 +193,33 @@ export default function InvoiceView() {
               <div className="bg-gradient-to-r from-slate-50 to-gray-50 p-4 mb-6">
                 <div className="flex justify-between items-start">
                   <div className="space-y-3">
-                    <h1 className="text-3xl font-light text-foreground tracking-wide">{companySettings?.company_name || invoice.companyName}</h1>
-                    {companySettings?.company_motto && (
+                    <h1 className="text-3xl font-light text-foreground tracking-wide">{displayCompanyName}</h1>
+                    {!isPersonal && companySettings?.company_motto && (
                       <p className="text-sm italic text-muted-foreground mt-1">{companySettings.company_motto}</p>
                     )}
                     <div className="text-sm text-muted-foreground space-y-1 font-mono">
-                      {(companySettings?.gst_number || invoice.companyGst) && <p>GST: {companySettings?.gst_number || invoice.companyGst}</p>}
+                      {!isPersonal && (companySettings?.gst_number || invoice.companyGst) && <p>GST: {companySettings?.gst_number || invoice.companyGst}</p>}
                       {companySettings?.company_address_line1 && (
                         <p className="text-xs leading-relaxed">
                           {[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}
                         </p>
                       )}
-                      <div className="flex flex-wrap gap-4 text-xs">
-                        {companySettings?.company_phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            <span>{companySettings.company_phone}</span>
-                          </div>
-                        )}
-                        {companySettings?.company_email && (
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            <span>{companySettings.company_email}</span>
-                          </div>
-                        )}
-                      </div>
+                      {!isPersonal && (
+                        <div className="flex flex-wrap gap-4 text-xs">
+                          {companySettings?.company_phone && (
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              <span>{companySettings.company_phone}</span>
+                            </div>
+                          )}
+                          {companySettings?.company_email && (
+                            <div className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              <span>{companySettings.company_email}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="bg-white border border-border rounded-lg p-4 shadow-sm">
@@ -270,7 +274,7 @@ export default function InvoiceView() {
                       <MapPin className="h-3 w-3 text-muted-foreground mt-0.5 flex-shrink-0" />
                       <p className="text-sm text-muted-foreground leading-relaxed">{invoice.clientAddress.split(', ').filter(Boolean).join(', ')}</p>
                     </div>
-                    {invoice.siteGst && (
+                    {!isPersonal && invoice.siteGst && (
                       <p className="text-xs text-muted-foreground font-mono mt-2">
                         <span className="font-medium">GST:</span> {invoice.siteGst}
                       </p>
@@ -385,7 +389,7 @@ export default function InvoiceView() {
                           </div>
                         )}
                         
-                        {(invoice.gstType === 'NGST' || invoice.gstType === 'PERSONAL') && (
+                        {invoice.gstType === 'NGST' && (
                           <div className="flex justify-between text-xs border-l-2 border-muted pl-3">
                             <span className="text-muted-foreground">GST ({(invoice.gstRate || 0).toFixed(1)}%)</span>
                             <span className="font-mono">{formatCurrency(invoice.gstAmount || 0)}</span>
@@ -410,6 +414,7 @@ export default function InvoiceView() {
                 </div>
 
                 {/* Payment Terms */}
+                {!isPersonal && (
                 <div className="px-4 mb-6">
                   <div className="bg-muted/20 border border-border/50 rounded p-3">
                     <h4 className="text-xs font-medium text-muted-foreground mb-2">Payment Terms</h4>
@@ -419,6 +424,7 @@ export default function InvoiceView() {
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Authorized Signatory */}
                 <div className="px-4 mb-6">
