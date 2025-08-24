@@ -92,7 +92,7 @@ export async function calculateInvoiceFromSite(
   const timeDiff = toDate.getTime() - fromDate.getTime();
   const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1; // +1 to include both start and end dates
 
-  // Calculate line items from staffing slots - combine day and night for same role
+      // Calculate line items from staffing slots - combine day and night for same role
   site.staffingSlots?.forEach((slot: StaffingSlot) => {
     const totalSlots = slot.daySlots + slot.nightSlots;
     
@@ -127,6 +127,16 @@ export async function calculateInvoiceFromSite(
         lineTotal = totalSlots * daysDiff * slot.budgetPerSlot;
       }
 
+      // Generate description with day/night slot information
+      let description = slot.role;
+      if (slot.daySlots > 0 && slot.nightSlots > 0) {
+        description += ` (${slot.daySlots} day, ${slot.nightSlots} night)`;
+      } else if (slot.daySlots > 0) {
+        description += ` (day)`;
+      } else if (slot.nightSlots > 0) {
+        description += ` (night)`;
+      }
+
       lineItems.push({
         id: slot.id,
         role: slot.role,
@@ -137,7 +147,7 @@ export async function calculateInvoiceFromSite(
         ratePerSlot,
         monthlyRate,
         lineTotal,
-        description: slot.role // Just show the role name
+        description
       });
       subtotal += lineTotal;
     }
