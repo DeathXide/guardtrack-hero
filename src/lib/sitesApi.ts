@@ -12,6 +12,7 @@ export interface SiteDB {
   address_line3?: string;
   site_category: string;
   personal_billing_name?: string;
+  status: string;
   created_at: string;
   updated_at: string;
 }
@@ -37,6 +38,7 @@ export interface CreateSiteData {
   address_line3?: string;
   site_category: string;
   personal_billing_name?: string;
+  status: 'active' | 'inactive' | 'temp';
   staffing_requirements: {
     role_type: string;
     budget_per_slot: number;
@@ -125,7 +127,8 @@ export const sitesApi = {
         address_line2: siteData.address_line2,
         address_line3: siteData.address_line3,
         site_category: siteData.site_category,
-        personal_billing_name: siteData.personal_billing_name
+        personal_billing_name: siteData.personal_billing_name,
+        status: siteData.status
       })
       .select()
       .single();
@@ -172,7 +175,8 @@ export const sitesApi = {
         address_line2: siteData.address_line2,
         address_line3: siteData.address_line3,
         site_category: siteData.site_category,
-        personal_billing_name: siteData.personal_billing_name
+        personal_billing_name: siteData.personal_billing_name,
+        status: siteData.status
       })
       .eq('id', siteData.id)
       .select()

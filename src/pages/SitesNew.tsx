@@ -15,6 +15,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { companyApi } from "@/lib/companyApi";
 
 const GST_TYPES = ['GST', 'NGST', 'RCM', 'PERSONAL'] as const;
+const SITE_STATUS_OPTIONS = ['active', 'inactive', 'temp'] as const;
 const SITE_CATEGORIES = [
   'Office Building', 
   'Residential Complex', 
@@ -49,6 +50,7 @@ const initialFormState: Omit<CreateSiteData, 'staffing_requirements'> & { staffi
   address_line3: "",
   site_category: "",
   personal_billing_name: "",
+  status: "active",
   staffing_requirements: []
 };
 
@@ -187,6 +189,7 @@ export default function SitesNew() {
       address_line3: site.address_line3 || "",
       site_category: site.site_category,
       personal_billing_name: site.personal_billing_name || "",
+      status: (site.status || "active") as 'active' | 'inactive' | 'temp',
       staffing_requirements: site.staffing_requirements.map(req => ({
         role_type: req.role_type,
         budget_per_slot: req.budget_per_slot,
@@ -376,6 +379,23 @@ export default function SitesNew() {
                       {SITE_CATEGORIES.map(category => (
                         <SelectItem key={category} value={category}>{category}</SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status">Site Status</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) => handleInputChange("status", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select site status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="temp">Temporary</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
