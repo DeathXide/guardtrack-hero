@@ -122,7 +122,7 @@ export async function calculateInvoiceFromSite(
         rateType = 'shift';
         quantity = totalSlots;
         manDays = daysDiff;
-        monthlyRate = undefined;
+        monthlyRate = 0;
         ratePerSlot = slot.budgetPerSlot;
         lineTotal = totalSlots * daysDiff * slot.budgetPerSlot;
       }
