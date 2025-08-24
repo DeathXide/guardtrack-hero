@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { fetchSitesWithStaffing, fetchCompanySettings, convertSiteToInvoiceFormat, SiteWithStaffing, CompanySettings } from '@/lib/supabaseInvoiceApi';
+import { sitesApi } from '@/lib/sitesApi';
+import { companyApi } from '@/lib/companyApi';
 import { createInvoiceInDB, checkSiteHasInvoiceForMonth } from '@/lib/supabaseInvoiceApiNew';
 import { calculateInvoiceFromSite, formatCurrency } from '@/lib/invoiceUtils';
 import { toast } from 'sonner';
@@ -18,8 +19,8 @@ interface AutoGenerateInvoicesProps {
 }
 
 export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth }: AutoGenerateInvoicesProps) {
-  const [sites, setSites] = useState<SiteWithStaffing[]>([]);
-  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  const [sites, setSites] = useState<any[]>([]);
+  const [companySettings, setCompanySettings] = useState<any | null>(null);
   const [selectedSites, setSelectedSites] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [gstTypeFilter, setGstTypeFilter] = useState<string>('all');
@@ -45,8 +46,8 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
   const loadSites = async () => {
     try {
       const [sitesData, companyData] = await Promise.all([
-        fetchSitesWithStaffing(),
-        fetchCompanySettings()
+        sitesApi.getAllSites(),
+        companyApi.getCompanySettings()
       ]);
       
       setCompanySettings(companyData);
@@ -145,8 +146,27 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
         }
 
         try {
-          // Convert to our Site format for invoice calculation
-          const site = convertSiteToInvoiceFormat(siteData);
+          // Create site data compatible with invoice calculation
+          const site = {
+            id: siteData.id,
+            name: siteData.site_name,
+            organizationName: siteData.organization_name,
+            gstNumber: siteData.gst_number,
+            gstType: siteData.gst_type,
+            addressLine1: siteData.address_line1,
+            addressLine2: siteData.address_line2,
+            addressLine3: siteData.address_line3,
+            siteType: siteData.site_category,
+            staffingSlots: siteData.staffing_requirements?.map((req: any) => ({
+              id: req.id,
+              role: req.role_type,
+              daySlots: req.day_slots,
+              nightSlots: req.night_slots,
+              budgetPerSlot: req.budget_per_slot,
+              rateType: 'monthly' as const,
+              description: req.description
+            })) || []
+          };
           
           const companyData = {
             company_name: companySettings.company_name,
@@ -207,7 +227,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
     }
   };
 
-  const calculateSiteTotal = (site: SiteWithStaffing) => {
+  const calculateSiteTotal = (site: any) => {
     if (!site.staffing_requirements) return 0;
     return site.staffing_requirements.reduce((sum, req) => {
       return sum + (req.day_slots * Number(req.budget_per_slot)) + (req.night_slots * Number(req.budget_per_slot));
