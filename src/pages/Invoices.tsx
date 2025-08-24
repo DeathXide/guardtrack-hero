@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, FileText, Eye, Edit, Trash2, Wand2, Download, Calendar } from 'lucide-react';
+import { Search, Filter, FileText, Eye, Edit, Trash2, Wand2, Download, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -211,10 +211,6 @@ export default function Invoices() {
               <AutoGenerateInvoices onInvoicesCreated={handleInvoicesCreated} selectedMonth={selectedMonth} />
             </DialogContent>
           </Dialog>
-          <Button onClick={() => navigate('/invoices/create-custom')} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create Custom Invoice
-          </Button>
         </div>
       </div>
 
