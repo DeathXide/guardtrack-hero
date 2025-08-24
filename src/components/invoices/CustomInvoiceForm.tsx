@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calculator, FileText, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,20 +20,20 @@ interface CustomSiteData {
   gstNumber: string;
   gstType: string;
   address: string;
-  addressLine1?: string;
-  addressLine2?: string;
-  addressLine3?: string;
   personalBillingName?: string;
 }
 
 interface LineItem {
   id: string;
+  role: 'Security Guard' | 'Supervisor' | 'Housekeeping' | 'Custom Service';
   description: string;
   shiftType: 'day' | 'night';
   rateType: 'monthly' | 'shift';
   quantity: number;
-  rate: number;
-  total: number;
+  manDays: number;
+  ratePerSlot: number;
+  monthlyRate?: number;
+  lineTotal: number;
 }
 
 export default function CustomInvoiceForm() {
@@ -44,9 +44,6 @@ export default function CustomInvoiceForm() {
     gstNumber: '',
     gstType: 'GST',
     address: '',
-    addressLine1: '',
-    addressLine2: '',
-    addressLine3: '',
     personalBillingName: ''
   });
   
@@ -58,20 +55,48 @@ export default function CustomInvoiceForm() {
   });
   
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: '1', description: '', shiftType: 'day', rateType: 'shift', quantity: 1, rate: 0, total: 0 }
+    { 
+      id: '1', 
+      role: 'Security Guard',
+      description: '', 
+      shiftType: 'day', 
+      rateType: 'shift', 
+      quantity: 1, 
+      manDays: 1,
+      ratePerSlot: 0, 
+      lineTotal: 0 
+    }
   ]);
   
+  const [availablePersonalNames, setAvailablePersonalNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Load personal billing names when component mounts
+  useEffect(() => {
+    const loadPersonalNames = async () => {
+      try {
+        const companySettings = await companyApi.getCompanySettings();
+        if (companySettings?.personal_billing_names) {
+          setAvailablePersonalNames(companySettings.personal_billing_names);
+        }
+      } catch (error) {
+        console.error('Error loading personal names:', error);
+      }
+    };
+    loadPersonalNames();
+  }, []);
 
   const addLineItem = () => {
     const newItem: LineItem = {
       id: (lineItems.length + 1).toString(),
+      role: 'Security Guard',
       description: '',
       shiftType: 'day',
       rateType: 'shift',
       quantity: 1,
-      rate: 0,
-      total: 0
+      manDays: 1,
+      ratePerSlot: 0,
+      lineTotal: 0
     };
     setLineItems([...lineItems, newItem]);
   };
@@ -87,9 +112,10 @@ export default function CustomInvoiceForm() {
       items.map(item => {
         if (item.id === id) {
           const updatedItem = { ...item, [field]: value };
-          // Recalculate total when quantity or rate changes
-          if (field === 'quantity' || field === 'rate') {
-            updatedItem.total = updatedItem.quantity * updatedItem.rate;
+          // Recalculate total and manDays when quantity or rate changes
+          if (field === 'quantity' || field === 'ratePerSlot') {
+            updatedItem.manDays = updatedItem.quantity;
+            updatedItem.lineTotal = updatedItem.quantity * updatedItem.ratePerSlot;
           }
           return updatedItem;
         }
@@ -98,7 +124,7 @@ export default function CustomInvoiceForm() {
     );
   };
 
-  const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
+  const subtotal = lineItems.reduce((sum, item) => sum + item.lineTotal, 0);
   const gstCalculation = calculateGST(subtotal, siteData.gstType);
 
   const handleCreateInvoice = async () => {
@@ -108,7 +134,7 @@ export default function CustomInvoiceForm() {
       return;
     }
 
-    if (lineItems.some(item => !item.description || item.quantity <= 0 || item.rate <= 0)) {
+    if (lineItems.some(item => !item.description || item.quantity <= 0 || item.ratePerSlot <= 0)) {
       toast.error('Please complete all line items with valid quantities and rates');
       return;
     }
@@ -127,13 +153,14 @@ export default function CustomInvoiceForm() {
       // Convert line items to invoice format
       const invoiceLineItems = lineItems.map(item => ({
         id: item.id,
-        role: 'Custom Service' as const,
+        role: item.role,
         shiftType: item.shiftType,
         rateType: item.rateType,
         quantity: item.quantity,
-        manDays: item.quantity,
-        ratePerSlot: item.rate,
-        lineTotal: item.total,
+        manDays: item.manDays,
+        ratePerSlot: item.ratePerSlot,
+        monthlyRate: item.monthlyRate,
+        lineTotal: item.lineTotal,
         description: item.description
       }));
 
@@ -144,10 +171,10 @@ export default function CustomInvoiceForm() {
         siteGst: siteData.gstNumber,
         companyName: companySettings?.company_name || 'Security Management System',
         companyGst: companySettings?.gst_number || '',
-        clientName: siteData.organizationName,
-        clientAddress: [siteData.address, siteData.addressLine1, siteData.addressLine2, siteData.addressLine3]
-          .filter(Boolean)
-          .join(', '),
+        clientName: siteData.personalBillingName && siteData.gstType === 'PERSONAL' 
+          ? siteData.personalBillingName 
+          : siteData.organizationName,
+        clientAddress: siteData.address,
         invoiceDate: formData.invoiceDate,
         periodFrom: formData.periodFrom,
         periodTo: formData.periodTo,
@@ -276,13 +303,22 @@ export default function CustomInvoiceForm() {
 
               {siteData.gstType === 'PERSONAL' && (
                 <div className="space-y-2">
-                  <Label htmlFor="personalBillingName">Personal Billing Name</Label>
-                  <Input
-                    id="personalBillingName"
-                    value={siteData.personalBillingName}
-                    onChange={(e) => setSiteData(prev => ({ ...prev, personalBillingName: e.target.value }))}
-                    placeholder="Enter personal billing name"
-                  />
+                  <Label htmlFor="personalBillingName">Personal Billing Name *</Label>
+                  <Select 
+                    value={siteData.personalBillingName || ''} 
+                    onValueChange={(value) => setSiteData(prev => ({ ...prev, personalBillingName: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select personal billing name" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availablePersonalNames.map((name) => (
+                        <SelectItem key={name} value={name}>
+                          {name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
             </div>
@@ -335,16 +371,22 @@ export default function CustomInvoiceForm() {
                 {lineItems.map((item, index) => (
                   <div key={item.id} className="space-y-3 p-4 border rounded-lg">
                     <div className="grid grid-cols-12 gap-3">
-                      <div className="col-span-6">
-                        <Label>Description</Label>
-                        <Input
-                          value={item.description}
-                          onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
-                          placeholder="Service description"
-                        />
+                      <div className="col-span-4">
+                        <Label>Role *</Label>
+                        <Select value={item.role} onValueChange={(value) => updateLineItem(item.id, 'role', value)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Security Guard">Security Guard</SelectItem>
+                            <SelectItem value="Supervisor">Supervisor</SelectItem>
+                            <SelectItem value="Housekeeping">Housekeeping</SelectItem>
+                            <SelectItem value="Custom Service">Custom Service</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <div className="col-span-3">
-                        <Label>Shift Type</Label>
+                      <div className="col-span-4">
+                        <Label>Shift Type *</Label>
                         <Select value={item.shiftType} onValueChange={(value) => updateLineItem(item.id, 'shiftType', value)}>
                           <SelectTrigger>
                             <SelectValue />
@@ -355,8 +397,8 @@ export default function CustomInvoiceForm() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="col-span-3">
-                        <Label>Rate Type</Label>
+                      <div className="col-span-4">
+                        <Label>Rate Type *</Label>
                         <Select value={item.rateType} onValueChange={(value) => updateLineItem(item.id, 'rateType', value)}>
                           <SelectTrigger>
                             <SelectValue />
@@ -368,9 +410,19 @@ export default function CustomInvoiceForm() {
                         </Select>
                       </div>
                     </div>
+                    <div className="grid grid-cols-12 gap-3">
+                      <div className="col-span-12">
+                        <Label>Description *</Label>
+                        <Input
+                          value={item.description}
+                          onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
+                          placeholder="Service description"
+                        />
+                      </div>
+                    </div>
                     <div className="grid grid-cols-12 gap-3 items-end">
-                      <div className="col-span-3">
-                        <Label>Quantity</Label>
+                      <div className="col-span-2">
+                        <Label>Quantity *</Label>
                         <Input
                           type="number"
                           value={item.quantity}
@@ -378,21 +430,25 @@ export default function CustomInvoiceForm() {
                           min="1"
                         />
                       </div>
+                      <div className="col-span-2">
+                        <Label>Man Days</Label>
+                        <Input value={item.manDays} disabled />
+                      </div>
                       <div className="col-span-3">
-                        <Label>Rate</Label>
+                        <Label>Rate Per {item.rateType === 'shift' ? 'Shift' : 'Month'} *</Label>
                         <Input
                           type="number"
-                          value={item.rate}
-                          onChange={(e) => updateLineItem(item.id, 'rate', Number(e.target.value))}
+                          value={item.ratePerSlot}
+                          onChange={(e) => updateLineItem(item.id, 'ratePerSlot', Number(e.target.value))}
                           min="0"
                           step="0.01"
                         />
                       </div>
                       <div className="col-span-3">
-                        <Label>Total</Label>
-                        <Input value={formatCurrency(item.total)} disabled />
+                        <Label>Line Total</Label>
+                        <Input value={formatCurrency(item.lineTotal)} disabled />
                       </div>
-                      <div className="col-span-3 flex justify-end">
+                      <div className="col-span-2 flex justify-end">
                         {lineItems.length > 1 && (
                           <Button
                             type="button"
@@ -401,7 +457,7 @@ export default function CustomInvoiceForm() {
                             onClick={() => removeLineItem(item.id)}
                             className="text-destructive"
                           >
-                            Remove Item
+                            Remove
                           </Button>
                         )}
                       </div>
@@ -461,15 +517,16 @@ export default function CustomInvoiceForm() {
                 </div>
               </div>
 
-              {lineItems.some(item => item.description && item.quantity > 0 && item.rate > 0) && (
+              {lineItems.some(item => item.description && item.quantity > 0 && item.ratePerSlot > 0) && (
                 <>
                   <div>
                     <h4 className="font-semibold mb-3">Line Items</h4>
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead>Role</TableHead>
                           <TableHead>Description</TableHead>
-                          <TableHead>Type</TableHead>
+                          <TableHead>Shift/Rate</TableHead>
                           <TableHead>Qty</TableHead>
                           <TableHead>Rate</TableHead>
                           <TableHead>Total</TableHead>
@@ -477,19 +534,20 @@ export default function CustomInvoiceForm() {
                       </TableHeader>
                       <TableBody>
                         {lineItems
-                          .filter(item => item.description && item.quantity > 0 && item.rate > 0)
+                          .filter(item => item.description && item.quantity > 0 && item.ratePerSlot > 0)
                           .map((item) => (
                           <TableRow key={item.id}>
+                            <TableCell>{item.role}</TableCell>
                             <TableCell>{item.description}</TableCell>
                             <TableCell>
                               <div className="text-xs">
-                                <div>{item.shiftType === 'day' ? 'Day' : 'Night'} Shift</div>
+                                <div>{item.shiftType === 'day' ? 'Day' : 'Night'}</div>
                                 <div>{item.rateType === 'shift' ? 'Per Shift' : 'Monthly'}</div>
                               </div>
                             </TableCell>
                             <TableCell>{item.quantity}</TableCell>
-                            <TableCell>{formatCurrency(item.rate)}</TableCell>
-                            <TableCell>{formatCurrency(item.total)}</TableCell>
+                            <TableCell>{formatCurrency(item.ratePerSlot)}</TableCell>
+                            <TableCell>{formatCurrency(item.lineTotal)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -538,7 +596,7 @@ export default function CustomInvoiceForm() {
                 </>
               )}
 
-              {!lineItems.some(item => item.description && item.quantity > 0 && item.rate > 0) && (
+              {!lineItems.some(item => item.description && item.quantity > 0 && item.ratePerSlot > 0) && (
                 <div className="text-center py-12 text-muted-foreground">
                   <Calculator className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>Add line items to see invoice preview</p>
