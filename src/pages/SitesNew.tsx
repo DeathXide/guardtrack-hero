@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { sitesApi, CreateSiteData, UpdateSiteData, SiteDB, StaffingRequirementDB } from "@/lib/sitesApi";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { companyApi } from "@/lib/companyApi";
 
 const GST_TYPES = ['GST', 'NGST', 'RCM', 'PERSONAL'] as const;
 const SITE_CATEGORIES = [
@@ -47,6 +48,7 @@ const initialFormState: Omit<CreateSiteData, 'staffing_requirements'> & { staffi
   address_line2: "",
   address_line3: "",
   site_category: "",
+  personal_billing_name: "",
   staffing_requirements: []
 };
 
@@ -65,6 +67,7 @@ export default function SitesNew() {
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState(initialFormState);
   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
+  const [personalBillingNames, setPersonalBillingNames] = useState<string[]>([]);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -73,6 +76,13 @@ export default function SitesNew() {
   const { data: sites = [], isLoading, error } = useQuery({
     queryKey: ['sites'],
     queryFn: sitesApi.getAllSites,
+  });
+
+  // Fetch company settings to get personal billing names
+  const { data: companySettings } = useQuery({
+    queryKey: ['company-settings'],
+    queryFn: companyApi.getCompanySettings,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Create site mutation
@@ -176,6 +186,7 @@ export default function SitesNew() {
       address_line2: site.address_line2 || "",
       address_line3: site.address_line3 || "",
       site_category: site.site_category,
+      personal_billing_name: site.personal_billing_name || "",
       staffing_requirements: site.staffing_requirements.map(req => ({
         role_type: req.role_type,
         budget_per_slot: req.budget_per_slot,
@@ -332,6 +343,25 @@ export default function SitesNew() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {formData.gst_type === 'PERSONAL' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="personal_billing_name">Personal Billing Name</Label>
+                    <Select
+                      value={formData.personal_billing_name}
+                      onValueChange={(value) => handleInputChange("personal_billing_name", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select personal billing name" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {companySettings?.personal_billing_names?.map((name, index) => (
+                          <SelectItem key={index} value={name}>{name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="site_category">Site Category *</Label>

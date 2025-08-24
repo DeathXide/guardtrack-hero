@@ -11,6 +11,7 @@ export interface SiteWithStaffing {
   address_line2: string;
   address_line3: string;
   site_category: string;
+  personal_billing_name?: string;
   staffing_requirements: Array<{
     id: string;
     role_type: string;
@@ -48,6 +49,7 @@ export async function fetchSitesWithStaffing(): Promise<SiteWithStaffing[]> {
       address_line2,
       address_line3,
       site_category,
+      personal_billing_name,
       staffing_requirements (
         id,
         role_type,
@@ -101,6 +103,7 @@ export function convertSiteToInvoiceFormat(site: SiteWithStaffing): Site {
     gstType: site.gst_type as 'GST' | 'NGST' | 'RCM' | 'PERSONAL',
     siteType: site.site_category,
     staffingSlots,
+    personalBillingName: site.personal_billing_name,
     created_at: new Date().toISOString()
   };
 }
