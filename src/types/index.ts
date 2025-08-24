@@ -28,6 +28,7 @@ export interface Site {
   gstType: 'GST' | 'NGST' | 'RCM' | 'PERSONAL';
   siteType: string;
   staffingSlots: StaffingSlot[];
+  personalBillingName?: string;
   // Legacy fields for backward compatibility
   location?: string;
   daySlots?: number;

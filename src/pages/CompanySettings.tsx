@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Building, Mail, Phone, Globe, CreditCard, FileText } from "lucide-react";
+import { Building, Mail, Phone, Globe, CreditCard, FileText, User, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,8 +24,10 @@ export default function CompanySettings() {
     gst_number: "",
     pan_number: "",
     company_seal_image_url: "",
+    personal_billing_names: [],
   });
   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
+  const [newPersonalName, setNewPersonalName] = useState("");
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -77,6 +79,23 @@ export default function CompanySettings() {
     updateSettingsMutation.mutate(formData);
   };
 
+  const addPersonalName = () => {
+    if (newPersonalName.trim() && !formData.personal_billing_names?.includes(newPersonalName.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        personal_billing_names: [...(prev.personal_billing_names || []), newPersonalName.trim()]
+      }));
+      setNewPersonalName("");
+    }
+  };
+
+  const removePersonalName = (nameToRemove: string) => {
+    setFormData(prev => ({
+      ...prev,
+      personal_billing_names: prev.personal_billing_names?.filter(name => name !== nameToRemove) || []
+    }));
+  };
+
   // Set form data when company settings are loaded
   React.useEffect(() => {
     if (companySettings) {
@@ -93,6 +112,7 @@ export default function CompanySettings() {
         gst_number: companySettings.gst_number || "",
         pan_number: companySettings.pan_number || "",
         company_seal_image_url: companySettings.company_seal_image_url || "",
+        personal_billing_names: companySettings.personal_billing_names || [],
       });
     }
   }, [companySettings]);
@@ -304,6 +324,63 @@ export default function CompanySettings() {
                 disabled={isLoading}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Personal Billing Names */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Personal Billing Names
+            </CardTitle>
+            <CardDescription>
+              Manage personal names for individual billing (used when GST Type is PERSONAL)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={newPersonalName}
+                onChange={(e) => setNewPersonalName(e.target.value)}
+                placeholder="Enter personal name"
+                disabled={isLoading}
+                onKeyDown={(e) => e.key === 'Enter' && addPersonalName()}
+              />
+              <Button 
+                onClick={addPersonalName} 
+                variant="outline" 
+                size="sm"
+                disabled={isLoading || !newPersonalName.trim()}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            {formData.personal_billing_names && formData.personal_billing_names.length > 0 && (
+              <div className="space-y-2">
+                <Label>Current Personal Names:</Label>
+                <div className="flex flex-wrap gap-2">
+                  {formData.personal_billing_names.map((name, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-1 bg-secondary text-secondary-foreground px-3 py-1 rounded-md text-sm"
+                    >
+                      <span>{name}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removePersonalName(name)}
+                        className="h-auto p-1 hover:bg-destructive hover:text-destructive-foreground"
+                        disabled={isLoading}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

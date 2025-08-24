@@ -80,7 +80,7 @@ export async function calculateInvoiceFromSite(
   site: Site,
   periodFrom: string,
   periodTo: string,
-  companySettings?: { company_name: string; gst_number?: string },
+  companySettings?: { company_name: string; gst_number?: string; personal_billing_names?: string[] },
   invoiceDate?: string
 ): Promise<Omit<Invoice, 'id' | 'created_at' | 'status'>> {
   const lineItems: InvoiceLineItem[] = [];
@@ -156,13 +156,18 @@ export async function calculateInvoiceFromSite(
   // Calculate GST with proper breakdown
   const gstCalculation = calculateGST(subtotal, site.gstType);
 
+  // For personal billing, use assigned personal name or site organization name
+  const billingCompanyName = site.gstType === 'PERSONAL' && site.personalBillingName 
+    ? site.personalBillingName 
+    : companySettings?.company_name || "Your Security Company";
+
   return {
     invoiceNumber: await generateInvoiceNumber(),
     siteId: site.id,
     siteName: site.name,
     siteGst: site.gstNumber,
-    companyName: companySettings?.company_name || "Your Security Company",
-    companyGst: companySettings?.gst_number || '',
+    companyName: billingCompanyName,
+    companyGst: site.gstType === 'PERSONAL' ? '' : (companySettings?.gst_number || ''),
     clientName: site.organizationName,
     clientAddress: [site.addressLine1, site.addressLine2, site.addressLine3].filter(Boolean).join(', '),
     invoiceDate: invoiceDate || new Date().toISOString().split('T')[0],

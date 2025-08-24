@@ -61,6 +61,7 @@ function numberToWords(num: number): string {
 }
 
 export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanySettings): string {
+  const isPersonalBilling = invoice.gstType === 'PERSONAL';
   // Calculate man days for line items
   const fromDate = new Date(invoice.periodFrom);
   const toDate = new Date(invoice.periodTo);
@@ -569,26 +570,28 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
         <h1 class="company-name">${companySettings?.company_name || invoice.companyName}</h1>
         ${companySettings?.company_motto ? `<p class="company-motto">${companySettings.company_motto}</p>` : ''}
         <div class="company-details">
-          ${(companySettings?.gst_number || invoice.companyGst) ? `<div>GST: ${companySettings?.gst_number || invoice.companyGst}</div>` : ''}
+          ${!isPersonalBilling && (companySettings?.gst_number || invoice.companyGst) ? `<div>GST: ${companySettings?.gst_number || invoice.companyGst}</div>` : ''}
           ${companySettings?.company_address_line1 ? `
             <div style="font-size: 10px; line-height: 1.5; margin-top: 4px;">
               ${[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}
             </div>
           ` : ''}
-          <div class="contact-row">
-            ${companySettings?.company_phone ? `
-              <div class="contact-item">
-                ${ICONS.phone}
-                <span>${companySettings.company_phone}</span>
-              </div>
-            ` : ''}
-            ${companySettings?.company_email ? `
-              <div class="contact-item">
-                ${ICONS.mail}
-                <span>${companySettings.company_email}</span>
-              </div>
-            ` : ''}
-          </div>
+          ${!isPersonalBilling ? `
+            <div class="contact-row">
+              ${companySettings?.company_phone ? `
+                <div class="contact-item">
+                  ${ICONS.phone}
+                  <span>${companySettings.company_phone}</span>
+                </div>
+              ` : ''}
+              ${companySettings?.company_email ? `
+                <div class="contact-item">
+                  ${ICONS.mail}
+                  <span>${companySettings.company_email}</span>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
         </div>
       </div>
       <div class="invoice-box">
@@ -639,7 +642,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
           ${ICONS.mapPin}
           <p class="client-address-text">${invoice.clientAddress.split(', ').filter(Boolean).join(', ')}</p>
         </div>
-        ${invoice.siteGst ? `
+        ${!isPersonalBilling && invoice.siteGst ? `
           <p class="client-gst">
             <strong>GST:</strong> ${invoice.siteGst}
           </p>
@@ -684,7 +687,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
 
       <!-- Totals -->
       <div class="totals-section">
-        ${invoice.gstType === 'RCM' ? `
+        ${!isPersonalBilling && invoice.gstType === 'RCM' ? `
           <div class="rcm-notice">
             <div class="rcm-box">
               <div class="rcm-header">
@@ -709,7 +712,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
               <span class="total-value">${formatCurrency(invoice.subtotal)}</span>
             </div>
             
-            ${invoice.gstType === 'GST' ? `
+            ${!isPersonalBilling && invoice.gstType === 'GST' ? `
               <div class="gst-breakdown">
                 <div class="gst-row">
                   <span class="gst-label">CGST (${(invoice.cgstRate || 0).toFixed(1)}%)</span>
@@ -722,7 +725,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
               </div>
             ` : ''}
             
-            ${invoice.gstType === 'IGST' ? `
+            ${!isPersonalBilling && invoice.gstType === 'IGST' ? `
               <div class="gst-breakdown">
                 <div class="gst-row">
                   <span class="gst-label">IGST (${(invoice.igstRate || 0).toFixed(1)}%)</span>
@@ -731,7 +734,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
               </div>
             ` : ''}
             
-            ${invoice.gstType === 'RCM' ? `
+            ${!isPersonalBilling && invoice.gstType === 'RCM' ? `
               <div class="rcm-gst-box">
                 <div class="rcm-gst-title">Tax Payable by Recipient</div>
                 <div class="rcm-gst-row">
@@ -745,7 +748,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
               </div>
             ` : ''}
             
-            ${(invoice.gstType === 'NGST' || invoice.gstType === 'PERSONAL') ? `
+            ${!isPersonalBilling && (invoice.gstType === 'NGST') ? `
               <div class="gst-breakdown">
                 <div class="gst-row">
                   <span class="gst-label">GST (${(invoice.gstRate || 0).toFixed(1)}%)</span>
@@ -771,15 +774,17 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
       </div>
 
       <!-- Payment Terms -->
-      <div class="payment-terms">
-        <div class="payment-terms-box">
-          <h4 class="payment-terms-title">Payment Terms</h4>
-          <div class="payment-terms-content">
-            <p>Kindly release the payment towards the bill on or before the 3rd of this month.</p>
-            <p>Interest at 24% per annum will be charged on all outstanding amounts beyond the due date.</p>
+      ${!isPersonalBilling ? `
+        <div class="payment-terms">
+          <div class="payment-terms-box">
+            <h4 class="payment-terms-title">Payment Terms</h4>
+            <div class="payment-terms-content">
+              <p>Kindly release the payment towards the bill on or before the 3rd of this month.</p>
+              <p>Interest at 24% per annum will be charged on all outstanding amounts beyond the due date.</p>
+            </div>
           </div>
         </div>
-      </div>
+      ` : ''}
 
       <!-- Authorized Signatory -->
       <div class="signature-section">

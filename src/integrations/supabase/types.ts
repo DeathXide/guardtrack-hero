@@ -211,6 +211,7 @@ export type Database = {
           gst_number: string | null
           id: string
           pan_number: string | null
+          personal_billing_names: Json | null
           updated_at: string
         }
         Insert: {
@@ -228,6 +229,7 @@ export type Database = {
           gst_number?: string | null
           id?: string
           pan_number?: string | null
+          personal_billing_names?: Json | null
           updated_at?: string
         }
         Update: {
@@ -245,6 +247,7 @@ export type Database = {
           gst_number?: string | null
           id?: string
           pan_number?: string | null
+          personal_billing_names?: Json | null
           updated_at?: string
         }
         Relationships: []
@@ -688,6 +691,7 @@ export type Database = {
           gst_type: string
           id: string
           organization_name: string
+          personal_billing_name: string | null
           site_category: string
           site_name: string
           updated_at: string
@@ -702,6 +706,7 @@ export type Database = {
           gst_type: string
           id?: string
           organization_name: string
+          personal_billing_name?: string | null
           site_category: string
           site_name: string
           updated_at?: string
@@ -716,6 +721,7 @@ export type Database = {
           gst_type?: string
           id?: string
           organization_name?: string
+          personal_billing_name?: string | null
           site_category?: string
           site_name?: string
           updated_at?: string

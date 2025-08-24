@@ -14,6 +14,7 @@ export interface CompanySettings {
   gst_number?: string;
   pan_number?: string;
   company_seal_image_url?: string;
+  personal_billing_names?: string[];
   created_at: string;
   updated_at: string;
 }
@@ -31,6 +32,7 @@ export interface UpdateCompanySettingsData {
   gst_number?: string;
   pan_number?: string;
   company_seal_image_url?: string;
+  personal_billing_names?: string[];
 }
 
 export const companyApi = {
@@ -45,7 +47,15 @@ export const companyApi = {
       throw new Error(`Failed to fetch company settings: ${error.message}`);
     }
 
-    return data;
+    // Convert personal_billing_names from JSON to string array
+    const processedData = {
+      ...data,
+      personal_billing_names: Array.isArray(data.personal_billing_names) 
+        ? data.personal_billing_names 
+        : (data.personal_billing_names ? [] : [])
+    };
+
+    return processedData as CompanySettings;
   },
 
   // Update company settings
@@ -71,6 +81,14 @@ export const companyApi = {
       throw new Error(`Failed to update company settings: ${error.message}`);
     }
 
-    return data;
+    // Convert personal_billing_names from JSON to string array
+    const processedData = {
+      ...data,
+      personal_billing_names: Array.isArray(data.personal_billing_names) 
+        ? data.personal_billing_names 
+        : (data.personal_billing_names ? [] : [])
+    };
+
+    return processedData as CompanySettings;
   },
 };
