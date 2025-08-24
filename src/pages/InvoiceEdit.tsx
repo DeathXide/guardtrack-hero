@@ -67,14 +67,13 @@ export default function InvoiceEdit() {
     const item = newLineItems[index];
     if (field === 'quantity' || field === 'manDays' || field === 'ratePerSlot' || field === 'monthlyRate' || field === 'rateType' || field === 'lineTotal') {
       if (item.rateType === 'utility') {
-        // For utility items, lineTotal is directly editable
+        // For utility items, lineTotal is directly editable and no calculation needed
         if (field !== 'lineTotal') {
-          // Don't recalculate for utility items unless lineTotal is being set
           return;
         }
       } else if (item.rateType === 'monthly' && item.monthlyRate) {
         newLineItems[index].lineTotal = item.quantity * item.monthlyRate;
-      } else {
+      } else if (item.rateType === 'shift') {
         newLineItems[index].lineTotal = item.quantity * item.manDays * item.ratePerSlot;
       }
     }
@@ -345,7 +344,7 @@ export default function InvoiceEdit() {
                             className="w-20"
                           />
                         ) : (
-                          <span className="text-muted-foreground text-sm">N/A</span>
+                          <span className="text-muted-foreground text-sm">-</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -379,7 +378,7 @@ export default function InvoiceEdit() {
                             placeholder="Amount"
                           />
                         ) : (
-                          formatCurrency(item.lineTotal)
+                          <span>{formatCurrency(item.lineTotal)}</span>
                         )}
                       </TableCell>
                       <TableCell>
