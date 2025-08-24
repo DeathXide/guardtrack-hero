@@ -130,11 +130,11 @@ export async function calculateInvoiceFromSite(
       // Generate description with day/night slot information
       let description = slot.role;
       if (slot.daySlots > 0 && slot.nightSlots > 0) {
-        description += ` (${slot.daySlots} day, ${slot.nightSlots} night)`;
+        description += ` - [${slot.daySlots} Day, ${slot.nightSlots} Night]`;
       } else if (slot.daySlots > 0) {
-        description += ` (day)`;
+        description += " - [Day]";
       } else if (slot.nightSlots > 0) {
-        description += ` (night)`;
+        description += " - [Night]";
       }
 
       lineItems.push({
