@@ -29,6 +29,7 @@ export interface Site {
   siteType: string;
   staffingSlots: StaffingSlot[];
   personalBillingName?: string;
+  status?: 'active' | 'inactive' | 'custom';
   // Legacy fields for backward compatibility
   location?: string;
   daySlots?: number;

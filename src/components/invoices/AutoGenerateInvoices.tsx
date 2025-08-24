@@ -45,8 +45,10 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
       ]);
       
       setCompanySettings(companyData);
-      setSites(sitesData);
-      setSelectedSites(new Set(sitesData.map(site => site.id))); // Select all sites by default
+      // Filter only active sites for auto-generation
+      const activeSites = sitesData.filter(site => !site.status || site.status === 'active');
+      setSites(activeSites);
+      setSelectedSites(new Set(activeSites.map(site => site.id))); // Select all active sites by default
       setSitesLoaded(true);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -92,11 +94,13 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
     try {
       const selectedSiteData = sites.filter(site => selectedSites.has(site.id));
       let createdCount = 0;
+      let skippedCount = 0;
 
       for (const siteData of selectedSiteData) {
         // Check if site has staffing requirements
         if (!siteData.staffing_requirements || siteData.staffing_requirements.length === 0) {
           console.warn(`Skipping site ${siteData.site_name} - no staffing requirements defined`);
+          skippedCount++;
           continue;
         }
 
@@ -104,35 +108,50 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
         const totalSlots = siteData.staffing_requirements.reduce((sum, req) => sum + req.day_slots + req.night_slots, 0);
         if (totalSlots === 0) {
           console.warn(`Skipping site ${siteData.site_name} - no slots configured`);
+          skippedCount++;
           continue;
         }
 
-        // Convert to our Site format for invoice calculation
-        const site = convertSiteToInvoiceFormat(siteData);
-        
-        const companyData = {
-          company_name: companySettings.company_name,
-          gst_number: companySettings.gst_number
-        };
+        try {
+          // Convert to our Site format for invoice calculation
+          const site = convertSiteToInvoiceFormat(siteData);
+          
+          const companyData = {
+            company_name: companySettings.company_name,
+            gst_number: companySettings.gst_number
+          };
 
-        const invoiceData = await calculateInvoiceFromSite(
-          site, 
-          periodFrom, 
-          periodTo, 
-          companyData
-        );
-        
-        const newInvoice = await createInvoiceInDB({
-          ...invoiceData,
-          status: 'draft' as const
-        });
-        
-        createdCount++;
+          const invoiceData = await calculateInvoiceFromSite(
+            site, 
+            periodFrom, 
+            periodTo, 
+            companyData
+          );
+          
+          const newInvoice = await createInvoiceInDB({
+            ...invoiceData,
+            status: 'draft' as const
+          });
+          
+          createdCount++;
+        } catch (error: any) {
+          if (error.message?.includes('An invoice already exists for this site and month period')) {
+            console.warn(`Skipping site ${siteData.site_name} - invoice already exists for this month`);
+            skippedCount++;
+            continue;
+          }
+          throw error; // Re-throw other errors
+        }
       }
 
       if (createdCount > 0) {
-        toast.success(`Created ${createdCount} invoice(s) successfully`);
+        const message = skippedCount > 0 
+          ? `Created ${createdCount} invoice(s) successfully. ${skippedCount} site(s) skipped (already have invoices for this month or missing requirements).`
+          : `Created ${createdCount} invoice(s) successfully`;
+        toast.success(message);
         onInvoicesCreated();
+      } else if (skippedCount > 0) {
+        toast.warning(`No new invoices were created. ${skippedCount} site(s) either already have invoices for this month or are missing staffing requirements.`);
       } else {
         toast.warning('No invoices were created. Please ensure sites have staffing requirements configured.');
       }
@@ -183,7 +202,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated }: AutoGenerate
               <Alert>
                 <FileText className="h-4 w-4" />
                 <AlertDescription>
-                  No sites found. Please create some sites with staffing requirements first before generating invoices.
+                  No active sites found. Please ensure you have active sites with staffing requirements before generating invoices.
                 </AlertDescription>
               </Alert>
             ) : (

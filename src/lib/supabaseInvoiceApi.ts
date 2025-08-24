@@ -12,6 +12,7 @@ export interface SiteWithStaffing {
   address_line3: string;
   site_category: string;
   personal_billing_name?: string;
+  status?: 'active' | 'inactive' | 'custom';
   staffing_requirements: Array<{
     id: string;
     role_type: string;
@@ -50,6 +51,7 @@ export async function fetchSitesWithStaffing(): Promise<SiteWithStaffing[]> {
       address_line3,
       site_category,
       personal_billing_name,
+      status,
       staffing_requirements (
         id,
         role_type,
@@ -64,7 +66,7 @@ export async function fetchSitesWithStaffing(): Promise<SiteWithStaffing[]> {
     throw error;
   }
 
-  return sites || [];
+  return (sites || []) as SiteWithStaffing[];
 }
 
 export async function fetchCompanySettings(): Promise<CompanySettings | null> {
@@ -104,6 +106,7 @@ export function convertSiteToInvoiceFormat(site: SiteWithStaffing): Site {
     siteType: site.site_category,
     staffingSlots,
     personalBillingName: site.personal_billing_name,
+    status: site.status || 'active',
     created_at: new Date().toISOString()
   };
 }

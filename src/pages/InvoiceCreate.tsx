@@ -50,7 +50,9 @@ export default function InvoiceCreate() {
   const loadSites = async () => {
     try {
       const data = await fetchSites();
-      setSites(data);
+      // Filter out custom sites from the regular create invoice page
+      const regularSites = data.filter(site => !site.status || site.status !== 'custom');
+      setSites(regularSites);
     } catch (error) {
       console.error('Error loading sites:', error);
       toast.error('Failed to load sites');
@@ -127,9 +129,13 @@ export default function InvoiceCreate() {
       const newInvoice = await createInvoiceInDB(invoiceData);
       toast.success('Invoice created successfully');
       navigate(`/invoices/${newInvoice.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating invoice:', error);
-      toast.error('Failed to create invoice');
+      if (error.message?.includes('An invoice already exists for this site and month period')) {
+        toast.error('An invoice already exists for this site and month. Only one invoice per site per month is allowed.');
+      } else {
+        toast.error('Failed to create invoice');
+      }
     } finally {
       setLoading(false);
     }

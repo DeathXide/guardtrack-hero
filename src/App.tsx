@@ -19,6 +19,7 @@ import Invoices from "./pages/Invoices";
 import InvoiceCreate from "./pages/InvoiceCreate";
 import InvoiceView from "./pages/InvoiceView";
 import InvoiceEdit from "./pages/InvoiceEdit";
+import CustomInvoiceForm from "./components/invoices/CustomInvoiceForm";
 import CompanySettings from "./pages/CompanySettings";
 import NotFound from "./pages/NotFound";
 
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/schedule" element={<DashboardLayout><Schedule /></DashboardLayout>} />
             <Route path="/invoices" element={<DashboardLayout><Invoices /></DashboardLayout>} />
             <Route path="/invoices/create" element={<DashboardLayout><InvoiceCreate /></DashboardLayout>} />
+            <Route path="/invoices/create-custom" element={<DashboardLayout><CustomInvoiceForm /></DashboardLayout>} />
             <Route path="/invoices/:id" element={<DashboardLayout><InvoiceView /></DashboardLayout>} />
             <Route path="/invoices/:id/edit" element={<DashboardLayout><InvoiceEdit /></DashboardLayout>} />
             <Route path="/reports" element={<DashboardLayout><Reports /></DashboardLayout>} />

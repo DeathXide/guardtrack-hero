@@ -202,10 +202,16 @@ export default function Invoices() {
               <AutoGenerateInvoices onInvoicesCreated={handleInvoicesCreated} />
             </DialogContent>
           </Dialog>
-          <Button onClick={() => navigate('/invoices/create')} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create Invoice
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => navigate('/invoices/create')} variant="outline" className="gap-2">
+              <Plus className="h-4 w-4" />
+              Create Invoice
+            </Button>
+            <Button onClick={() => navigate('/invoices/create-custom')} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Create Custom
+            </Button>
+          </div>
         </div>
       </div>
 
