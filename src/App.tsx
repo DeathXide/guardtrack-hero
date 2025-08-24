@@ -11,6 +11,7 @@ import Header from "@/components/layout/Header";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import SitesNew from "./pages/SitesNew";
+import SiteDetail from "./pages/SiteDetail";
 import Guards from "./pages/Guards";
 import Attendance from "./pages/Attendance";
 import Schedule from "./pages/Schedule";
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
             <Route path="/sites" element={<DashboardLayout><SitesNew /></DashboardLayout>} />
+            <Route path="/sites/:id" element={<DashboardLayout><SiteDetail /></DashboardLayout>} />
             <Route path="/guards" element={<DashboardLayout><Guards /></DashboardLayout>} />
             <Route path="/attendance" element={<DashboardLayout><Attendance /></DashboardLayout>} />
             <Route path="/schedule" element={<DashboardLayout><Schedule /></DashboardLayout>} />

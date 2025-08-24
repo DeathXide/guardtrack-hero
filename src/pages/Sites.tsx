@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchSites, createSite, updateSite, deleteSite, formatCurrency } from '@/lib/supabaseService';
 import { PageLoader } from '@/components/ui/loader';
-import UtilityChargesFormSection from '@/components/sites/UtilityChargesFormSection';
+import SitesTable from '@/components/sites/SitesTable';
 
 const Sites = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -242,69 +242,10 @@ const Sites = () => {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredSites.length === 0 ? (
-          <p className="col-span-full text-center py-10 text-muted-foreground">
-            No sites found. Try a different search term or add a new site.
-          </p>
-        ) : (
-          filteredSites.map(site => (
-            <Card key={site.id} className="overflow-hidden border border-border/60">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between">
-                  <CardTitle>{site.name}</CardTitle>
-                  <div className="flex gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => handleEditSite(site)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-destructive"
-                      onClick={() => handleDeleteClick(site.id)}
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <CardDescription>{site.location}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  
-                  <div className="flex flex-col gap-2">
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                        {site.daySlots} Day Slots
-                      </Badge>
-                      <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                        {site.nightSlots} Night Slots
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex items-center text-sm mt-2">
-                      <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Budget:</span>
-                      <span className="font-medium ml-2">{formatCurrency(site.payRate)}</span>
-                    </div>
-                    
-                    <div className="flex items-center text-sm">
-                      <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Per Shift:</span>
-                      <span className="font-medium ml-2">{formatCurrency(getPayRatePerShift(site))}</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+      <SitesTable 
+        onCreateSite={() => setIsDialogOpen(true)}
+        onEditSite={handleEditSite}
+      />
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
@@ -369,14 +310,6 @@ const Sites = () => {
                   onChange={handleInputChange}
                 />
               </div>
-            </div>
-            
-            {/* Utility Charges Section - show for both new and existing sites */}
-            <div className="pt-4 border-t">
-              <UtilityChargesFormSection 
-                siteId={isEditMode ? newSite.id : null} 
-                siteName={newSite.name || 'New Site'}
-              />
             </div>
           </div>
           <DialogFooter>
