@@ -15,9 +15,16 @@ import { SiteUtilityCharge, CreateUtilityChargeData } from '@/types/utility';
 interface UtilityChargesFormSectionProps {
   siteId: string | null;
   siteName: string;
+  temporaryCharges?: Omit<CreateUtilityChargeData, 'site_id'>[];
+  onTemporaryChargesChange?: (charges: Omit<CreateUtilityChargeData, 'site_id'>[]) => void;
 }
 
-const UtilityChargesFormSection: React.FC<UtilityChargesFormSectionProps> = ({ siteId, siteName }) => {
+const UtilityChargesFormSection: React.FC<UtilityChargesFormSectionProps> = ({ 
+  siteId, 
+  siteName, 
+  temporaryCharges = [], 
+  onTemporaryChargesChange 
+}) => {
   const [isAddingUtility, setIsAddingUtility] = useState(false);
   const [editingUtility, setEditingUtility] = useState<SiteUtilityCharge | null>(null);
   const { toast } = useToast();
@@ -36,6 +43,18 @@ const UtilityChargesFormSection: React.FC<UtilityChargesFormSectionProps> = ({ s
     queryFn: () => siteId ? getUtilityChargesForSite(siteId) : Promise.resolve([]),
     enabled: !!siteId,
   });
+
+  // Use either existing utility charges or temporary charges for creation mode
+  const displayCharges = siteId 
+    ? utilityCharges 
+    : temporaryCharges.map((charge, index) => ({
+        ...charge,
+        id: `temp-${index}`,
+        site_id: 'temp',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
 
   // Create utility charge mutation
   const createMutation = useMutation({
@@ -113,16 +132,42 @@ const UtilityChargesFormSection: React.FC<UtilityChargesFormSectionProps> = ({ s
   };
 
   const handleEdit = (utility: SiteUtilityCharge) => {
-    setEditingUtility(utility);
-    setFormData({
-      description: utility.description,
-      amount: utility.amount,
-    });
-    setIsAddingUtility(true);
+    if (!siteId && onTemporaryChargesChange) {
+      // Handle temporary charge editing
+      const index = temporaryCharges.findIndex((_, i) => `temp-${i}` === utility.id);
+      if (index !== -1) {
+        setEditingUtility(utility);
+        setFormData({
+          description: utility.description,
+          amount: utility.amount,
+        });
+        setIsAddingUtility(true);
+      }
+    } else {
+      setEditingUtility(utility);
+      setFormData({
+        description: utility.description,
+        amount: utility.amount,
+      });
+      setIsAddingUtility(true);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    deleteMutation.mutate(id);
+  const handleDelete = (utilityId: string) => {
+    if (!siteId && onTemporaryChargesChange) {
+      // Handle temporary charge deletion
+      const index = temporaryCharges.findIndex((_, i) => `temp-${i}` === utilityId);
+      if (index !== -1) {
+        const updatedCharges = temporaryCharges.filter((_, i) => i !== index);
+        onTemporaryChargesChange(updatedCharges);
+        toast({
+          title: "Utility Charge Removed",
+          description: "The temporary utility charge has been removed",
+        });
+      }
+    } else {
+      deleteMutation.mutate(utilityId);
+    }
   };
 
   const handleFormReset = () => {
@@ -132,34 +177,55 @@ const UtilityChargesFormSection: React.FC<UtilityChargesFormSectionProps> = ({ s
   };
 
   const handleSubmit = () => {
-    if (!siteId) {
+    if (!formData.description.trim()) {
       toast({
-        title: "Site Required",
-        description: "Please save the site first before adding utility charges",
+        title: "Validation Error",
+        description: "Please enter a description for the utility charge",
         variant: "destructive"
       });
       return;
     }
 
-    if (!formData.description || formData.amount <= 0) {
+    if (formData.amount <= 0) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in description and amount",
+        title: "Validation Error", 
+        description: "Please enter a valid amount",
         variant: "destructive"
       });
       return;
     }
 
-    if (editingUtility) {
-      updateMutation.mutate({ 
-        id: editingUtility.id, 
-        data: formData 
+    if (!siteId && onTemporaryChargesChange) {
+      // Handle temporary charges for site creation
+      if (editingUtility) {
+        const index = temporaryCharges.findIndex((_, i) => `temp-${i}` === editingUtility.id);
+        if (index !== -1) {
+          const updatedCharges = [...temporaryCharges];
+          updatedCharges[index] = formData;
+          onTemporaryChargesChange(updatedCharges);
+        }
+      } else {
+        onTemporaryChargesChange([...temporaryCharges, formData]);
+      }
+      
+      toast({
+        title: editingUtility ? "Utility Charge Updated" : "Utility Charge Added",
+        description: `${formData.description} has been ${editingUtility ? 'updated' : 'added'} temporarily`,
       });
-    } else {
-      createMutation.mutate({
-        site_id: siteId,
-        ...formData
-      });
+      handleFormReset();
+    } else if (siteId) {
+      // Handle persisted charges for existing sites
+      if (editingUtility) {
+        updateMutation.mutate({ 
+          id: editingUtility.id, 
+          data: formData 
+        });
+      } else {
+        createMutation.mutate({
+          site_id: siteId,
+          ...formData
+        });
+      }
     }
   };
 
@@ -184,7 +250,6 @@ const UtilityChargesFormSection: React.FC<UtilityChargesFormSectionProps> = ({ s
           <Button 
             onClick={() => setIsAddingUtility(true)} 
             size="sm"
-            disabled={!siteId}
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Utility
@@ -195,19 +260,19 @@ const UtilityChargesFormSection: React.FC<UtilityChargesFormSectionProps> = ({ s
         {/* Existing Utility Charges */}
         {isLoading ? (
           <div className="text-center py-4">Loading utility charges...</div>
-        ) : utilityCharges.length === 0 ? (
+        ) : displayCharges.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No utility charges configured</p>
             <p className="text-sm">
               {siteId 
                 ? "Add utility charges to include them in invoices" 
-                : "Save the site first to configure utility charges"}
+                : "Add utility charges that will be created when the site is saved"}
             </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {utilityCharges.map((utility) => (
+            {displayCharges.map((utility) => (
               <div key={utility.id} className="flex items-center justify-between p-3 border rounded-lg bg-card">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${getUtilityColor()}`}>

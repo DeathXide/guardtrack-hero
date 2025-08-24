@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { sitesApi, CreateSiteData, UpdateSiteData, SiteDB, StaffingRequirementDB } from "@/lib/sitesApi";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { companyApi } from "@/lib/companyApi";
+import { createUtilityCharge } from "@/lib/utilityChargesApi";
+import { CreateUtilityChargeData } from "@/types/utility";
 import SitesTable from '@/components/sites/SitesTable';
 import UtilityChargesFormSection from '@/components/sites/UtilityChargesFormSection';
 
@@ -74,6 +76,7 @@ export default function SitesNew() {
   const [formData, setFormData] = useState(initialFormState);
   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
   const [personalBillingNames, setPersonalBillingNames] = useState<string[]>([]);
+  const [temporaryUtilityCharges, setTemporaryUtilityCharges] = useState<Omit<CreateUtilityChargeData, 'site_id'>[]>([]);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -94,8 +97,27 @@ export default function SitesNew() {
   // Create site mutation
   const createSiteMutation = useMutation({
     mutationFn: sitesApi.createSite,
-    onSuccess: () => {
+    onSuccess: async (newSite) => {
+      // Create utility charges if any exist
+      if (temporaryUtilityCharges.length > 0) {
+        try {
+          await Promise.all(
+            temporaryUtilityCharges.map(utilityData =>
+              createUtilityCharge({ ...utilityData, site_id: newSite.id })
+            )
+          );
+        } catch (error) {
+          console.error('Error creating utility charges:', error);
+          toast({
+            title: "Warning",
+            description: "Site created but some utility charges failed to save.",
+            variant: "destructive",
+          });
+        }
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['sites'] });
+      queryClient.invalidateQueries({ queryKey: ['utility-charges'] });
       toast({
         title: "Success",
         description: "Site created successfully!",
@@ -222,6 +244,7 @@ export default function SitesNew() {
     setSelectedSiteId("");
     setFormData(initialFormState);
     setValidationErrors(new Set());
+    setTemporaryUtilityCharges([]);
   };
 
   const handleSubmit = () => {
@@ -525,11 +548,13 @@ export default function SitesNew() {
 
               <Separator />
 
-              {/* Utility Charges - visible in both create and edit; adding requires saved site */}
+              {/* Utility Charges - visible in both create and edit */}
               <div className="pt-2">
                 <UtilityChargesFormSection 
                   siteId={isEditMode ? selectedSiteId : null}
                   siteName={formData.site_name || 'New Site'}
+                  temporaryCharges={isEditMode ? undefined : temporaryUtilityCharges}
+                  onTemporaryChargesChange={isEditMode ? undefined : setTemporaryUtilityCharges}
                 />
               </div>
             </div>
