@@ -63,6 +63,22 @@ export default function InvoiceEdit() {
     const newLineItems = [...lineItems];
     newLineItems[index] = { ...newLineItems[index], [field]: value };
     
+    // Handle rate type switching
+    if (field === 'rateType') {
+      const item = newLineItems[index];
+      if (value === 'monthly') {
+        // If switching to monthly and no monthlyRate set, use current calculation to derive it
+        if (!item.monthlyRate && item.ratePerSlot && item.quantity && item.manDays) {
+          newLineItems[index].monthlyRate = (item.lineTotal || (item.quantity * item.manDays * item.ratePerSlot)) / item.quantity;
+        }
+      } else if (value === 'shift') {
+        // If switching to shift and no ratePerSlot set, derive it from monthlyRate
+        if (!item.ratePerSlot && item.monthlyRate && item.quantity && item.manDays) {
+          newLineItems[index].ratePerSlot = (item.lineTotal || (item.quantity * item.monthlyRate)) / (item.quantity * item.manDays);
+        }
+      }
+    }
+    
     // Recalculate line total based on rate type
     const item = newLineItems[index];
     if (field === 'quantity' || field === 'manDays' || field === 'ratePerSlot' || field === 'monthlyRate' || field === 'rateType') {
