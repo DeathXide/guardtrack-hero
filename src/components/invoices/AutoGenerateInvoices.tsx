@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { FileText, Calendar, Building2, Wand2, CheckSquare, X } from 'lucide-react';
+import { FileText, Calendar, Building2, Wand2, CheckSquare, X, Filter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { fetchSitesWithStaffing, fetchCompanySettings, convertSiteToInvoiceFormat, SiteWithStaffing, CompanySettings } from '@/lib/supabaseInvoiceApi';
 import { createInvoiceInDB, checkSiteHasInvoiceForMonth } from '@/lib/supabaseInvoiceApiNew';
 import { calculateInvoiceFromSite, formatCurrency } from '@/lib/invoiceUtils';
@@ -20,6 +21,8 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
   const [sites, setSites] = useState<SiteWithStaffing[]>([]);
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   const [selectedSites, setSelectedSites] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [gstTypeFilter, setGstTypeFilter] = useState<string>('all');
   const [periodFrom, setPeriodFrom] = useState('');
   const [periodTo, setPeriodTo] = useState('');
   const [loading, setLoading] = useState(false);
@@ -69,6 +72,19 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
     }
   };
 
+  // Filter sites based on status and GST type filters
+  const filteredSites = sites.filter(site => {
+    const matchesStatus = statusFilter === 'all' || (site.status || 'active') === statusFilter;
+    const matchesGstType = gstTypeFilter === 'all' || site.gst_type === gstTypeFilter;
+    return matchesStatus && matchesGstType;
+  });
+
+  // Update selected sites when filters change
+  useEffect(() => {
+    const filteredIds = filteredSites.map(site => site.id);
+    setSelectedSites(prev => new Set([...prev].filter(id => filteredIds.includes(id))));
+  }, [statusFilter, gstTypeFilter, sites]);
+
   const toggleSiteSelection = (siteId: string) => {
     const newSelection = new Set(selectedSites);
     if (newSelection.has(siteId)) {
@@ -80,7 +96,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
   };
 
   const selectAllSites = () => {
-    setSelectedSites(new Set(sites.map(site => site.id)));
+    setSelectedSites(new Set(filteredSites.map(site => site.id)));
   };
 
   const clearSelection = () => {
@@ -105,7 +121,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
 
     setLoading(true);
     try {
-      const selectedSiteData = sites.filter(site => selectedSites.has(site.id));
+      const selectedSiteData = filteredSites.filter(site => selectedSites.has(site.id));
       let createdCount = 0;
       let skippedCount = 0;
 
@@ -193,6 +209,22 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
     }, 0);
   };
 
+  const statusOptions = [
+    { value: 'all', label: 'All Status' },
+    { value: 'active', label: 'Active' },
+    { value: 'inactive', label: 'Inactive' },
+    { value: 'temp', label: 'Temporary' }
+  ];
+
+  const gstTypeOptions = [
+    { value: 'all', label: 'All GST Types' },
+    { value: 'GST', label: 'Standard GST' },
+    { value: 'IGST', label: 'Inter-State GST' },
+    { value: 'NGST', label: 'No GST' },
+    { value: 'RCM', label: 'Reverse Charge' },
+    { value: 'PERSONAL', label: 'Personal Billing' }
+  ];
+
   return (
     <Card>
       <CardHeader>
@@ -247,17 +279,64 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
                   </div>
                 </div>
 
+                {/* Filters */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    <Label className="text-base font-medium">Filter Sites</Label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Site Status</Label>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {statusOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>GST Type</Label>
+                      <Select value={gstTypeFilter} onValueChange={setGstTypeFilter}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {gstTypeOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Sites Selection */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-base font-medium">Select Sites to Generate Invoices</Label>
+                    <Label className="text-base font-medium">
+                      Select Sites to Generate Invoices 
+                      {filteredSites.length !== sites.length && (
+                        <span className="text-sm text-muted-foreground ml-2">
+                          ({filteredSites.length} of {sites.length} sites shown)
+                        </span>
+                      )}
+                    </Label>
                     <div className="flex gap-2">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={selectAllSites}
-                        disabled={sites.length === 0}
+                        disabled={filteredSites.length === 0}
                       >
                         <CheckSquare className="h-4 w-4 mr-1" />
                         Select All
@@ -276,7 +355,14 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
                   </div>
 
                   <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {sites.map((site) => {
+                    {filteredSites.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>No sites match the selected filters</p>
+                        <p className="text-sm">Try adjusting your status or GST type filters</p>
+                      </div>
+                    ) : (
+                      filteredSites.map((site) => {
                       const isSelected = selectedSites.has(site.id);
                       const siteTotal = calculateSiteTotal(site);
                       const hasStaffing = site.staffing_requirements && site.staffing_requirements.length > 0;
@@ -318,8 +404,9 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
                             </div>
                           </div>
                         </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
                 </div>
 
