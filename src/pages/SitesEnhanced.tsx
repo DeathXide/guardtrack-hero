@@ -70,7 +70,8 @@ const SitesEnhanced = () => {
       role: 'Security Guard',
       daySlots: 0,
       nightSlots: 0,
-      budgetPerSlot: 0
+      budgetPerSlot: 0,
+      rateType: 'shift'
     };
     setNewSite({
       ...newSite,
@@ -534,35 +535,52 @@ const SitesEnhanced = () => {
                             </Button>
                           </div>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">Role Type</Label>
-                              <Select 
-                                value={slot.role} 
-                                onValueChange={value => updateStaffingSlot(index, 'role', value)}
-                              >
-                                <SelectTrigger className="h-11">
-                                  <SelectValue placeholder="Select role" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {ROLES.map(role => (
-                                    <SelectItem key={role} value={role}>{role}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">Budget per Slot (₹)</Label>
-                              <Input 
-                                type="number" 
-                                min="0" 
-                                placeholder="e.g., 25000"
-                                value={slot.budgetPerSlot}
-                                onChange={e => updateStaffingSlot(index, 'budgetPerSlot', parseInt(e.target.value) || 0)}
-                                className="h-11"
-                              />
-                            </div>
-                          </div>
+                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                             <div className="space-y-2">
+                               <Label className="text-sm font-medium">Role Type</Label>
+                               <Select 
+                                 value={slot.role} 
+                                 onValueChange={value => updateStaffingSlot(index, 'role', value)}
+                               >
+                                 <SelectTrigger className="h-11">
+                                   <SelectValue placeholder="Select role" />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                   {ROLES.map(role => (
+                                     <SelectItem key={role} value={role}>{role}</SelectItem>
+                                   ))}
+                                 </SelectContent>
+                               </Select>
+                             </div>
+                             <div className="space-y-2">
+                               <Label className="text-sm font-medium">Billing Type</Label>
+                               <Select 
+                                 value={slot.rateType} 
+                                 onValueChange={value => updateStaffingSlot(index, 'rateType', value)}
+                               >
+                                 <SelectTrigger className="h-11">
+                                   <SelectValue placeholder="Select billing type" />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                   <SelectItem value="shift">Per Shift</SelectItem>
+                                   <SelectItem value="monthly">Monthly</SelectItem>
+                                 </SelectContent>
+                               </Select>
+                             </div>
+                             <div className="space-y-2">
+                               <Label className="text-sm font-medium">
+                                 {slot.rateType === 'monthly' ? 'Monthly Rate (₹)' : 'Rate per Slot (₹)'}
+                               </Label>
+                               <Input 
+                                 type="number" 
+                                 min="0" 
+                                 placeholder={slot.rateType === 'monthly' ? 'e.g., 25000' : 'e.g., 1500'}
+                                 value={slot.budgetPerSlot}
+                                 onChange={e => updateStaffingSlot(index, 'budgetPerSlot', parseInt(e.target.value) || 0)}
+                                 className="h-11"
+                               />
+                             </div>
+                           </div>
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">

@@ -19,6 +19,7 @@ export interface SiteWithStaffing {
     day_slots: number;
     night_slots: number;
     budget_per_slot: number;
+    rate_type: string;
   }>;
 }
 
@@ -57,7 +58,8 @@ export async function fetchSitesWithStaffing(): Promise<SiteWithStaffing[]> {
         role_type,
         day_slots,
         night_slots,
-        budget_per_slot
+        budget_per_slot,
+        rate_type
       )
     `);
 
@@ -91,7 +93,8 @@ export function convertSiteToInvoiceFormat(site: SiteWithStaffing): Site {
     role: req.role_type as 'Security Guard' | 'Supervisor' | 'Housekeeping',
     daySlots: req.day_slots,
     nightSlots: req.night_slots,
-    budgetPerSlot: Number(req.budget_per_slot)
+    budgetPerSlot: Number(req.budget_per_slot),
+    rateType: (req.rate_type || 'shift') as 'monthly' | 'shift'
   }));
 
   return {

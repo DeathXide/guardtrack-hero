@@ -300,23 +300,37 @@ export default function InvoiceView() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {invoice.lineItems.map((item, index) => {
-                          const fromDate = new Date(invoice.periodFrom);
-                          const toDate = new Date(invoice.periodTo);
-                          const timeDiff = toDate.getTime() - fromDate.getTime();
-                          const daysInPeriod = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
-                          const manDays = daysInPeriod * item.quantity;
-                          return (
-                            <TableRow key={item.id} className={index % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-                              <TableCell className="text-center text-sm text-muted-foreground">{index + 1}</TableCell>
-                              <TableCell className="text-sm font-medium">{item.description}</TableCell>
-                              <TableCell className="text-center text-sm font-medium">{item.quantity}</TableCell>
-                              <TableCell className="text-center text-sm font-medium">{manDays}</TableCell>
-                              <TableCell className="text-right text-sm font-mono">{formatCurrency(item.rateType === 'monthly' ? (item.monthlyRate || 0) : item.ratePerSlot)}</TableCell>
-                              <TableCell className="text-right text-sm font-mono font-semibold">{formatCurrency(item.lineTotal)}</TableCell>
-                            </TableRow>
-                          );
-                        })}
+                         {invoice.lineItems.map((item, index) => {
+                           const fromDate = new Date(invoice.periodFrom);
+                           const toDate = new Date(invoice.periodTo);
+                           const timeDiff = toDate.getTime() - fromDate.getTime();
+                           const daysInPeriod = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+                           const isUtility = item.rateType === 'utility';
+                           
+                           return (
+                             <TableRow key={item.id} className={index % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+                               <TableCell className="text-center text-sm text-muted-foreground">{index + 1}</TableCell>
+                               {isUtility ? (
+                                 <>
+                                   <TableCell colSpan={4} className="text-sm font-medium">{item.description}</TableCell>
+                                   <TableCell className="text-right text-sm font-mono font-semibold">{formatCurrency(item.lineTotal)}</TableCell>
+                                 </>
+                               ) : (
+                                 <>
+                                   <TableCell className="text-sm font-medium">{item.description}</TableCell>
+                                   <TableCell className="text-center text-sm font-medium">{item.quantity}</TableCell>
+                                   <TableCell className="text-center text-sm font-medium">
+                                     {item.rateType === 'monthly' ? '-' : daysInPeriod * item.quantity}
+                                   </TableCell>
+                                   <TableCell className="text-right text-sm font-mono">
+                                     {formatCurrency(item.rateType === 'monthly' ? (item.monthlyRate || 0) : item.ratePerSlot)}
+                                   </TableCell>
+                                   <TableCell className="text-right text-sm font-mono font-semibold">{formatCurrency(item.lineTotal)}</TableCell>
+                                 </>
+                               )}
+                             </TableRow>
+                           );
+                         })}
                       </TableBody>
                     </Table>
                   </div>

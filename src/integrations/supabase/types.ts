@@ -768,6 +768,7 @@ export type Database = {
           day_slots: number
           id: string
           night_slots: number
+          rate_type: string
           role_type: string
           site_id: string
           updated_at: string
@@ -778,6 +779,7 @@ export type Database = {
           day_slots?: number
           id?: string
           night_slots?: number
+          rate_type?: string
           role_type: string
           site_id: string
           updated_at?: string
@@ -788,6 +790,7 @@ export type Database = {
           day_slots?: number
           id?: string
           night_slots?: number
+          rate_type?: string
           role_type?: string
           site_id?: string
           updated_at?: string

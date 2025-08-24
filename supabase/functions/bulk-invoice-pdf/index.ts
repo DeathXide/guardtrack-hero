@@ -659,17 +659,31 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
             </thead>
             <tbody>
               ${invoice.lineItems.map((item: any, index: number) => {
-                const manDays = daysInPeriod * item.quantity;
-                return `
-                  <tr>
-                    <td class="row-number">${index + 1}</td>
-                    <td class="description">${item.description}</td>
-                    <td class="quantity">${item.quantity}</td>
-                    <td class="days">${manDays}</td>
-                    <td class="rate">${formatCurrency(item.ratePerSlot)}</td>
-                    <td class="amount">${formatCurrency(item.lineTotal)}</td>
-                  </tr>
-                `;
+                const isUtility = item.rateType === 'utility';
+                
+                if (isUtility) {
+                  return `
+                    <tr>
+                      <td class="row-number">${index + 1}</td>
+                      <td colspan="4" class="description">${item.description}</td>
+                      <td class="amount">${formatCurrency(item.lineTotal)}</td>
+                    </tr>
+                  `;
+                } else {
+                  const manDays = item.rateType === 'monthly' ? '-' : (daysInPeriod * item.quantity).toString();
+                  const rate = item.rateType === 'monthly' ? (item.monthlyRate || 0) : item.ratePerSlot;
+                  
+                  return `
+                    <tr>
+                      <td class="row-number">${index + 1}</td>
+                      <td class="description">${item.description}</td>
+                      <td class="quantity">${item.quantity}</td>
+                      <td class="days">${manDays}</td>
+                      <td class="rate">${formatCurrency(rate)}</td>
+                      <td class="amount">${formatCurrency(item.lineTotal)}</td>
+                    </tr>
+                  `;
+                }
               }).join('')}
             </tbody>
           </table>

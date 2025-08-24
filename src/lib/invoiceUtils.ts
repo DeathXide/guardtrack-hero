@@ -99,21 +99,15 @@ export async function calculateInvoiceFromSite(
     const totalSlots = slot.daySlots + slot.nightSlots;
     
     if (totalSlots > 0) {
-      // Determine if this is monthly or shift-based billing
-      // If budgetPerSlot is high (>= 15000), treat as monthly rate
-      // Otherwise treat as daily shift rate
-      const isMonthlyRate = slot.budgetPerSlot >= 15000;
-      
+      // Use explicit rate type from the staffing slot
       let lineTotal: number;
-      let rateType: 'monthly' | 'shift';
       let quantity: number;
       let manDays: number;
       let monthlyRate: number | undefined;
       let ratePerSlot: number;
 
-      if (isMonthlyRate) {
+      if (slot.rateType === 'monthly') {
         // Monthly billing
-        rateType = 'monthly';
         quantity = totalSlots;
         manDays = daysDiff;
         monthlyRate = slot.budgetPerSlot;
@@ -121,7 +115,6 @@ export async function calculateInvoiceFromSite(
         lineTotal = totalSlots * slot.budgetPerSlot;
       } else {
         // Shift-based billing
-        rateType = 'shift';
         quantity = totalSlots;
         manDays = daysDiff;
         monthlyRate = undefined;
@@ -143,7 +136,7 @@ export async function calculateInvoiceFromSite(
         id: slot.id,
         role: slot.role,
         shiftType: 'day', // Not relevant anymore since we're combining
-        rateType,
+        rateType: slot.rateType,
         quantity,
         manDays,
         ratePerSlot,

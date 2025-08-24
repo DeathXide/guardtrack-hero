@@ -28,14 +28,16 @@ export let sites: Site[] = [
         role: 'Security Guard',
         daySlots: 4,
         nightSlots: 3,
-        budgetPerSlot: 1500
+        budgetPerSlot: 1500,
+        rateType: 'shift'
       },
       {
         id: '2',
         role: 'Supervisor',
         daySlots: 1,
         nightSlots: 1,
-        budgetPerSlot: 2500
+        budgetPerSlot: 2500,
+        rateType: 'shift'
       }
     ],
     created_at: '2024-08-01T00:00:00Z'
@@ -56,14 +58,16 @@ export let sites: Site[] = [
         role: 'Security Guard',
         daySlots: 6,
         nightSlots: 6,
-        budgetPerSlot: 1400
+        budgetPerSlot: 1400,
+        rateType: 'shift'
       },
       {
         id: '4',
         role: 'Housekeeping',
         daySlots: 2,
         nightSlots: 1,
-        budgetPerSlot: 1200
+        budgetPerSlot: 1200,
+        rateType: 'shift'
       }
     ],
     created_at: '2024-08-01T00:00:00Z'
@@ -84,7 +88,8 @@ export let sites: Site[] = [
         role: 'Security Guard',
         daySlots: 2,
         nightSlots: 2,
-        budgetPerSlot: 1600
+        budgetPerSlot: 1600,
+        rateType: 'shift'
       }
     ],
     created_at: '2024-08-01T00:00:00Z'
