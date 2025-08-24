@@ -65,8 +65,14 @@ export default function InvoiceEdit() {
     
     // Recalculate line total based on rate type
     const item = newLineItems[index];
-    if (field === 'quantity' || field === 'manDays' || field === 'ratePerSlot' || field === 'monthlyRate' || field === 'rateType') {
-      if (item.rateType === 'monthly' && item.monthlyRate) {
+    if (field === 'quantity' || field === 'manDays' || field === 'ratePerSlot' || field === 'monthlyRate' || field === 'rateType' || field === 'lineTotal') {
+      if (item.rateType === 'utility') {
+        // For utility items, lineTotal is directly editable
+        if (field !== 'lineTotal') {
+          // Don't recalculate for utility items unless lineTotal is being set
+          return;
+        }
+      } else if (item.rateType === 'monthly' && item.monthlyRate) {
         newLineItems[index].lineTotal = item.quantity * item.monthlyRate;
       } else {
         newLineItems[index].lineTotal = item.quantity * item.manDays * item.ratePerSlot;
@@ -76,19 +82,35 @@ export default function InvoiceEdit() {
     setLineItems(newLineItems);
   };
 
-  const addLineItem = () => {
-    const newItem: InvoiceLineItem = {
-      id: Date.now().toString(),
-      role: 'Security Guard',
-      shiftType: 'day',
-      rateType: 'shift',
-      quantity: 1,
-      manDays: 30,
-      ratePerSlot: 1500,
-      lineTotal: 45000,
-      description: 'Security Guard - Day Shift'
-    };
-    setLineItems([...lineItems, newItem]);
+  const addLineItem = (itemType: 'service' | 'utility' = 'service') => {
+    if (itemType === 'utility') {
+      const newItem: InvoiceLineItem = {
+        id: Date.now().toString(),
+        role: 'Water Bill',
+        shiftType: 'day',
+        rateType: 'utility',
+        quantity: 1,
+        manDays: 1,
+        ratePerSlot: 0,
+        lineTotal: 0,
+        description: 'Utility Charge',
+        utilityType: 'water'
+      };
+      setLineItems([...lineItems, newItem]);
+    } else {
+      const newItem: InvoiceLineItem = {
+        id: Date.now().toString(),
+        role: 'Security Guard',
+        shiftType: 'day',
+        rateType: 'shift',
+        quantity: 1,
+        manDays: 30,
+        ratePerSlot: 1500,
+        lineTotal: 45000,
+        description: 'Security Guard - Day Shift'
+      };
+      setLineItems([...lineItems, newItem]);
+    }
   };
 
   const removeLineItem = (index: number) => {
@@ -239,7 +261,10 @@ export default function InvoiceEdit() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Line Items</CardTitle>
-                <Button onClick={addLineItem} size="sm">Add Item</Button>
+                <div className="flex gap-2">
+                  <Button onClick={() => addLineItem('service')} size="sm" variant="outline">Add Service</Button>
+                  <Button onClick={() => addLineItem('utility')} size="sm">Add Utility</Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -247,11 +272,11 @@ export default function InvoiceEdit() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Description</TableHead>
-                    <TableHead>Rate Type</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Qty</TableHead>
                     <TableHead>Man Days</TableHead>
                     <TableHead>Rate</TableHead>
-                    <TableHead>Total</TableHead>
+                    <TableHead>Amount</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -267,29 +292,52 @@ export default function InvoiceEdit() {
                         />
                       </TableCell>
                       <TableCell>
-                        <Select 
-                          value={item.rateType} 
-                          onValueChange={(value) => updateLineItem(index, 'rateType', value)}
-                        >
-                          <SelectTrigger className="w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="shift">Shift</SelectItem>
-                            <SelectItem value="monthly">Monthly</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        {item.rateType === 'utility' ? (
+                          <Select 
+                            value={item.role} 
+                            onValueChange={(value) => updateLineItem(index, 'role', value)}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Water Bill">Water</SelectItem>
+                              <SelectItem value="Electricity Bill">Electricity</SelectItem>
+                              <SelectItem value="Maintenance Charges">Maintenance</SelectItem>
+                              <SelectItem value="Other Utility">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Select 
+                            value={item.rateType} 
+                            onValueChange={(value) => updateLineItem(index, 'rateType', value)}
+                          >
+                            <SelectTrigger className="w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="shift">Shift</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
                       </TableCell>
                       <TableCell>
-                        <Input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                          className="w-16"
-                        />
+                        {item.rateType === 'utility' ? (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        ) : (
+                          <Input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value) || 0)}
+                            className="w-16"
+                          />
+                        )}
                       </TableCell>
                       <TableCell>
-                        {item.rateType === 'shift' ? (
+                        {item.rateType === 'utility' ? (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        ) : item.rateType === 'shift' ? (
                           <Input
                             type="number"
                             value={item.manDays}
@@ -301,7 +349,9 @@ export default function InvoiceEdit() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {item.rateType === 'monthly' ? (
+                        {item.rateType === 'utility' ? (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        ) : item.rateType === 'monthly' ? (
                           <Input
                             type="number"
                             value={item.monthlyRate || 0}
@@ -319,7 +369,19 @@ export default function InvoiceEdit() {
                           />
                         )}
                       </TableCell>
-                      <TableCell className="font-medium">{formatCurrency(item.lineTotal)}</TableCell>
+                      <TableCell className="font-medium">
+                        {item.rateType === 'utility' ? (
+                          <Input
+                            type="number"
+                            value={item.lineTotal}
+                            onChange={(e) => updateLineItem(index, 'lineTotal', parseFloat(e.target.value) || 0)}
+                            className="w-24"
+                            placeholder="Amount"
+                          />
+                        ) : (
+                          formatCurrency(item.lineTotal)
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Button
                           variant="ghost"

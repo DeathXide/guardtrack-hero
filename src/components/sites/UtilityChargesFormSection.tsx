@@ -215,7 +215,11 @@ const UtilityChargesFormSection: React.FC<UtilityChargesFormSectionProps> = ({ s
           <div className="text-center py-8 text-muted-foreground">
             <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No utility charges configured</p>
-            <p className="text-sm">Add utility charges to include them in invoices</p>
+            <p className="text-sm">
+              {siteId 
+                ? "Add utility charges to include them in invoices" 
+                : "Save the site first to configure utility charges"}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
