@@ -12,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -30,8 +31,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Edit, Trash, Search, Filter } from 'lucide-react';
-import { fetchSites, deleteSite } from '@/lib/supabaseService';
+import { Plus, Edit, Trash, Search, Filter, MoreVertical, Trash2, Eye } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { sitesApi } from '@/lib/sitesApi';
 import { useToast } from '@/hooks/use-toast';
 import { PageLoader } from '@/components/ui/loader';
 
@@ -47,6 +54,7 @@ interface DatabaseSite {
   status: string;
   created_at: string;
   updated_at: string;
+  staffing_requirements?: any[];
 }
 
 interface SitesTableProps {
@@ -60,7 +68,10 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [gstFilter, setGstFilter] = useState<string>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [selectedSites, setSelectedSites] = useState<Set<string>>(new Set());
+  const [bulkStatusUpdate, setBulkStatusUpdate] = useState<'active' | 'inactive' | 'temp' | ''>('');
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -68,11 +79,11 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
 
   const { data: sites = [], isLoading } = useQuery({
     queryKey: ['sites'],
-    queryFn: fetchSites
+    queryFn: sitesApi.getAllSites
   });
 
   const deleteSiteMutation = useMutation({
-    mutationFn: deleteSite,
+    mutationFn: sitesApi.deleteSite,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sites'] });
       toast({
@@ -91,8 +102,70 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
     }
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (siteIds: string[]) => {
+      await Promise.all(siteIds.map(id => sitesApi.deleteSite(id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+      toast({
+        title: "Sites Deleted",
+        description: `Successfully deleted ${selectedSites.size} sites`,
+      });
+      setBulkDeleteDialogOpen(false);
+      setSelectedSites(new Set());
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete sites: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const bulkStatusUpdateMutation = useMutation({
+    mutationFn: async ({ siteIds, status }: { siteIds: string[], status: 'active' | 'inactive' | 'temp' }) => {
+      const sitesToUpdate = sites.filter(site => siteIds.includes(site.id));
+      await Promise.all(
+        sitesToUpdate.map(site => 
+          sitesApi.updateSite({
+            id: site.id,
+            site_name: site.site_name,
+            organization_name: site.organization_name,
+            gst_number: site.gst_number || '',
+            gst_type: site.gst_type as 'GST' | 'NGST' | 'RCM' | 'PERSONAL',
+            address_line1: site.address_line1 || '',
+            address_line2: site.address_line2 || '',
+            address_line3: site.address_line3 || '',
+            site_category: site.site_category,
+            personal_billing_name: site.personal_billing_name || '',
+            status: status,
+            staffing_requirements: site.staffing_requirements || []
+          })
+        )
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+      toast({
+        title: "Status Updated",
+        description: `Successfully updated status for ${selectedSites.size} sites`,
+      });
+      setSelectedSites(new Set());
+      setBulkStatusUpdate('');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to update status: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  });
+
   // Filter sites based on search and filters
-  const filteredSites = (sites as any[]).filter((site: any) => {
+  const filteredSites = (sites as DatabaseSite[]).filter((site: DatabaseSite) => {
     const matchesSearch = site.site_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       site.organization_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       site.address?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -105,8 +178,8 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
   });
 
   // Get unique values for filters
-  const categories = [...new Set((sites as any[]).map((site: any) => site.site_category).filter(Boolean))];
-  const gstTypes = [...new Set((sites as any[]).map((site: any) => site.gst_type).filter(Boolean))];
+  const categories = [...new Set((sites as DatabaseSite[]).map((site: DatabaseSite) => site.site_category).filter(Boolean))];
+  const gstTypes = [...new Set((sites as DatabaseSite[]).map((site: DatabaseSite) => site.gst_type).filter(Boolean))];
 
   const handleDeleteClick = (siteId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -114,7 +187,7 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
     setDeleteDialogOpen(true);
   };
 
-  const handleEditClick = (site: any, e: React.MouseEvent) => {
+  const handleEditClick = (site: DatabaseSite, e: React.MouseEvent) => {
     e.stopPropagation();
     onEditSite(site);
   };
@@ -127,6 +200,41 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
 
   const handleRowClick = (siteId: string) => {
     navigate(`/sites/${siteId}`);
+  };
+
+  const handleSelectSite = (siteId: string, checked: boolean) => {
+    const newSelection = new Set(selectedSites);
+    if (checked) {
+      newSelection.add(siteId);
+    } else {
+      newSelection.delete(siteId);
+    }
+    setSelectedSites(newSelection);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedSites(new Set(filteredSites.map(site => site.id)));
+    } else {
+      setSelectedSites(new Set());
+    }
+  };
+
+  const handleBulkStatusUpdate = () => {
+    if (bulkStatusUpdate && (bulkStatusUpdate === 'active' || bulkStatusUpdate === 'inactive' || bulkStatusUpdate === 'temp') && selectedSites.size > 0) {
+      bulkStatusUpdateMutation.mutate({
+        siteIds: Array.from(selectedSites),
+        status: bulkStatusUpdate
+      });
+    }
+  };
+
+  const handleBulkDelete = () => {
+    setBulkDeleteDialogOpen(true);
+  };
+
+  const confirmBulkDelete = () => {
+    bulkDeleteMutation.mutate(Array.from(selectedSites));
   };
 
   if (isLoading) {
@@ -224,6 +332,58 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
         </CardContent>
       </Card>
 
+      {/* Bulk Actions Bar */}
+      {selectedSites.size > 0 && (
+        <Card className="bg-accent/50 border-accent">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <span className="font-medium">
+                  {selectedSites.size} sites selected
+                </span>
+                <div className="flex items-center gap-2">
+                  <Select value={bulkStatusUpdate} onValueChange={(value) => setBulkStatusUpdate(value as 'active' | 'inactive' | 'temp' | '')}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="temp">Temporary</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button 
+                    onClick={handleBulkStatusUpdate}
+                    disabled={!bulkStatusUpdate || bulkStatusUpdateMutation.isPending}
+                    size="sm"
+                  >
+                    Update Status
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={handleBulkDelete}
+                  variant="destructive"
+                  size="sm"
+                  disabled={bulkDeleteMutation.isPending}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Selected
+                </Button>
+                <Button 
+                  onClick={() => setSelectedSites(new Set())}
+                  variant="outline"
+                  size="sm"
+                >
+                  Clear Selection
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Results Summary */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
@@ -251,6 +411,13 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={filteredSites.length > 0 && selectedSites.size === filteredSites.length}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all sites"
+                  />
+                </TableHead>
                 <TableHead>Site Name</TableHead>
                 <TableHead>Organization</TableHead>
                 <TableHead>Category</TableHead>
@@ -263,17 +430,24 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
             <TableBody>
               {filteredSites.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     No sites found matching your criteria
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredSites.map((site: any) => (
+                filteredSites.map((site: DatabaseSite) => (
                   <TableRow 
                     key={site.id} 
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleRowClick(site.id)}
                   >
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedSites.has(site.id)}
+                        onCheckedChange={(checked) => handleSelectSite(site.id, checked as boolean)}
+                        aria-label={`Select ${site.site_name}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{site.site_name}</TableCell>
                     <TableCell>{site.organization_name}</TableCell>
                     <TableCell>
@@ -290,13 +464,26 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
                         {site.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRowClick(site.id);
+                          }}
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
                           onClick={(e) => handleEditClick(site, e)}
+                          title="Edit Site"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -305,6 +492,7 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
                           size="icon"
                           className="h-8 w-8 text-destructive"
                           onClick={(e) => handleDeleteClick(site.id, e)}
+                          title="Delete Site"
                         >
                           <Trash className="h-4 w-4" />
                         </Button>
@@ -335,6 +523,28 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
               disabled={deleteSiteMutation.isPending}
             >
               {deleteSiteMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedSites.size} Sites?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete all selected sites and their associated records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmBulkDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={bulkDeleteMutation.isPending}
+            >
+              {bulkDeleteMutation.isPending ? 'Deleting...' : `Delete ${selectedSites.size} Sites`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
