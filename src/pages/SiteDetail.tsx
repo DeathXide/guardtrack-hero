@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, MapPin, Building, Edit } from 'lucide-react';
-import { fetchSites } from '@/lib/supabaseService';
+import { sitesApi } from '@/lib/sitesApi';
 import { PageLoader } from '@/components/ui/loader';
 import UtilityChargesManagement from '@/components/sites/UtilityChargesManagement';
 
@@ -15,7 +15,7 @@ const SiteDetail = () => {
 
   const { data: sites = [], isLoading } = useQuery({
     queryKey: ['sites'],
-    queryFn: fetchSites
+    queryFn: sitesApi.getAllSites
   });
 
   const site = (sites as any[]).find((s: any) => s.id === id);
