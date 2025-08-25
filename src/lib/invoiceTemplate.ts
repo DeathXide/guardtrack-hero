@@ -682,7 +682,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
                   `;
                 } else {
                   // Regular staffing line items - show man days for both monthly and shift-based
-                  const manDays = item.manDays || (daysInPeriod * item.quantity);
+                  const manDays = (item.manDays ?? daysInPeriod) * item.quantity;
                   return `
                     <tr>
                       <td class="row-number">${index + 1}</td>
