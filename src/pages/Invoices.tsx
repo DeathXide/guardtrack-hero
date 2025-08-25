@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, FileText, Eye, Edit, Trash2, Wand2, Download, Calendar } from 'lucide-react';
+import { Search, Filter, FileText, Eye, Edit, Trash2, Wand2, Download, Calendar, CheckSquare, Square } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,8 @@ export default function Invoices() {
   const [loading, setLoading] = useState(true);
   const [autoGenerateOpen, setAutoGenerateOpen] = useState(false);
   const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   useEffect(() => {
     loadInvoices();
@@ -73,6 +75,79 @@ export default function Invoices() {
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('Failed to update status');
+    }
+  };
+
+  // Bulk operations
+  const toggleInvoiceSelection = (invoiceId: string) => {
+    const newSelection = new Set(selectedInvoices);
+    if (newSelection.has(invoiceId)) {
+      newSelection.delete(invoiceId);
+    } else {
+      newSelection.add(invoiceId);
+    }
+    setSelectedInvoices(newSelection);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedInvoices.size === filteredInvoices.length) {
+      setSelectedInvoices(new Set());
+    } else {
+      setSelectedInvoices(new Set(filteredInvoices.map(inv => inv.id)));
+    }
+  };
+
+  const handleBulkStatusUpdate = async (newStatus: string) => {
+    if (selectedInvoices.size === 0) {
+      toast.error('Please select invoices to update');
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      const updatePromises = Array.from(selectedInvoices).map(id => 
+        updateInvoiceInDB(id, { status: newStatus as 'draft' | 'sent' | 'paid' | 'overdue' })
+      );
+      
+      await Promise.all(updatePromises);
+      
+      setInvoices(invoices.map(inv => 
+        selectedInvoices.has(inv.id) ? { ...inv, status: newStatus as 'draft' | 'sent' | 'paid' | 'overdue' } : inv
+      ));
+      
+      setSelectedInvoices(new Set());
+      toast.success(`Updated ${selectedInvoices.size} invoice(s) status to ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating invoices:', error);
+      toast.error('Failed to update invoices');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedInvoices.size === 0) {
+      toast.error('Please select invoices to delete');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${selectedInvoices.size} invoice(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      const deletePromises = Array.from(selectedInvoices).map(id => deleteInvoiceFromDB(id));
+      await Promise.all(deletePromises);
+      
+      setInvoices(invoices.filter(inv => !selectedInvoices.has(inv.id)));
+      setSelectedInvoices(new Set());
+      toast.success(`Deleted ${selectedInvoices.size} invoice(s) successfully`);
+    } catch (error) {
+      console.error('Error deleting invoices:', error);
+      toast.error('Failed to delete invoices');
+    } finally {
+      setBulkActionLoading(false);
     }
   };
 
@@ -303,14 +378,62 @@ export default function Invoices() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Bulk Actions */}
+          {selectedInvoices.size > 0 && (
+            <div className="mb-4 p-4 bg-muted rounded-lg">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium">
+                  {selectedInvoices.size} invoice(s) selected
+                </span>
+                <div className="flex gap-2">
+                  <Select onValueChange={handleBulkStatusUpdate} disabled={bulkActionLoading}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue placeholder="Update Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Set to Draft</SelectItem>
+                      <SelectItem value="sent">Set to Sent</SelectItem>
+                      <SelectItem value="paid">Set to Paid</SelectItem>
+                      <SelectItem value="overdue">Set to Overdue</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={handleBulkDelete}
+                    disabled={bulkActionLoading}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete Selected
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setSelectedInvoices(new Set())}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Invoice #</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Site</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Period</TableHead>
+                <TableHead className="w-12">
+                  <button 
+                    onClick={toggleSelectAll}
+                    className="flex items-center justify-center w-full"
+                  >
+                    {selectedInvoices.size === filteredInvoices.length && filteredInvoices.length > 0 ? 
+                      <CheckSquare className="h-4 w-4" /> : 
+                      <Square className="h-4 w-4" />
+                    }
+                  </button>
+                </TableHead>
+                <TableHead>Site Name</TableHead>
+                <TableHead>GST Type</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
@@ -319,29 +442,33 @@ export default function Invoices() {
             <TableBody>
               {filteredInvoices.map((invoice) => (
                 <TableRow key={invoice.id}>
-                  <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                  <TableCell>{invoice.clientName}</TableCell>
-                  <TableCell>{invoice.siteName}</TableCell>
-                  <TableCell>{new Date(invoice.invoiceDate).toLocaleDateString()}</TableCell>
                   <TableCell>
-                    {new Date(invoice.periodFrom).toLocaleDateString()} - {new Date(invoice.periodTo).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>{formatCurrency(invoice.totalAmount)}</TableCell>
-                  <TableCell>
-                    <Select 
-                      value={invoice.status} 
-                      onValueChange={(newStatus) => handleStatusUpdate(invoice.id, newStatus)}
+                    <button 
+                      onClick={() => toggleInvoiceSelection(invoice.id)}
+                      className="flex items-center justify-center w-full"
                     >
-                      <SelectTrigger className="w-24 h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="sent">Sent</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                        <SelectItem value="overdue">Overdue</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      {selectedInvoices.has(invoice.id) ? 
+                        <CheckSquare className="h-4 w-4" /> : 
+                        <Square className="h-4 w-4" />
+                      }
+                    </button>
+                  </TableCell>
+                  <TableCell className="font-medium">{invoice.siteName}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {invoice.gstType === 'GST' ? 'Standard GST' :
+                       invoice.gstType === 'IGST' ? 'Inter-State GST' :
+                       invoice.gstType === 'NGST' ? 'No GST' :
+                       invoice.gstType === 'RCM' ? 'Reverse Charge' :
+                       invoice.gstType === 'PERSONAL' ? 'Personal' :
+                       invoice.gstType}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-semibold">{formatCurrency(invoice.totalAmount)}</TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusBadgeVariant(invoice.status)}>
+                      {invoice.status.toUpperCase()}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
