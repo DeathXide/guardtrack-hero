@@ -214,7 +214,6 @@ export default function SitesNew() {
     
     if (!formData.site_name.trim()) errors.add("site_name");
     if (!formData.organization_name.trim()) errors.add("organization_name");
-    if (!formData.address_line1.trim()) errors.add("address_line1");
     if (!formData.site_category) errors.add("site_category");
 
     if (errors.size > 0) {
@@ -371,7 +370,7 @@ export default function SitesNew() {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="address_line1">Address Line 1 *</Label>
+                <Label htmlFor="address_line1">Address Line 1</Label>
                 <Input
                   id="address_line1"
                   value={formData.address_line1}

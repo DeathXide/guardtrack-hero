@@ -164,6 +164,14 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
     }
   });
 
+  // Calculate total budget for a site
+  const calculateSiteBudget = (site: DatabaseSite) => {
+    if (!site.staffing_requirements) return 0;
+    return site.staffing_requirements.reduce((total: number, req: any) => 
+      total + (req.budget_per_slot * (req.day_slots + req.night_slots)), 0
+    );
+  };
+  
   // Filter sites based on search and filters
   const filteredSites = (sites as DatabaseSite[]).filter((site: DatabaseSite) => {
     const matchesSearch = site.site_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -421,8 +429,8 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
                 <TableHead>Site Name</TableHead>
                 <TableHead>Organization</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>Address</TableHead>
                 <TableHead>GST Type</TableHead>
+                <TableHead>Budget</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -453,9 +461,11 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
                     <TableCell>
                       <Badge variant="outline">{site.site_category}</Badge>
                     </TableCell>
-                    <TableCell className="max-w-xs truncate">{site.address}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{site.gst_type}</Badge>
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      ₹{calculateSiteBudget(site).toLocaleString()}
                     </TableCell>
                     <TableCell>
                       <Badge 
