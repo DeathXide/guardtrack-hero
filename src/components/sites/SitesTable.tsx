@@ -171,6 +171,18 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
       total + (req.budget_per_slot * (req.day_slots + req.night_slots)), 0
     );
   };
+
+  // Calculate total day slots for a site
+  const calculateDaySlots = (site: DatabaseSite) => {
+    if (!site.staffing_requirements) return 0;
+    return site.staffing_requirements.reduce((total: number, req: any) => total + req.day_slots, 0);
+  };
+
+  // Calculate total night slots for a site
+  const calculateNightSlots = (site: DatabaseSite) => {
+    if (!site.staffing_requirements) return 0;
+    return site.staffing_requirements.reduce((total: number, req: any) => total + req.night_slots, 0);
+  };
   
   // Filter sites based on search and filters
   const filteredSites = (sites as DatabaseSite[]).filter((site: DatabaseSite) => {
@@ -430,6 +442,8 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
                 <TableHead>Organization</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>GST Type</TableHead>
+                <TableHead>Day Slots</TableHead>
+                <TableHead>Night Slots</TableHead>
                 <TableHead>Budget</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
@@ -438,7 +452,7 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
             <TableBody>
               {filteredSites.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                     No sites found matching your criteria
                   </TableCell>
                 </TableRow>
@@ -463,6 +477,12 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{site.gst_type}</Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {calculateDaySlots(site)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {calculateNightSlots(site)}
                     </TableCell>
                     <TableCell className="font-medium">
                       ₹{calculateSiteBudget(site).toLocaleString()}
