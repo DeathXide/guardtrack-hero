@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { sitesApi } from '@/lib/sitesApi';
 import { companyApi } from '@/lib/companyApi';
-import { createInvoiceInDB, checkSiteHasInvoiceForMonth } from '@/lib/supabaseInvoiceApiNew';
+import { createInvoiceInDB, checkSiteHasInvoiceForMonth, checkMultipleSitesHaveInvoiceForMonth } from '@/lib/supabaseInvoiceApiNew';
 import { calculateInvoiceFromSite, formatCurrency } from '@/lib/invoiceUtils';
 import { toast } from 'sonner';
 
@@ -57,14 +57,12 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
       
       // Filter out sites that already have invoices for the selected month
       const [year, month] = selectedMonth.split('-').map(Number);
-      const sitesWithoutInvoices = [];
       
-      for (const site of allSites) {
-        const hasInvoice = await checkSiteHasInvoiceForMonth(site.id, year, month);
-        if (!hasInvoice) {
-          sitesWithoutInvoices.push(site);
-        }
-      }
+      // Batch check for existing invoices instead of sequential calls
+      const siteIds = allSites.map(site => site.id);
+      const sitesWithInvoices = await checkMultipleSitesHaveInvoiceForMonth(siteIds, year, month);
+      
+      const sitesWithoutInvoices = allSites.filter(site => !sitesWithInvoices.has(site.id));
       
       setSites(sitesWithoutInvoices);
       // Don't auto-select all sites - let user choose with filters

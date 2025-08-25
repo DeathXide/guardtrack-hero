@@ -155,6 +155,24 @@ export async function checkSiteHasInvoiceForMonth(siteId: string, year: number, 
   return data && data.length > 0;
 }
 
+export async function checkMultipleSitesHaveInvoiceForMonth(siteIds: string[], year: number, month: number): Promise<Set<string>> {
+  if (siteIds.length === 0) return new Set();
+  
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('site_id')
+    .in('site_id', siteIds)
+    .gte('period_from', `${year}-${String(month).padStart(2, '0')}-01`)
+    .lt('period_from', `${year}-${String(month + 1).padStart(2, '0')}-01`);
+
+  if (error) {
+    console.error('Error checking invoice existence for multiple sites:', error);
+    return new Set();
+  }
+
+  return new Set(data?.map(record => record.site_id) || []);
+}
+
 function convertDbRecordToInvoice(record: InvoiceRow): Invoice {
   return {
     id: record.id,
