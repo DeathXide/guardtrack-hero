@@ -21,6 +21,7 @@ export default function Invoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [gstTypeFilter, setGstTypeFilter] = useState<string>('all');
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -213,13 +214,14 @@ export default function Invoices() {
       invoice.siteName.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
+    const matchesGstType = gstTypeFilter === 'all' || invoice.gstType === gstTypeFilter;
     
     // Filter by selected month
     const invoiceMonth = new Date(invoice.periodFrom);
     const invoiceMonthKey = `${invoiceMonth.getFullYear()}-${String(invoiceMonth.getMonth() + 1).padStart(2, '0')}`;
     const matchesMonth = invoiceMonthKey === selectedMonth;
     
-    return matchesSearch && matchesStatus && matchesMonth;
+    return matchesSearch && matchesStatus && matchesGstType && matchesMonth;
   });
 
   const getStatusBadgeVariant = (status: string) => {
@@ -375,6 +377,20 @@ export default function Invoices() {
                 <SelectItem value="overdue">Overdue</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={gstTypeFilter} onValueChange={setGstTypeFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter by GST type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All GST Types</SelectItem>
+                <SelectItem value="GST">Standard GST</SelectItem>
+                <SelectItem value="IGST">Inter-State GST</SelectItem>
+                <SelectItem value="NGST">No GST</SelectItem>
+                <SelectItem value="RCM">Reverse Charge</SelectItem>
+                <SelectItem value="PERSONAL">Personal</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
         <CardContent>
@@ -501,7 +517,7 @@ export default function Invoices() {
           </Table>
           {filteredInvoices.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              {searchTerm || statusFilter !== 'all' ? 'No invoices match your filters' : 'No invoices found'}
+              {searchTerm || statusFilter !== 'all' || gstTypeFilter !== 'all' ? 'No invoices match your filters' : 'No invoices found'}
             </div>
           )}
         </CardContent>
