@@ -127,20 +127,20 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
       let createdCount = 0;
       let skippedCount = 0;
 
-      for (const siteData of selectedSiteData) {
+      const processSite = async (siteData: any) => {
         // Check if site has staffing requirements
         if (!siteData.staffing_requirements || siteData.staffing_requirements.length === 0) {
           console.warn(`Skipping site ${siteData.site_name} - no staffing requirements defined`);
           skippedCount++;
-          continue;
+          return;
         }
 
         // Calculate total slots to ensure there's something to bill
-        const totalSlots = siteData.staffing_requirements.reduce((sum, req) => sum + req.day_slots + req.night_slots, 0);
+        const totalSlots = siteData.staffing_requirements.reduce((sum: number, req: any) => sum + req.day_slots + req.night_slots, 0);
         if (totalSlots === 0) {
           console.warn(`Skipping site ${siteData.site_name} - no slots configured`);
           skippedCount++;
-          continue;
+          return;
         }
 
         try {
@@ -172,15 +172,15 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
           };
 
           const invoiceData = await calculateInvoiceFromSite(
-            site, 
-            periodFrom, 
-            periodTo, 
+            site,
+            periodFrom,
+            periodTo,
             companyData,
             undefined,
             includeUtilities
           );
           
-          const newInvoice = await createInvoiceInDB({
+          await createInvoiceInDB({
             ...invoiceData,
             status: 'draft' as const
           });
@@ -190,10 +190,17 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
           if (error.message?.includes('An invoice already exists for this site and month period')) {
             console.warn(`Skipping site ${siteData.site_name} - invoice already exists for this month`);
             skippedCount++;
-            continue;
+            return;
           }
           throw error; // Re-throw other errors
         }
+      };
+
+      // Process in parallel batches to speed up generation without overloading the server
+      const concurrency = 5; // tune as needed
+      for (let i = 0; i < selectedSiteData.length; i += concurrency) {
+        const batch = selectedSiteData.slice(i, i + concurrency);
+        await Promise.all(batch.map(processSite));
       }
 
       if (createdCount > 0) {
