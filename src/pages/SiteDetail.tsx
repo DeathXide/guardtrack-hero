@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, MapPin, Building, Edit } from 'lucide-react';
+import { ArrowLeft, MapPin, Building, Edit, Users, IndianRupee } from 'lucide-react';
 import { sitesApi } from '@/lib/sitesApi';
 import { PageLoader } from '@/components/ui/loader';
 import UtilityChargesManagement from '@/components/sites/UtilityChargesManagement';
@@ -19,6 +19,20 @@ const SiteDetail = () => {
   });
 
   const site = (sites as any[]).find((s: any) => s.id === id);
+
+  // Calculate total budget and slots
+  const calculateTotals = () => {
+    if (!site?.staffing_requirements) return { totalBudget: 0, totalSlots: 0, daySlots: 0, nightSlots: 0 };
+    
+    return site.staffing_requirements.reduce((acc: any, req: any) => ({
+      totalBudget: acc.totalBudget + (req.budget_per_slot * (req.day_slots + req.night_slots)),
+      totalSlots: acc.totalSlots + req.day_slots + req.night_slots,
+      daySlots: acc.daySlots + req.day_slots,
+      nightSlots: acc.nightSlots + req.night_slots
+    }), { totalBudget: 0, totalSlots: 0, daySlots: 0, nightSlots: 0 });
+  };
+
+  const totals = calculateTotals();
 
   if (isLoading) {
     return <PageLoader />;
@@ -63,7 +77,7 @@ const SiteDetail = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Site Information */}
         <Card>
           <CardHeader>
@@ -157,7 +171,125 @@ const SiteDetail = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Budget Overview */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <IndianRupee className="h-5 w-5" />
+              Budget Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 bg-primary/10 rounded-lg">
+                <p className="text-sm text-muted-foreground">Total Budget</p>
+                <p className="text-2xl font-bold text-primary">
+                  ₹{totals.totalBudget.toLocaleString()}
+                </p>
+              </div>
+              <div className="text-center p-4 bg-secondary/10 rounded-lg">
+                <p className="text-sm text-muted-foreground">Total Slots</p>
+                <p className="text-2xl font-bold text-secondary-foreground">
+                  {totals.totalSlots}
+                </p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 border rounded-lg">
+                <p className="text-sm text-muted-foreground">Day Shifts</p>
+                <p className="text-xl font-semibold">{totals.daySlots}</p>
+              </div>
+              <div className="text-center p-3 border rounded-lg">
+                <p className="text-sm text-muted-foreground">Night Shifts</p>
+                <p className="text-xl font-semibold">{totals.nightSlots}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Staffing Requirements */}
+      {site?.staffing_requirements && site.staffing_requirements.length > 0 && (
+        <div className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Staffing Requirements
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {site.staffing_requirements.map((req: any, index: number) => (
+                  <div key={index} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="text-sm">
+                        {req.role_type}
+                      </Badge>
+                      <span className="font-semibold text-lg">
+                        ₹{req.budget_per_slot.toLocaleString()}
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Day Slots:</span>
+                        <span className="ml-2 font-medium">{req.day_slots}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Night Slots:</span>
+                        <span className="ml-2 font-medium">{req.night_slots}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-2 border-t">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Total Slots:</span>
+                        <span className="font-medium">{req.day_slots + req.night_slots}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-semibold">
+                        <span>Total Budget:</span>
+                        <span>₹{(req.budget_per_slot * (req.day_slots + req.night_slots)).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    
+                    {req.description && (
+                      <div className="pt-2 border-t">
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium">Description:</span> {req.description}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* No Staffing Requirements Message */}
+      {(!site?.staffing_requirements || site.staffing_requirements.length === 0) && (
+        <div className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Staffing Requirements
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No staffing requirements defined for this site.</p>
+                <p className="text-sm">Edit the site to add staffing requirements.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Utility Charges Section */}
       <div className="mt-6">
