@@ -71,7 +71,7 @@ const SiteDetail = () => {
             <p className="text-muted-foreground">{site.organization_name}</p>
           </div>
         </div>
-        <Button onClick={() => navigate('/sites')} className="flex items-center gap-2">
+        <Button onClick={() => navigate(`/sites/edit/${id}`)} className="flex items-center gap-2">
           <Edit className="h-4 w-4" />
           Edit Site
         </Button>
