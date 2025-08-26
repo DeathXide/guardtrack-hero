@@ -159,6 +159,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
             addressLine1: siteData.address_line1,
             addressLine2: siteData.address_line2,
             addressLine3: siteData.address_line3,
+            personalBillingName: siteData.personal_billing_name,
             siteType: siteData.site_category,
             staffingSlots: siteData.staffing_requirements?.map((req: any) => ({
               id: req.id,

@@ -637,7 +637,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
           ${ICONS.building2}
           <h3 class="client-title">BILL TO</h3>
         </div>
-        <p class="client-name">${isPersonalBilling && invoice.clientName !== invoice.siteName ? invoice.clientName : invoice.siteName}</p>
+        <p class="client-name">${invoice.siteName}</p>
         <div class="client-address">
           ${ICONS.mapPin}
           <p class="client-address-text">${invoice.clientAddress.split(', ').filter(Boolean).join(', ')}</p>
