@@ -176,12 +176,20 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
             gst_number: companySettings.gst_number
           };
 
+          // Format date in local timezone to avoid timezone shifting
+          const formatLocalDate = (date: Date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          };
+
           const invoiceData = await calculateInvoiceFromSite(
             site,
             periodFrom,
             periodTo,
             companyData,
-            invoiceDate ? invoiceDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            invoiceDate ? formatLocalDate(invoiceDate) : formatLocalDate(new Date()),
             includeUtilities
           );
           
