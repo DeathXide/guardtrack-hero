@@ -179,10 +179,11 @@ export async function calculateInvoiceFromSite(
   // Calculate GST with proper breakdown
   const gstCalculation = calculateGST(subtotal, site.gstType);
 
-  // For personal billing, use assigned personal name or site organization name
-  const billingCompanyName = site.gstType === 'PERSONAL' && site.personalBillingName 
-    ? site.personalBillingName 
-    : companySettings?.company_name || "Your Security Company";
+  // Vendor company name always the company; client name uses personal for PERSONAL
+  const billingCompanyName = companySettings?.company_name || "Your Security Company";
+  const billingClientName = site.gstType === 'PERSONAL' && site.personalBillingName
+    ? site.personalBillingName
+    : site.organizationName;
 
   return {
     invoiceNumber: await generateInvoiceNumber(),
@@ -191,7 +192,7 @@ export async function calculateInvoiceFromSite(
     siteGst: site.gstNumber,
     companyName: billingCompanyName,
     companyGst: site.gstType === 'PERSONAL' ? '' : (companySettings?.gst_number || ''),
-    clientName: site.organizationName,
+    clientName: billingClientName,
     clientAddress: [site.addressLine1, site.addressLine2, site.addressLine3].filter(Boolean).join(', '),
     invoiceDate: invoiceDate || new Date().toISOString().split('T')[0],
     periodFrom,
