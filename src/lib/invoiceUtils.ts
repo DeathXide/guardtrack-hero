@@ -191,7 +191,7 @@ export async function calculateInvoiceFromSite(
     siteGst: site.gstNumber,
     companyName: billingCompanyName,
     companyGst: site.gstType === 'PERSONAL' ? '' : (companySettings?.gst_number || ''),
-    clientName: site.organizationName,
+    clientName: site.gstType === 'PERSONAL' && site.personalBillingName ? site.personalBillingName : site.organizationName,
     clientAddress: [site.addressLine1, site.addressLine2, site.addressLine3].filter(Boolean).join(', '),
     invoiceDate: invoiceDate || new Date().toISOString().split('T')[0],
     periodFrom,

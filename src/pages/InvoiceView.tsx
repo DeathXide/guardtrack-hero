@@ -269,7 +269,7 @@ export default function InvoiceView() {
                     <h3 className="text-sm font-medium text-muted-foreground">BILL TO</h3>
                   </div>
                   <div className="space-y-2">
-                    <p className="font-medium text-foreground">{invoice.siteName}</p>
+                    <p className="font-medium text-foreground">{isPersonal && invoice.clientName !== invoice.siteName ? invoice.clientName : invoice.siteName}</p>
                     <div className="flex items-start gap-1">
                       <MapPin className="h-3 w-3 text-muted-foreground mt-0.5 flex-shrink-0" />
                       <p className="text-sm text-muted-foreground leading-relaxed">{invoice.clientAddress.split(', ').filter(Boolean).join(', ')}</p>
