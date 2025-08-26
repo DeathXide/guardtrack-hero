@@ -567,7 +567,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
     <!-- Header -->
     <div class="header">
       <div class="company-info">
-        <h1 class="company-name">${companySettings?.company_name || invoice.companyName}</h1>
+        <h1 class="company-name">${isPersonalBilling ? invoice.companyName : (companySettings?.company_name || invoice.companyName)}</h1>
         ${!isPersonalBilling && companySettings?.company_motto ? `<p class="company-motto">${companySettings.company_motto}</p>` : ''}
         <div class="company-details">
           ${!isPersonalBilling && (companySettings?.gst_number || invoice.companyGst) ? `<div>GST: ${companySettings?.gst_number || invoice.companyGst}</div>` : ''}
@@ -804,7 +804,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
       <!-- Authorized Signatory -->
       <div class="signature-section">
         <div class="signature-content">
-          <div class="signature-company">For ${invoice.companyName}</div>
+          <div class="signature-company">For ${isPersonalBilling ? invoice.companyName : (companySettings?.company_name || invoice.companyName)}</div>
           <div class="signature-image-container">
             ${companySettings?.company_seal_image_url ? `
               <img src="${companySettings.company_seal_image_url}" alt="Company Seal" class="signature-image" />

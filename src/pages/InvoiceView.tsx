@@ -454,7 +454,7 @@ export default function InvoiceView() {
                   <div className="flex justify-start">
                      <div className="text-left space-y-4">
                        <div>
-                         <p className="text-sm font-medium text-foreground">For {invoice.companyName}</p>
+                         <p className="text-sm font-medium text-foreground">For {displayCompanyName}</p>
                        </div>
                        <div className="h-12 w-32 flex items-end justify-end">
                          {companySettings?.company_seal_image_url && (
