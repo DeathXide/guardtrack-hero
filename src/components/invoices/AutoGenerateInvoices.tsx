@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Calendar, Building2, Wand2, CheckSquare, X, Filter } from 'lucide-react';
+import { FileText, Calendar, Building2, Wand2, CheckSquare, X, Filter, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { sitesApi } from '@/lib/sitesApi';
 import { companyApi } from '@/lib/companyApi';
 import { createInvoiceInDB, checkSiteHasInvoiceForMonth, checkMultipleSitesHaveInvoiceForMonth } from '@/lib/supabaseInvoiceApiNew';
@@ -26,6 +30,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
   const [gstTypeFilter, setGstTypeFilter] = useState<string>('all');
   const [periodFrom, setPeriodFrom] = useState('');
   const [periodTo, setPeriodTo] = useState('');
+  const [invoiceDate, setInvoiceDate] = useState<Date | undefined>(new Date());
   const [loading, setLoading] = useState(false);
   const [sitesLoaded, setSitesLoaded] = useState(false);
   const [includeUtilities, setIncludeUtilities] = useState(true);
@@ -176,7 +181,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
             periodFrom,
             periodTo,
             companyData,
-            undefined,
+            invoiceDate ? invoiceDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             includeUtilities
           );
           
@@ -285,9 +290,9 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
                 {/* Period Selection */}
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-base font-medium">Billing Period</Label>
+                    <Label className="text-base font-medium">Billing Period & Invoice Date</Label>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="periodFrom">From Date</Label>
                       <Input
@@ -305,6 +310,32 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
                         value={periodTo}
                         onChange={(e) => setPeriodTo(e.target.value)}
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Invoice Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !invoiceDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {invoiceDate ? format(invoiceDate, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={invoiceDate}
+                            onSelect={setInvoiceDate}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
                 </div>
