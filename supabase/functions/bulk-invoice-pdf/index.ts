@@ -55,6 +55,7 @@ const ICONS = {
 };
 
 function generateInvoiceHTML(invoice: any, companySettings?: any): string {
+  const isPersonalBilling = invoice.gstType === 'PERSONAL';
   // Calculate man days for line items
   const fromDate = new Date(invoice.periodFrom);
   const toDate = new Date(invoice.periodTo);
@@ -560,29 +561,31 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
     <!-- Header -->
     <div class="header">
       <div class="company-info">
-        <h1 class="company-name">${companySettings?.company_name || invoice.companyName}</h1>
-        ${companySettings?.company_motto ? `<p class="company-motto">${companySettings.company_motto}</p>` : ''}
+        <h1 class="company-name">${isPersonalBilling ? invoice.companyName : (companySettings?.company_name || invoice.companyName)}</h1>
+        ${!isPersonalBilling && companySettings?.company_motto ? `<p class="company-motto">${companySettings.company_motto}</p>` : ''}
         <div class="company-details">
-          ${(companySettings?.gst_number || invoice.companyGst) ? `<div>GST: ${companySettings?.gst_number || invoice.companyGst}</div>` : ''}
+          ${!isPersonalBilling && (companySettings?.gst_number || invoice.companyGst) ? `<div>GST: ${companySettings?.gst_number || invoice.companyGst}</div>` : ''}
           ${companySettings?.company_address_line1 ? `
             <div style="font-size: 10px; line-height: 1.5; margin-top: 4px;">
               ${[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}
             </div>
           ` : ''}
-          <div class="contact-row">
-            ${companySettings?.company_phone ? `
-              <div class="contact-item">
-                ${ICONS.phone}
-                <span>${companySettings.company_phone}</span>
-              </div>
-            ` : ''}
-            ${companySettings?.company_email ? `
-              <div class="contact-item">
-                ${ICONS.mail}
-                <span>${companySettings.company_email}</span>
-              </div>
-            ` : ''}
-          </div>
+          ${!isPersonalBilling ? `
+            <div class="contact-row">
+              ${companySettings?.company_phone ? `
+                <div class="contact-item">
+                  ${ICONS.phone}
+                  <span>${companySettings.company_phone}</span>
+                </div>
+              ` : ''}
+              ${companySettings?.company_email ? `
+                <div class="contact-item">
+                  ${ICONS.mail}
+                  <span>${companySettings.company_email}</span>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
         </div>
       </div>
       <div class="invoice-box">
@@ -633,7 +636,7 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
           ${ICONS.mapPin}
           <p class="client-address-text">${invoice.clientAddress.split(', ').filter(Boolean).join(', ')}</p>
         </div>
-        ${invoice.siteGst ? `
+        ${!isPersonalBilling && invoice.siteGst ? `
           <p class="client-gst">
             <strong>GST:</strong> ${invoice.siteGst}
           </p>
@@ -670,15 +673,18 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
                     </tr>
                   `;
                 } else {
-                  const manDays = item.rateType === 'monthly' ? '-' : (daysInPeriod * item.quantity).toString();
+                  // Regular staffing line items - show man days for both monthly and shift-based
+                  const manDays = (item.manDays ?? daysInPeriod) * item.quantity;
                   const rate = item.rateType === 'monthly' ? (item.monthlyRate || 0) : item.ratePerSlot;
                   
                   return `
                     <tr>
                       <td class="row-number">${index + 1}</td>
                        <td class="description">
-                         ${item.description}
-                         ${item.customDescription ? `<br><span style="font-size: 11px; color: #666; font-weight: normal;">${item.customDescription}</span>` : ''}
+                         <div>
+                           <div>${item.description}</div>
+                           ${item.customDescription ? `<div style="font-size: 10px; color: #64748b; font-weight: normal; line-height: 1.5; margin-top: 4px;">${item.customDescription}</div>` : ''}
+                         </div>
                        </td>
                       <td class="quantity">${item.quantity}</td>
                       <td class="days">${manDays}</td>
@@ -695,7 +701,7 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
 
       <!-- Totals -->
       <div class="totals-section">
-        ${invoice.gstType === 'RCM' ? `
+        ${!isPersonalBilling && invoice.gstType === 'RCM' ? `
           <div class="rcm-notice">
             <div class="rcm-box">
               <div class="rcm-header">
@@ -720,7 +726,7 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
               <span class="total-value">${formatCurrency(invoice.subtotal)}</span>
             </div>
             
-            ${invoice.gstType === 'GST' ? `
+            ${!isPersonalBilling && invoice.gstType === 'GST' ? `
               <div class="gst-breakdown">
                 <div class="gst-row">
                   <span class="gst-label">CGST (${(invoice.cgstRate || 0).toFixed(1)}%)</span>
@@ -733,7 +739,7 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
               </div>
             ` : ''}
             
-            ${invoice.gstType === 'IGST' ? `
+            ${!isPersonalBilling && invoice.gstType === 'IGST' ? `
               <div class="gst-breakdown">
                 <div class="gst-row">
                   <span class="gst-label">IGST (${(invoice.igstRate || 0).toFixed(1)}%)</span>
@@ -742,7 +748,7 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
               </div>
             ` : ''}
             
-            ${invoice.gstType === 'RCM' ? `
+            ${!isPersonalBilling && invoice.gstType === 'RCM' ? `
               <div class="rcm-gst-box">
                 <div class="rcm-gst-title">Tax Payable by Recipient</div>
                 <div class="rcm-gst-row">
@@ -756,7 +762,7 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
               </div>
             ` : ''}
             
-            ${(invoice.gstType === 'NGST' || invoice.gstType === 'PERSONAL') ? `
+            ${!isPersonalBilling && invoice.gstType === 'NGST' ? `
               <div class="gst-breakdown">
                 <div class="gst-row">
                   <span class="gst-label">GST (${(invoice.gstRate || 0).toFixed(1)}%)</span>
@@ -782,20 +788,22 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
       </div>
 
       <!-- Payment Terms -->
-      <div class="payment-terms">
-        <div class="payment-terms-box">
-          <h4 class="payment-terms-title">Payment Terms</h4>
-          <div class="payment-terms-content">
-            <p>Kindly release the payment towards the bill on or before the 3rd of this month.</p>
-            <p>Interest at 24% per annum will be charged on all outstanding amounts beyond the due date.</p>
+      ${!isPersonalBilling ? `
+        <div class="payment-terms">
+          <div class="payment-terms-box">
+            <h4 class="payment-terms-title">Payment Terms</h4>
+            <div class="payment-terms-content">
+              <p>Kindly release the payment towards the bill on or before the 3rd of this month.</p>
+              <p>Interest at 24% per annum will be charged on all outstanding amounts beyond the due date.</p>
+            </div>
           </div>
         </div>
-      </div>
+      ` : ''}
 
       <!-- Authorized Signatory -->
       <div class="signature-section">
         <div class="signature-content">
-          <div class="signature-company">For ${invoice.companyName}</div>
+          <div class="signature-company">For ${isPersonalBilling ? invoice.companyName : (companySettings?.company_name || invoice.companyName)}</div>
           <div class="signature-image-container">
             ${companySettings?.company_seal_image_url ? `
               <img src="${companySettings.company_seal_image_url}" alt="Company Seal" class="signature-image" />
@@ -874,9 +882,25 @@ serve(async (req) => {
 
     // Create ZIP file
     const zip = new JSZip();
+    
+    // Group invoices by GST type for organized folders
+    const invoicesByGstType: Record<string, any[]> = {};
+    invoices.forEach(invoice => {
+      const gstType = invoice.gst_type || 'UNKNOWN';
+      if (!invoicesByGstType[gstType]) {
+        invoicesByGstType[gstType] = [];
+      }
+      invoicesByGstType[gstType].push(invoice);
+    });
 
     // Generate PDF for each invoice using HTML/CSS to PDF API
-    for (const invoice of invoices) {
+    for (const [gstType, gstInvoices] of Object.entries(invoicesByGstType)) {
+      console.log(`Processing ${gstInvoices.length} invoices for GST type: ${gstType}`);
+      
+      // Create folder name based on GST type
+      const folderName = getGstFolderName(gstType);
+      
+      for (const invoice of gstInvoices) {
       try {
         console.log(`Processing invoice ${invoice.invoice_number}...`);
         
@@ -942,8 +966,8 @@ serve(async (req) => {
         
         const filename = `${cleanSiteName}_${invoice.invoice_number}.html`;
         
-        // Add HTML file to ZIP (optimized for printing)
-        zip.file(filename, printOptimizedHtml);
+        // Add HTML file to ZIP in the GST type folder (optimized for printing)
+        zip.file(`${folderName}/${filename}`, printOptimizedHtml);
         
         console.log(`Generated file for invoice ${invoice.invoice_number}`);
       } catch (error) {
@@ -969,11 +993,12 @@ serve(async (req) => {
             .replace(/\s+/g, '_')
             .substring(0, 30);
           const filename = `ERROR_${cleanSiteName}_${invoice.invoice_number}.html`;
-          zip.file(filename, fallbackHtml);
+          zip.file(`${folderName}/${filename}`, fallbackHtml);
         } catch (fallbackError) {
           console.error(`Fallback also failed for ${invoice.invoice_number}:`, fallbackError);
         }
       }
+    }
     }
 
     console.log('Generating ZIP file...');
@@ -1014,3 +1039,21 @@ serve(async (req) => {
     );
   }
 })
+
+// Helper function to get folder name for GST types
+function getGstFolderName(gstType: string): string {
+  switch (gstType) {
+    case 'GST':
+      return '01_CGST_SGST_Invoices';
+    case 'IGST':
+      return '02_IGST_Invoices';
+    case 'RCM':
+      return '03_RCM_Invoices';
+    case 'NGST':
+      return '04_Non_GST_Invoices';
+    case 'PERSONAL':
+      return '05_Personal_Billing_Invoices';
+    default:
+      return '06_Other_Invoices';
+  }
+}
