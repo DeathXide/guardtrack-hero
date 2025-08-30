@@ -511,25 +511,32 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
     }
     
     .signature-image-container {
-      height: 48px;
+      position: relative;
+      height: auto;
       width: 128px;
-      display: flex;
-      align-items: flex-end;
-      justify-content: flex-end;
+      display: inline-block;
       margin-bottom: 16px;
     }
     
     .signature-image {
-      max-height: 96px;
-      width: auto;
+      display: block;
+      width: 100%;
+      height: auto;
       object-fit: contain;
-      opacity: 0.8;
-      margin-left: auto;
+      opacity: 1;
+      position: relative;
+      z-index: 10;
     }
     
     .signature-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-size: 10px;
       color: #64748b;
+      z-index: 0;
     }
     
     .notes-section {
@@ -808,8 +815,8 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
             ${companySettings?.company_seal_image_url ? `
               <img src="${companySettings.company_seal_image_url}" alt="Company Seal" class="signature-image" />
             ` : ''}
+            <div class="signature-label">Authorized Signatory</div>
           </div>
-          <div class="signature-label">Authorized Signatory</div>
         </div>
       </div>
 
