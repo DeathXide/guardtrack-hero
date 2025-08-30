@@ -539,6 +539,10 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
       z-index: 0;
     }
     
+    .signature-label.personal-spacing {
+      margin-top: 32px;
+    }
+    
     .notes-section {
       margin-bottom: 24px;
     }
@@ -815,7 +819,7 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
             ${!isPersonalBilling && companySettings?.company_seal_image_url ? `
               <img src="${companySettings.company_seal_image_url}" alt="Company Seal" class="signature-image" />
             ` : ''}
-            <div class="signature-label">Authorized Signatory</div>
+            <div class="signature-label ${isPersonalBilling ? 'personal-spacing' : ''}">Authorized Signatory</div>
           </div>
         </div>
       </div>
