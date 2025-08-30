@@ -1,6 +1,6 @@
+import JSZip from 'https://esm.sh/jszip@3.10.1'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.0'
-import JSZip from 'https://esm.sh/jszip@3.10.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -532,17 +532,20 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
       position: absolute;
       inset: 0;
       display: flex;
-      align-items: center;
-      justify-content: center;
+
       font-size: 10px;
       color: #64748b;
       z-index: 0;
     }
     
     .signature-label.personal-spacing {
-      margin-top: 32px;
+      margin-top: 48px;
     }
-    
+    .signature-label.non-personal-spacing {
+      align-items: center;
+      justify-content: center;
+    }
+
     .notes-section {
       margin-bottom: 24px;
     }
@@ -819,7 +822,7 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
             ${!isPersonalBilling && companySettings?.company_seal_image_url ? `
               <img src="${companySettings.company_seal_image_url}" alt="Company Seal" class="signature-image" />
             ` : ''}
-            <div class="signature-label ${isPersonalBilling ? 'personal-spacing' : ''}">Authorized Signatory</div>
+            <div class="signature-label ${isPersonalBilling ? 'personal-spacing' : 'non-personal-spacing'}">Authorized Signatory</div>
           </div>
         </div>
       </div>
