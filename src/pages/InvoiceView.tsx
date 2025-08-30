@@ -458,7 +458,7 @@ export default function InvoiceView() {
       </p>
 
     <div className="relative h-auto inline-block w-32">
-  {companySettings?.company_seal_image_url && (
+  {!isPersonal && companySettings?.company_seal_image_url && (
     <img
       src={companySettings.company_seal_image_url}
       alt="Company Seal"

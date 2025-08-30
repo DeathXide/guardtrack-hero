@@ -812,7 +812,7 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
         <div class="signature-content">
           <div class="signature-company">For ${isPersonalBilling ? invoice.companyName : (companySettings?.company_name || invoice.companyName)}</div>
           <div class="signature-image-container">
-            ${companySettings?.company_seal_image_url ? `
+            ${!isPersonalBilling && companySettings?.company_seal_image_url ? `
               <img src="${companySettings.company_seal_image_url}" alt="Company Seal" class="signature-image" />
             ` : ''}
             <div class="signature-label">Authorized Signatory</div>
