@@ -465,7 +465,7 @@ export default function InvoiceView() {
       className="block w-full h-auto object-contain opacity-100 relative z-10" 
     />
   )}
-  <p className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground z-0">
+  <p className={`absolute inset-0 flex items-center justify-center text-xs text-muted-foreground z-0 ${isPersonal ? 'mt-8' : ''}`}>
     Authorized Signatory
   </p>
 </div>
