@@ -858,6 +858,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: string
+      }
+      is_admin_or_supervisor: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       profile_is_admin: {
         Args: { _user_id: string }
         Returns: boolean
