@@ -234,9 +234,9 @@ export default function Invoices() {
     }
   };
 
-  const totalInvoices = invoices.length;
-  const totalAmount = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
-  const paidAmount = invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + inv.totalAmount, 0);
+  const totalInvoices = filteredInvoices.length;
+  const totalAmount = filteredInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
+  const paidAmount = filteredInvoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + inv.totalAmount, 0);
   const pendingAmount = totalAmount - paidAmount;
 
   if (loading) {
