@@ -96,7 +96,10 @@ export default function InvoiceView() {
   };
   const handleDownloadPDF = async () => {
     try {
-      await generatePDF('invoice-content', `Invoice-${invoice?.invoiceNumber}.pdf`);
+      const siteName = invoice?.siteName?.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_') || 'Unknown_Site';
+      const invoiceNumber = invoice?.invoiceNumber || 'Unknown';
+      const filename = `${siteName}_Invoice_${invoiceNumber}.pdf`;
+      await generatePDF('invoice-content', filename);
       toast.success('PDF downloaded successfully');
     } catch (error) {
       console.error('Error downloading PDF:', error);
