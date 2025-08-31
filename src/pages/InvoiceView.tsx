@@ -197,8 +197,9 @@ export default function InvoiceView() {
                     {!isPersonal && companySettings?.company_motto && (
                       <p className="text-sm italic text-muted-foreground mt-1">{companySettings.company_motto}</p>
                     )}
-                    <div className="text-sm text-muted-foreground space-y-1 font-mono">
-                      {!isPersonal && (companySettings?.gst_number || invoice.companyGst) && <p>GST: {companySettings?.gst_number || invoice.companyGst}</p>}
+                     <div className="text-sm text-muted-foreground space-y-1 font-mono">
+                       {!isPersonal && (companySettings?.gst_number || invoice.companyGst) && <p>GST: {companySettings?.gst_number || invoice.companyGst}</p>}
+                       {!isPersonal && <p>SAC: 99852</p>}
                       {companySettings?.company_address_line1 && (
                         <p className="text-xs leading-relaxed">
                           {[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}

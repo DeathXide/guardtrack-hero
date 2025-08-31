@@ -577,8 +577,9 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
       <div class="company-info">
         <h1 class="company-name">${isPersonalBilling ? invoice.companyName : (companySettings?.company_name || invoice.companyName)}</h1>
         ${!isPersonalBilling && companySettings?.company_motto ? `<p class="company-motto">${companySettings.company_motto}</p>` : ''}
-        <div class="company-details">
-          ${!isPersonalBilling && (companySettings?.gst_number || invoice.companyGst) ? `<div>GST: ${companySettings?.gst_number || invoice.companyGst}</div>` : ''}
+         <div class="company-details">
+           ${!isPersonalBilling && (companySettings?.gst_number || invoice.companyGst) ? `<div>GST: ${companySettings?.gst_number || invoice.companyGst}</div>` : ''}
+           ${!isPersonalBilling ? `<div>SAC: 99852</div>` : ''}
           ${companySettings?.company_address_line1 ? `
             <div style="font-size: 10px; line-height: 1.5; margin-top: 4px;">
               ${[companySettings.company_address_line1, companySettings.company_address_line2, companySettings.company_address_line3].filter(Boolean).join(', ')}
