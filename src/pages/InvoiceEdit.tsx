@@ -118,9 +118,20 @@ export default function InvoiceEdit() {
 
   const calculateTotals = () => {
     const subtotal = lineItems.reduce((sum, item) => sum + item.lineTotal, 0);
-    const { gstRate, gstAmount, totalAmount } = calculateGST(subtotal, invoice?.gstType || 'GST');
+    const gstCalculation = calculateGST(subtotal, invoice?.gstType || 'GST');
     
-    return { subtotal, gstRate, gstAmount, totalAmount };
+    return { 
+      subtotal, 
+      gstRate: gstCalculation.gstRate,
+      gstAmount: gstCalculation.gstAmount,
+      cgstRate: gstCalculation.cgstRate,
+      cgstAmount: gstCalculation.cgstAmount,
+      sgstRate: gstCalculation.sgstRate,
+      sgstAmount: gstCalculation.sgstAmount,
+      igstRate: gstCalculation.igstRate,
+      igstAmount: gstCalculation.igstAmount,
+      totalAmount: gstCalculation.totalAmount
+    };
   };
 
   const handleSave = async () => {
@@ -128,15 +139,21 @@ export default function InvoiceEdit() {
 
     setSaving(true);
     try {
-      const { subtotal, gstRate, gstAmount, totalAmount } = calculateTotals();
+      const totals = calculateTotals();
       
       const updatedInvoice = await updateInvoiceInDB(invoice.id, {
         ...formData,
         lineItems,
-        subtotal,
-        gstRate,
-        gstAmount,
-        totalAmount
+        subtotal: totals.subtotal,
+        gstRate: totals.gstRate,
+        gstAmount: totals.gstAmount,
+        cgstRate: totals.cgstRate,
+        cgstAmount: totals.cgstAmount,
+        sgstRate: totals.sgstRate,
+        sgstAmount: totals.sgstAmount,
+        igstRate: totals.igstRate,
+        igstAmount: totals.igstAmount,
+        totalAmount: totals.totalAmount
       });
 
       if (updatedInvoice) {
@@ -178,7 +195,7 @@ export default function InvoiceEdit() {
     );
   }
 
-  const { subtotal, gstRate, gstAmount, totalAmount } = calculateTotals();
+  const { subtotal, gstRate, gstAmount, cgstRate, cgstAmount, sgstRate, sgstAmount, igstRate, igstAmount, totalAmount } = calculateTotals();
 
   return (
     <div className="container mx-auto p-6 space-y-6">
