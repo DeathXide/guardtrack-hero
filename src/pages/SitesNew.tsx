@@ -36,6 +36,7 @@ const ROLE_TYPES = [
   'Housekeeping',
   'Receptionist',
   'Maintenance',
+  'Office Boy',
   'Other'
 ];
 
