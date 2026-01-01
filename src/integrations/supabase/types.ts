@@ -846,34 +846,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      generate_badge_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_financial_year: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_guard_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_next_invoice_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_user_role: {
-        Args: { _user_id: string }
-        Returns: string
-      }
-      is_admin_or_supervisor: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
-      profile_is_admin: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      generate_badge_number: { Args: never; Returns: string }
+      get_current_financial_year: { Args: never; Returns: string }
+      get_current_user_guard_id: { Args: never; Returns: string }
+      get_next_invoice_number: { Args: never; Returns: string }
+      get_user_role: { Args: { _user_id: string }; Returns: string }
+      is_admin_or_supervisor: { Args: { _user_id: string }; Returns: boolean }
+      profile_is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       gender_type: "male" | "female" | "other"
