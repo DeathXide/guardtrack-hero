@@ -9,13 +9,40 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { fetchSites } from '@/lib/localService';
+import { sitesApi } from '@/lib/sitesApi';
 import { createInvoiceInDB } from '@/lib/supabaseInvoiceApiNew';
 import { calculateInvoiceFromSite, formatCurrency } from '@/lib/invoiceUtils';
 import { companyApi } from '@/lib/companyApi';
 import { Site } from '@/types';
 import { InvoiceFormData } from '@/types/invoice';
 import { toast } from 'sonner';
+
+// Helper function to convert sitesApi data to Site type
+const convertToSiteType = (dbSite: any): Site => {
+  return {
+    id: dbSite.id,
+    name: dbSite.site_name,
+    organizationName: dbSite.organization_name,
+    gstNumber: dbSite.gst_number || '',
+    addressLine1: dbSite.address_line1 || '',
+    addressLine2: dbSite.address_line2 || '',
+    addressLine3: dbSite.address_line3 || '',
+    gstType: dbSite.gst_type as 'GST' | 'NGST' | 'RCM' | 'PERSONAL',
+    siteType: dbSite.site_category || '',
+    personalBillingName: dbSite.personal_billing_name,
+    status: dbSite.status as 'active' | 'inactive' | 'custom',
+    staffingSlots: (dbSite.staffing_requirements || []).map((req: any) => ({
+      id: req.id,
+      role: req.role_type,
+      daySlots: req.day_slots || 0,
+      nightSlots: req.night_slots || 0,
+      budgetPerSlot: req.budget_per_slot || 0,
+      rateType: req.rate_type || 'monthly',
+      description: req.description
+    })),
+    created_at: dbSite.created_at
+  };
+};
 
 export default function InvoiceCreate() {
   const navigate = useNavigate();
@@ -49,10 +76,12 @@ export default function InvoiceCreate() {
 
   const loadSites = async () => {
     try {
-      const data = await fetchSites();
-      // Filter out custom sites from the regular create invoice page
-      const regularSites = data.filter(site => !site.status || site.status !== 'custom');
-      setSites(regularSites);
+      const data = await sitesApi.getAllSites();
+      // Convert DB sites to Site type and filter out custom sites
+      const convertedSites = data
+        .map(convertToSiteType)
+        .filter(site => !site.status || site.status !== 'custom');
+      setSites(convertedSites);
     } catch (error) {
       console.error('Error loading sites:', error);
       toast.error('Failed to load sites');
