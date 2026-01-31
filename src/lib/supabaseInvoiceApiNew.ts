@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Invoice } from '@/types/invoice';
+import { generateInvoiceNumber } from '@/lib/invoiceUtils';
 
 import { Database } from '@/integrations/supabase/types';
 
@@ -7,8 +8,8 @@ type InvoiceRow = Database['public']['Tables']['invoices']['Row'];
 type InvoiceInsert = Database['public']['Tables']['invoices']['Insert'];
 
 export async function createInvoiceInDB(invoice: Omit<Invoice, 'id' | 'created_at'>): Promise<Invoice> {
-  const insertData: InvoiceInsert = {
-    invoice_number: invoice.invoiceNumber,
+  const buildInsertData = (invoiceNumber: string): InvoiceInsert => ({
+    invoice_number: invoiceNumber,
     site_id: invoice.siteId,
     site_name: invoice.siteName,
     site_gst: invoice.siteGst,
@@ -32,21 +33,44 @@ export async function createInvoiceInDB(invoice: Omit<Invoice, 'id' | 'created_a
     igst_amount: invoice.igstAmount,
     total_amount: invoice.totalAmount,
     status: invoice.status,
-    notes: invoice.notes
-  };
+    notes: invoice.notes,
+  });
 
-  const { data, error } = await supabase
-    .from('invoices')
-    .insert(insertData)
-    .select()
-    .single();
+  // Retry a couple times if invoice_number collides (can happen if numbers were generated
+  // earlier but inserts failed / were re-attempted).
+  let invoiceNumber = invoice.invoiceNumber;
+  let lastError: any = null;
 
-  if (error) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data, error } = await supabase
+      .from('invoices')
+      .insert(buildInsertData(invoiceNumber))
+      .select()
+      .single();
+
+    if (!error) {
+      return convertDbRecordToInvoice(data);
+    }
+
+    lastError = error;
     console.error('Error creating invoice:', error);
-    throw new Error('Failed to create invoice');
+
+    // Unique violation on invoice_number → get a fresh number and retry.
+    const isInvoiceNumberDuplicate =
+      error.code === '23505' &&
+      typeof error.message === 'string' &&
+      error.message.includes('invoices_invoice_number_key');
+
+    if (isInvoiceNumberDuplicate && attempt < 2) {
+      invoiceNumber = await generateInvoiceNumber();
+      continue;
+    }
+
+    // Surface the real DB error message so the UI can show specific toasts.
+    throw new Error(error.message || 'Failed to create invoice');
   }
 
-  return convertDbRecordToInvoice(data);
+  throw new Error(lastError?.message || 'Failed to create invoice');
 }
 
 export async function fetchInvoicesFromDB(): Promise<Invoice[]> {
@@ -57,7 +81,7 @@ export async function fetchInvoicesFromDB(): Promise<Invoice[]> {
 
   if (error) {
     console.error('Error fetching invoices:', error);
-    throw new Error('Failed to fetch invoices');
+    throw new Error(error.message || 'Failed to fetch invoices');
   }
 
   return data.map(convertDbRecordToInvoice);
@@ -75,7 +99,7 @@ export async function fetchInvoiceByIdFromDB(id: string): Promise<Invoice | null
       return null; // Not found
     }
     console.error('Error fetching invoice:', error);
-    throw new Error('Failed to fetch invoice');
+    throw new Error(error.message || 'Failed to fetch invoice');
   }
 
   return convertDbRecordToInvoice(data);
@@ -120,7 +144,7 @@ export async function updateInvoiceInDB(id: string, updates: Partial<Omit<Invoic
 
   if (error) {
     console.error('Error updating invoice:', error);
-    throw new Error('Failed to update invoice');
+    throw new Error(error.message || 'Failed to update invoice');
   }
 
   return convertDbRecordToInvoice(data);
@@ -134,7 +158,7 @@ export async function deleteInvoiceFromDB(id: string): Promise<void> {
 
   if (error) {
     console.error('Error deleting invoice:', error);
-    throw new Error('Failed to delete invoice');
+    throw new Error(error.message || 'Failed to delete invoice');
   }
 }
 
