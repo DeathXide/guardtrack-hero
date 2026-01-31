@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { sitesApi } from '@/lib/sitesApi';
 import { createInvoiceInDB } from '@/lib/supabaseInvoiceApiNew';
-import { calculateInvoiceFromSite, formatCurrency } from '@/lib/invoiceUtils';
+import { calculateInvoiceFromSite, formatCurrency, generateInvoiceNumber } from '@/lib/invoiceUtils';
 import { companyApi } from '@/lib/companyApi';
 import { Site } from '@/types';
 import { InvoiceFormData } from '@/types/invoice';
@@ -149,8 +149,12 @@ export default function InvoiceCreate() {
 
     setLoading(true);
     try {
+      // Generate a fresh invoice number at creation time to avoid duplicates
+      const freshInvoiceNumber = await generateInvoiceNumber();
+      
       const invoiceData = {
         ...preview,
+        invoiceNumber: freshInvoiceNumber, // Use fresh number, not the preview one
         notes: formData.notes,
         status: 'draft' as const
       };
@@ -162,6 +166,8 @@ export default function InvoiceCreate() {
       console.error('Error creating invoice:', error);
       if (error.message?.includes('An invoice already exists for this site and month period')) {
         toast.error('An invoice already exists for this site and month. Only one invoice per site per month is allowed.');
+      } else if (error.message?.includes('duplicate key')) {
+        toast.error('Invoice number conflict. Please try again.');
       } else {
         toast.error('Failed to create invoice');
       }
