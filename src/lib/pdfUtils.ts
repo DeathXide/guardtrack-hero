@@ -54,7 +54,7 @@ export const generatePDF = async (elementId: string, filename: string) => {
 
     // Generate canvas from HTML element with proper A4 scaling
     const canvas = await html2canvas(element, {
-      scale: 2,
+      scale: 3, // Higher scale for better quality
       useCORS: true,
       allowTaint: true,
       width: element.scrollWidth,
@@ -74,7 +74,7 @@ export const generatePDF = async (elementId: string, filename: string) => {
     // A4 dimensions in mm
     const a4Width = 210;
     const a4Height = 297;
-    const margin = 8; // 8mm margins on all sides
+    const margin = 6; // Smaller margins to maximize content area
     const contentWidth = a4Width - (2 * margin);
     const contentHeight = a4Height - (2 * margin);
 
@@ -84,17 +84,24 @@ export const generatePDF = async (elementId: string, filename: string) => {
     const imgWidth = canvas.width;
     const imgHeight = canvas.height;
     
-    // Calculate scaling to fit within content area with margins (safe factor to avoid clipping)
-    const scaleX = contentWidth / (imgWidth / 2); // Divide by 2 because of scale: 2
-    const scaleY = contentHeight / (imgHeight / 2);
-    const scale = Math.min(scaleX, scaleY) * 0.98;
+    // Calculate scaling to fit BOTH width and height within content area
+    // Use the canvas scale factor (3) to convert back to actual dimensions
+    const canvasScale = 3;
+    const actualWidth = imgWidth / canvasScale;
+    const actualHeight = imgHeight / canvasScale;
     
-    const scaledWidth = (imgWidth / 2) * scale;
-    const scaledHeight = (imgHeight / 2) * scale;
+    const scaleX = contentWidth / actualWidth;
+    const scaleY = contentHeight / actualHeight;
     
-    // Position at top with margins, center horizontally only
+    // Use the smaller scale to ensure content fits entirely on one page
+    const scale = Math.min(scaleX, scaleY, 1); // Cap at 1 to avoid scaling up
+    
+    const scaledWidth = actualWidth * scale;
+    const scaledHeight = actualHeight * scale;
+    
+    // Center horizontally, start from top margin
     const x = margin + (contentWidth - scaledWidth) / 2;
-    const y = margin; // Start from top margin instead of centering vertically
+    const y = margin;
 
     pdf.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight);
     pdf.save(filename);
