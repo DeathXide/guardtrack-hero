@@ -3,7 +3,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { MotionProvider } from "@/components/providers/MotionProvider";
+import { AnimatePresence, m } from "motion/react";
 import { AuthProvider } from "@/context/AuthContext";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
@@ -31,11 +33,12 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
+      <MotionProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
@@ -52,12 +55,30 @@ const App = () => (
             <Route path="/reports" element={<ProtectedRoute><DashboardLayout><Reports /></DashboardLayout></ProtectedRoute>} />
             <Route path="/company-settings" element={<ProtectedRoute><DashboardLayout><CompanySettings /></DashboardLayout></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </MotionProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
+
+const AnimatedPage = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait">
+      <m.div
+        key={location.pathname}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.2, ease: "easeInOut" }}
+      >
+        {children}
+      </m.div>
+    </AnimatePresence>
+  );
+};
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -67,8 +88,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         <SidebarInset>
           <Header />
           <main className="flex-1">
-            <div className="container mx-auto px-6 py-8">
-              {children}
+            <div className="container mx-auto px-4 py-6 md:px-6 lg:px-8">
+              <AnimatedPage>{children}</AnimatedPage>
             </div>
           </main>
         </SidebarInset>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FileText, Calendar, Building2, Wand2, CheckSquare, X, Filter, CalendarIcon } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { sitesApi } from '@/lib/sitesApi';
 import { companyApi } from '@/lib/companyApi';
 import { createInvoiceInDB, checkSiteHasInvoiceForMonth, checkMultipleSitesHaveInvoiceForMonth } from '@/lib/supabaseInvoiceApiNew';
-import { calculateInvoiceFromSite, formatCurrency } from '@/lib/invoiceUtils';
+import { calculateInvoiceFromSite, formatCurrency, generateInvoiceNumber } from '@/lib/invoiceUtils';
 import { toast } from 'sonner';
 
 interface AutoGenerateInvoicesProps {
@@ -194,8 +195,10 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
             includeUtilities
           );
           
+          const freshNumber = await generateInvoiceNumber();
           await createInvoiceInDB({
             ...invoiceData,
+            invoiceNumber: freshNumber,
             status: 'draft' as const
           });
           
@@ -392,12 +395,10 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
                 {/* Utility Options */}
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       id="include-utilities"
                       checked={includeUtilities}
-                      onChange={(e) => setIncludeUtilities(e.target.checked)}
-                      className="rounded border-gray-300"
+                      onCheckedChange={(checked) => setIncludeUtilities(checked === true)}
                     />
                     <Label htmlFor="include-utilities" className="text-sm font-medium">
                       Include utility charges (water, electricity, maintenance)

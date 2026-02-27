@@ -143,7 +143,9 @@ export async function calculateInvoiceFromSite(
         monthlyRate,
         lineTotal,
         description,
-        customDescription: slot.description
+        customDescription: slot.description,
+        daySlots: slot.daySlots,
+        nightSlots: slot.nightSlots
       });
       subtotal += lineTotal;
     }
@@ -185,7 +187,7 @@ export async function calculateInvoiceFromSite(
     : companySettings?.company_name || "Your Security Company";
 
   return {
-    invoiceNumber: await generateInvoiceNumber(),
+    invoiceNumber: 'PREVIEW',
     siteId: site.id,
     siteName: site.name,
     siteGst: site.gstNumber,

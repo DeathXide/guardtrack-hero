@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+
 import { useToast } from "@/hooks/use-toast";
 import { sitesApi, CreateSiteData, UpdateSiteData, SiteDB, StaffingRequirementDB } from "@/lib/sitesApi";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -255,15 +256,23 @@ export default function SitesNew() {
 
       {/* Site Creation/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <DialogHeader className="px-6 pt-6">
             <DialogTitle>{isEditMode ? "Edit Site" : "Add New Site"}</DialogTitle>
             <DialogDescription>
               {isEditMode ? "Update site information and staffing requirements" : "Enter site details and staffing requirements"}
             </DialogDescription>
           </DialogHeader>
-
+          <ScrollArea className="max-h-[calc(90vh-8rem)] px-6 pb-6">
           <div className="space-y-6">
+            {/* Section 1: Site Information */}
+            <div className="flex items-center gap-3">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">1</div>
+              <div>
+                <h3 className="text-sm font-semibold">Site Information</h3>
+                <p className="text-xs text-muted-foreground">Basic site and billing details</p>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="site_name">Site Name *</Label>
@@ -369,6 +378,14 @@ export default function SitesNew() {
               </div>
             </div>
 
+            {/* Section 2: Address */}
+            <div className="flex items-center gap-3 pt-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">2</div>
+              <div>
+                <h3 className="text-sm font-semibold">Address</h3>
+                <p className="text-xs text-muted-foreground">Location details for the site</p>
+              </div>
+            </div>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="address_line1">Address Line 1</Label>
@@ -400,7 +417,14 @@ export default function SitesNew() {
               </div>
             </div>
 
-            <Separator />
+            {/* Section 3: Staffing Requirements */}
+            <div className="flex items-center gap-3 pt-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">3</div>
+              <div>
+                <h3 className="text-sm font-semibold">Staffing Requirements</h3>
+                <p className="text-xs text-muted-foreground">Define roles and staffing needs</p>
+              </div>
+            </div>
 
             <div className="space-y-4">
               <div className="flex justify-between items-center">
@@ -486,7 +510,14 @@ export default function SitesNew() {
               ))}
             </div>
 
-            <Separator />
+            {/* Section 4: Utility Charges */}
+            <div className="flex items-center gap-3 pt-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">4</div>
+              <div>
+                <h3 className="text-sm font-semibold">Utility Charges</h3>
+                <p className="text-xs text-muted-foreground">Water, electricity, maintenance charges</p>
+              </div>
+            </div>
 
             {/* Utility Charges - visible in both create and edit */}
             <div className="pt-2">
@@ -507,6 +538,7 @@ export default function SitesNew() {
               {isEditMode ? "Update Site" : "Create Site"}
             </Button>
           </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

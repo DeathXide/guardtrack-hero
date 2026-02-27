@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePersistedFilters } from '@/hooks/usePersistedFilters';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Table,
@@ -32,6 +33,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Edit, Trash, Search, Filter, MoreVertical, Trash2, Eye } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,10 +65,17 @@ interface SitesTableProps {
 }
 
 const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [gstFilter, setGstFilter] = useState<string>('all');
+  const filterDefaults = useMemo(() => ({
+    search: '',
+    status: 'all',
+    category: 'all',
+    gst: 'all',
+  }), []);
+  const { values: filters, setFilter, resetFilters } = usePersistedFilters(filterDefaults);
+  const searchTerm = filters.search;
+  const statusFilter = filters.status;
+  const categoryFilter = filters.category;
+  const gstFilter = filters.gst;
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
@@ -293,8 +302,8 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search sites..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  defaultValue={searchTerm}
+                  onChange={(e) => setFilter('search', e.target.value, 300)}
                   className="pl-10"
                 />
               </div>
@@ -302,7 +311,7 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={(v) => setFilter('status', v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
@@ -317,7 +326,7 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Category</label>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <Select value={categoryFilter} onValueChange={(v) => setFilter('category', v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="All categories" />
                 </SelectTrigger>
@@ -334,7 +343,7 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
 
             <div className="space-y-2">
               <label className="text-sm font-medium">GST Type</label>
-              <Select value={gstFilter} onValueChange={setGstFilter}>
+              <Select value={gstFilter} onValueChange={(v) => setFilter('gst', v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="All GST types" />
                 </SelectTrigger>
@@ -413,12 +422,7 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              setSearchTerm('');
-              setStatusFilter('all');
-              setCategoryFilter('all');
-              setGstFilter('all');
-            }}
+            onClick={resetFilters}
           >
             Clear Filters
           </Button>
@@ -496,36 +500,48 @@ const SitesTable: React.FC<SitesTableProps> = ({ onCreateSite, onEditSite }) => 
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRowClick(site.id);
-                          }}
-                          title="View Details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => handleEditClick(site, e)}
-                          title="Edit Site"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive"
-                          onClick={(e) => handleDeleteClick(site.id, e)}
-                          title="Delete Site"
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRowClick(site.id);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View Details</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => handleEditClick(site, e)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit Site</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={(e) => handleDeleteClick(site.id, e)}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete Site</TooltipContent>
+                        </Tooltip>
                       </div>
                     </TableCell>
                   </TableRow>

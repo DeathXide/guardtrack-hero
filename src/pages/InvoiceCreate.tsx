@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calculator, FileText, Save } from 'lucide-react';
+import { Calculator, FileText, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { companyApi } from '@/lib/companyApi';
 import { Site } from '@/types';
 import { InvoiceFormData } from '@/types/invoice';
 import { toast } from 'sonner';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 // Helper function to convert sitesApi data to Site type
 const convertToSiteType = (dbSite: any): Site => {
@@ -188,17 +189,16 @@ export default function InvoiceCreate() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate('/invoices')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Invoices
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Create Invoice</h1>
-          <p className="text-muted-foreground">Generate a new invoice for your client</p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Create Invoice"
+        subtitle="Generate a new invoice for your client"
+        breadcrumbs={[
+          { label: 'Invoices', href: '/invoices' },
+          { label: 'Create New' },
+        ]}
+        backButton
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Form */}

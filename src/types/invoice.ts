@@ -1,6 +1,6 @@
 export interface InvoiceLineItem {
   id: string;
-  role: 'Security Guard' | 'Supervisor' | 'Housekeeping' | 'Custom Service' | 'Water Bill' | 'Electricity Bill' | 'Maintenance Charges' | 'Other Utility';
+  role: string;
   shiftType: 'day' | 'night';
   rateType: 'monthly' | 'shift' | 'utility';
   quantity: number;
@@ -11,6 +11,8 @@ export interface InvoiceLineItem {
   description?: string;
   customDescription?: string;
   utilityType?: string;
+  daySlots?: number;
+  nightSlots?: number;
 }
 
 export interface Invoice {

@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { User, DollarSign, Edit, Trash, Shield } from 'lucide-react';
 import { Guard } from '@/lib/guardsApi';
 import { guardUtils } from '@/lib/guardsApi';
+import { m } from 'motion/react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface MonthlyEarning {
   month: string;
@@ -33,6 +35,7 @@ export const GuardOverviewCard: React.FC<GuardOverviewCardProps> = ({
   onViewDetails
 }) => {
   return (
+    <m.div whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
     <Card className="overflow-hidden border border-border/60 hover:shadow-md transition-shadow">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <div>
@@ -103,33 +106,41 @@ export const GuardOverviewCard: React.FC<GuardOverviewCardProps> = ({
             <Shield className="h-3 w-3 mr-1" />
             Details
           </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPayment(guard)}
-          >
-            <DollarSign className="h-3 w-3" />
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onEdit(guard)}
-          >
-            <Edit className="h-3 w-3" />
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onDelete(guard.id)}
-            className="hover:bg-destructive hover:text-destructive-foreground"
-          >
-            <Trash className="h-3 w-3" />
-          </Button>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="sm" onClick={() => onPayment(guard)}>
+                <DollarSign className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Payment</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="sm" onClick={() => onEdit(guard)}>
+                <Edit className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Edit</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDelete(guard.id)}
+                className="hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <Trash className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete</TooltipContent>
+          </Tooltip>
         </div>
       </CardContent>
     </Card>
+    </m.div>
   );
 };

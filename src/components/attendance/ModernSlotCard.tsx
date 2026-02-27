@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  UserPlus, 
-  User, 
-  MoreVertical, 
-  CheckCircle, 
-  XCircle, 
+import {
+  UserPlus,
+  User,
+  MoreVertical,
+  CheckCircle,
+  XCircle,
   AlertCircle,
   Trash2,
   RefreshCw
@@ -20,6 +20,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { m } from 'motion/react';
 import { DailyAttendanceSlot } from '@/lib/dailyAttendanceSlotsApi';
 
 interface Guard {
@@ -48,8 +50,6 @@ const ModernSlotCard: React.FC<ModernSlotCardProps> = ({
   onMarkAttendance,
   isLoading = false
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  
   const getSlotStatus = () => {
     if (!assignedGuard) return 'empty';
     if (slot.is_present === true) return 'present';
@@ -96,12 +96,15 @@ const ModernSlotCard: React.FC<ModernSlotCardProps> = ({
   };
 
   return (
-    <Card 
+    <m.div
+      whileHover={{ y: -2, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+    >
+    <Card
       className={`attendance-card hover-lift transition-all duration-200 ${statusConfig.cardClass} ${
         isLoading ? 'opacity-60' : ''
       }`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       <CardContent className="p-4">
         {/* Header */}
@@ -155,11 +158,16 @@ const ModernSlotCard: React.FC<ModernSlotCardProps> = ({
               
               {/* Quick Actions Menu */}
               <DropdownMenu>
+                <Tooltip>
+                <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Actions</TooltipContent>
+                </Tooltip>
                 <DropdownMenuContent align="end" className="w-40">
                   <DropdownMenuItem
                     onClick={() => onReplaceGuard(slot.id, slot.shift_type, slot.role_type, assignedGuard.id)}
@@ -259,6 +267,7 @@ const ModernSlotCard: React.FC<ModernSlotCardProps> = ({
         )}
       </CardContent>
     </Card>
+    </m.div>
   );
 };
 

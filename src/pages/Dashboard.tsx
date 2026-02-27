@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Users, MapPin, Check, Clock } from 'lucide-react';
 import { 
   attendanceRecords, 
@@ -12,11 +11,13 @@ import {
   getGuardById, 
   getSiteById 
 } from '@/lib/data';
-import { PageLoader } from '@/components/ui/loader';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 // Import refactored components
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import StatCard from '@/components/dashboard/StatCard';
+import { m } from 'motion/react';
 import AttendanceChart from '@/components/dashboard/AttendanceChart';
 import AbsenceAlerts from '@/components/dashboard/AbsenceAlerts';
 import RecentActivity from '@/components/dashboard/RecentActivity';
@@ -34,7 +35,42 @@ const Dashboard = () => {
   }, []);
   
   if (isLoading) {
-    return <PageLoader text="Loading dashboard..." />;
+    return (
+      <div className="space-y-8">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-7 w-16 mb-1" />
+                <Skeleton className="h-3 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2">
+            <CardHeader><Skeleton className="h-5 w-40" /></CardHeader>
+            <CardContent><Skeleton className="h-48 w-full" /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader><Skeleton className="h-5 w-32" /></CardHeader>
+            <CardContent className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
   
   // Get today and yesterday dates
@@ -97,35 +133,32 @@ const Dashboard = () => {
         setSelectedDay={setSelectedDay}
       />
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          title="Total Guards" 
-          value={totalGuards} 
-          description="Active security personnel" 
-          icon={Users} 
-        />
-        
-        <StatCard 
-          title="Sites" 
-          value={totalSites} 
-          description="Secured locations" 
-          icon={MapPin} 
-        />
-        
-        <StatCard 
-          title="Attendance Rate" 
-          value={`${attendanceRate}%`} 
-          description="Present or replaced shifts" 
-          icon={Check} 
-        />
-        
-        <StatCard 
-          title="Total Shifts" 
-          value={totalShifts} 
-          description="Across all sites" 
-          icon={Clock} 
-        />
-      </div>
+      <m.div
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: {},
+          visible: { transition: { staggerChildren: 0.08 } }
+        }}
+      >
+        {[
+          { title: "Total Guards", value: totalGuards, description: "Active security personnel", icon: Users },
+          { title: "Sites", value: totalSites, description: "Secured locations", icon: MapPin },
+          { title: "Attendance Rate", value: `${attendanceRate}%`, description: "Present or replaced shifts", icon: Check },
+          { title: "Total Shifts", value: totalShifts, description: "Across all sites", icon: Clock },
+        ].map((card) => (
+          <m.div
+            key={card.title}
+            variants={{
+              hidden: { opacity: 0, y: 12 },
+              visible: { opacity: 1, y: 0 }
+            }}
+          >
+            <StatCard {...card} />
+          </m.div>
+        ))}
+      </m.div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <AttendanceChart data={siteAttendanceData} />

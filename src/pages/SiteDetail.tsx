@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, MapPin, Building, Edit, Users, IndianRupee } from 'lucide-react';
+import { MapPin, Building, Edit, Users, IndianRupee } from 'lucide-react';
 import { sitesApi } from '@/lib/sitesApi';
 import { PageLoader } from '@/components/ui/loader';
+import { PageHeader } from '@/components/layout/PageHeader';
 import UtilityChargesManagement from '@/components/sites/UtilityChargesManagement';
 
 const SiteDetail = () => {
@@ -38,44 +39,38 @@ const SiteDetail = () => {
     return <PageLoader />;
   }
 
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/sites');
+  };
+
   if (!site) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Site Not Found</h1>
-          <p className="text-muted-foreground mb-4">The site you're looking for doesn't exist.</p>
-          <Button onClick={() => navigate('/sites')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Sites
-          </Button>
-        </div>
+      <div className="text-center py-12">
+        <h1 className="text-2xl font-bold mb-4">Site Not Found</h1>
+        <p className="text-muted-foreground mb-4">The site you're looking for doesn't exist.</p>
+        <Button onClick={handleBack}>Back to Sites</Button>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/sites')}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Sites
+    <div className="space-y-6">
+      <PageHeader
+        title={site.site_name}
+        subtitle={site.organization_name}
+        breadcrumbs={[
+          { label: 'Sites', href: '/sites' },
+          { label: site.site_name },
+        ]}
+        backButton
+        actions={
+          <Button onClick={() => navigate(`/sites/edit/${id}`)} className="flex items-center gap-2">
+            <Edit className="h-4 w-4" />
+            Edit Site
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">{site.site_name}</h1>
-            <p className="text-muted-foreground">{site.organization_name}</p>
-          </div>
-        </div>
-        <Button onClick={() => navigate(`/sites/edit/${id}`)} className="flex items-center gap-2">
-          <Edit className="h-4 w-4" />
-          Edit Site
-        </Button>
-      </div>
+        }
+      />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Site Information */}
