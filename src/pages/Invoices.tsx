@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Search, Filter, FileText, Eye, Edit, Trash2, Wand2, Download, Calendar, CheckSquare, Square } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, Filter, FileText, Eye, Edit, Trash2, Wand2, Download, Calendar, IndianRupee, CheckCircle, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,25 +10,43 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import AutoGenerateInvoices from '@/components/invoices/AutoGenerateInvoices';
 import { fetchInvoicesFromDB, deleteInvoiceFromDB, updateInvoiceInDB } from '@/lib/supabaseInvoiceApiNew';
 import { formatCurrency } from '@/lib/invoiceUtils';
-import { generatePDF } from '@/lib/pdfUtils';
+import { generatePDF, generatePDFFromHTML } from '@/lib/pdfUtils';
 import { Invoice } from '@/types/invoice';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
+import { usePersistedFilters } from '@/hooks/usePersistedFilters';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { AnimatedNumber } from '@/components/ui/animated-number';
 
 export default function Invoices() {
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [gstTypeFilter, setGstTypeFilter] = useState<string>('all');
-  const [selectedMonth, setSelectedMonth] = useState(() => {
+  const defaultMonth = useMemo(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
+  }, []);
+  const filterDefaults = useMemo(() => ({
+    search: '',
+    status: 'all',
+    gst: 'all',
+    month: defaultMonth,
+  }), [defaultMonth]);
+  const { values: filters, setFilter, resetFilters } = usePersistedFilters(filterDefaults);
+  const searchTerm = filters.search;
+  const statusFilter = filters.status;
+  const gstTypeFilter = filters.gst;
+  const selectedMonth = filters.month;
   const [loading, setLoading] = useState(true);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [autoGenerateOpen, setAutoGenerateOpen] = useState(false);
   const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
@@ -152,7 +170,7 @@ export default function Invoices() {
     }
   };
 
-  // Server-side bulk download using edge function
+  // Bulk download: fetch HTML from edge function, convert each to PDF client-side, zip & download
   const handleBulkDownload = async () => {
     if (filteredInvoices.length === 0) {
       toast.error('No invoices to download');
@@ -160,18 +178,15 @@ export default function Invoices() {
     }
 
     setBulkDownloading(true);
-    toast.success(`Generating ${filteredInvoices.length} invoice HTMLs. This may take a moment...`);
+    setBulkProgress({ done: 0, total: 0 });
 
     try {
-      // Get invoice IDs
+      // Step 1: Get HTML files from edge function
+      toast.success('Fetching invoice data...');
       const invoiceIds = filteredInvoices.map(invoice => invoice.id);
-      
-      // Call the edge function
       const response = await fetch(`https://yntbkgrkgicddwmhqimy.supabase.co/functions/v1/bulk-invoice-pdf`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ invoiceIds }),
       });
 
@@ -180,11 +195,41 @@ export default function Invoices() {
         throw new Error(errorData.error || 'Failed to generate invoices');
       }
 
-      // Get the ZIP file as a blob
-      const blob = await response.blob();
-      
-      // Create download link
-      const url = URL.createObjectURL(blob);
+      // Step 2: Extract HTML files from the ZIP
+      const zipBlob = await response.blob();
+      const htmlZip = await JSZip.loadAsync(zipBlob);
+
+      const htmlFiles = Object.entries(htmlZip.files).filter(
+        ([name, file]) => !file.dir && name.endsWith('.html')
+      );
+
+      setBulkProgress({ done: 0, total: htmlFiles.length });
+
+      // Step 3: Convert each HTML to PDF
+      const pdfZip = new JSZip();
+      let completed = 0;
+
+      for (const [path, file] of htmlFiles) {
+        try {
+          const htmlContent = await file.async('string');
+          const pdfBuffer = await generatePDFFromHTML(htmlContent);
+          const pdfPath = path.replace('.html', '.pdf');
+          pdfZip.file(pdfPath, pdfBuffer);
+        } catch (err) {
+          console.error(`Failed to generate PDF for ${path}:`, err);
+        }
+        completed++;
+        setBulkProgress({ done: completed, total: htmlFiles.length });
+      }
+
+      // Step 4: Download ZIP of PDFs
+      const finalBlob = await pdfZip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 },
+      });
+
+      const url = URL.createObjectURL(finalBlob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `invoices-${new Date().toISOString().split('T')[0]}.zip`;
@@ -193,12 +238,13 @@ export default function Invoices() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast.success(`Downloaded ${filteredInvoices.length} invoices as HTML files in ZIP`);
+      toast.success(`Downloaded ${completed} invoice PDFs`);
     } catch (error) {
       console.error('Error during bulk download:', error);
       toast.error(`Failed to download invoices: ${error.message}`);
     } finally {
       setBulkDownloading(false);
+      setBulkProgress({ done: 0, total: 0 });
     }
   };
 
@@ -226,11 +272,11 @@ export default function Invoices() {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'paid': return 'default';
-      case 'sent': return 'secondary';
-      case 'overdue': return 'destructive';
-      case 'draft': return 'outline';
-      default: return 'outline';
+      case 'paid': return 'success' as const;
+      case 'sent': return 'info' as const;
+      case 'overdue': return 'warning' as const;
+      case 'draft': return 'outline' as const;
+      default: return 'outline' as const;
     }
   };
 
@@ -241,16 +287,51 @@ export default function Invoices() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-muted rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-32 bg-muted rounded"></div>
-            ))}
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-56" />
           </div>
-          <div className="h-96 bg-muted rounded"></div>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-40" />
+            <Skeleton className="h-10 w-36" />
+          </div>
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-7 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <div className="flex gap-4">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-48" />
+              <Skeleton className="h-10 w-48" />
+              <Skeleton className="h-10 w-48" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-3">
+                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 flex-1" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-8 w-24" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -271,7 +352,11 @@ export default function Invoices() {
               className="gap-2"
             >
               <Download className="h-4 w-4" />
-              {bulkDownloading ? 'Generating...' : `Download All HTML (${filteredInvoices.length})`}
+              {bulkDownloading
+                ? (bulkProgress.total > 0
+                  ? `PDF ${bulkProgress.done}/${bulkProgress.total}...`
+                  : 'Fetching...')
+                : `Download All (${filteredInvoices.length})`}
             </Button>
           )}
           <Dialog open={autoGenerateOpen} onOpenChange={setAutoGenerateOpen}>
@@ -281,52 +366,54 @@ export default function Invoices() {
                 Auto Generate
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
+            <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+              <DialogHeader className="px-6 pt-6">
                 <DialogTitle>Auto Generate Invoices</DialogTitle>
               </DialogHeader>
-              <AutoGenerateInvoices onInvoicesCreated={handleInvoicesCreated} selectedMonth={selectedMonth} />
+              <ScrollArea className="max-h-[calc(90vh-6rem)] px-6 pb-6">
+                <AutoGenerateInvoices onInvoicesCreated={handleInvoicesCreated} selectedMonth={selectedMonth} />
+              </ScrollArea>
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <FileText className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalInvoices}</div>
+            <div className="text-2xl font-bold"><AnimatedNumber value={totalInvoices} /></div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <IndianRupee className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalAmount)}</div>
+            <div className="text-2xl font-bold"><AnimatedNumber value={totalAmount} prefix="₹" /></div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-l-4 border-l-emerald-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Paid Amount</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CheckCircle className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(paidAmount)}</div>
+            <div className="text-2xl font-bold text-emerald-600"><AnimatedNumber value={paidAmount} prefix="₹" /></div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-l-4 border-l-amber-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Amount</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <Clock className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{formatCurrency(pendingAmount)}</div>
+            <div className="text-2xl font-bold text-amber-600"><AnimatedNumber value={pendingAmount} prefix="₹" /></div>
           </CardContent>
         </Card>
       </div>
@@ -339,12 +426,12 @@ export default function Invoices() {
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search invoices..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                defaultValue={searchTerm}
+                onChange={(e) => setFilter('search', e.target.value, 300)}
                 className="pl-10"
               />
             </div>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <Select value={selectedMonth} onValueChange={(v) => setFilter('month', v)}>
               <SelectTrigger className="w-full sm:w-48">
                 <Calendar className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Select month" />
@@ -364,7 +451,7 @@ export default function Invoices() {
                 })}
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(v) => setFilter('status', v)}>
               <SelectTrigger className="w-full sm:w-48">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filter by status" />
@@ -377,7 +464,7 @@ export default function Invoices() {
                 <SelectItem value="overdue">Overdue</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={gstTypeFilter} onValueChange={setGstTypeFilter}>
+            <Select value={gstTypeFilter} onValueChange={(v) => setFilter('gst', v)}>
               <SelectTrigger className="w-full sm:w-48">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filter by GST type" />
@@ -438,16 +525,13 @@ export default function Invoices() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">
-                  <button 
-                    onClick={toggleSelectAll}
-                    className="flex items-center justify-center w-full"
-                  >
-                    {selectedInvoices.size === filteredInvoices.length && filteredInvoices.length > 0 ? 
-                      <CheckSquare className="h-4 w-4" /> : 
-                      <Square className="h-4 w-4" />
-                    }
-                  </button>
+                  <Checkbox
+                    checked={filteredInvoices.length > 0 && selectedInvoices.size === filteredInvoices.length}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all"
+                  />
                 </TableHead>
+                <TableHead>Invoice #</TableHead>
                 <TableHead>Site Name</TableHead>
                 <TableHead>GST Type</TableHead>
                 <TableHead>Amount</TableHead>
@@ -459,16 +543,13 @@ export default function Invoices() {
               {filteredInvoices.map((invoice) => (
                 <TableRow key={invoice.id}>
                   <TableCell>
-                    <button 
-                      onClick={() => toggleInvoiceSelection(invoice.id)}
-                      className="flex items-center justify-center w-full"
-                    >
-                      {selectedInvoices.has(invoice.id) ? 
-                        <CheckSquare className="h-4 w-4" /> : 
-                        <Square className="h-4 w-4" />
-                      }
-                    </button>
+                    <Checkbox
+                      checked={selectedInvoices.has(invoice.id)}
+                      onCheckedChange={() => toggleInvoiceSelection(invoice.id)}
+                      aria-label={`Select ${invoice.invoiceNumber}`}
+                    />
                   </TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{invoice.invoiceNumber}</TableCell>
                   <TableCell className="font-medium">{invoice.siteName}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
@@ -482,33 +563,51 @@ export default function Invoices() {
                   </TableCell>
                   <TableCell className="font-semibold">{formatCurrency(invoice.totalAmount)}</TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(invoice.status)}>
-                      {invoice.status.toUpperCase()}
+                    <Badge variant={getStatusBadgeVariant(invoice.status)} className="capitalize">
+                      {invoice.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/invoices/${invoice.id}`)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/invoices/${invoice.id}/edit`)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteInvoice(invoice.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <div className="flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => navigate(`/invoices/${invoice.id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>View</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => navigate(`/invoices/${invoice.id}/edit`)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Edit</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setDeleteConfirmId(invoice.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete</TooltipContent>
+                      </Tooltip>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -516,12 +615,46 @@ export default function Invoices() {
             </TableBody>
           </Table>
           {filteredInvoices.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              {searchTerm || statusFilter !== 'all' || gstTypeFilter !== 'all' ? 'No invoices match your filters' : 'No invoices found'}
+            <div className="text-center py-12 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p className="font-medium">
+                {searchTerm || statusFilter !== 'all' || gstTypeFilter !== 'all' ? 'No invoices match your filters' : 'No invoices found for this month'}
+              </p>
+              <p className="text-sm mt-1">
+                {searchTerm || statusFilter !== 'all' || gstTypeFilter !== 'all'
+                  ? 'Try adjusting your filters'
+                  : 'Create a new invoice or auto-generate from sites'}
+              </p>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Invoice?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the invoice.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteConfirmId) {
+                  handleDeleteInvoice(deleteConfirmId);
+                  setDeleteConfirmId(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

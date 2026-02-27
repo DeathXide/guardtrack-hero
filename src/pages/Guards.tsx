@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { usePersistedFilters } from '@/hooks/usePersistedFilters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PageLoader, CardLoader } from '@/components/ui/loader';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   guardsApi, 
   paymentsApi, 
@@ -25,6 +26,8 @@ import {
 } from '@/lib/guardsApi';
 import { GuardOverviewCard } from '@/components/guards/GuardOverviewCard';
 import { GuardDetailView } from '@/components/guards/GuardDetailView';
+import { m } from 'motion/react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Mapping functions between Supabase types and local types
 const mapSupabaseGuardToLocal = (supabaseGuard: SupabaseGuard): Guard => {
@@ -83,10 +86,15 @@ const Guards = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const guardFilterDefaults = useMemo(() => ({
+    search: '',
+    type: 'permanent',
+  }), []);
+  const { values: guardFilters, setFilter: setGuardFilter } = usePersistedFilters(guardFilterDefaults);
+  const searchTerm = guardFilters.search;
+  const guardType = guardFilters.type as 'permanent' | 'contract';
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedGuardId, setSelectedGuardId] = useState<string | null>(null);
-  const [guardType, setGuardType] = useState<'permanent' | 'contract'>('permanent');
   const [selectedGuardForDetail, setSelectedGuardForDetail] = useState<SupabaseGuard | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -409,12 +417,48 @@ const Guards = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Guards</h2>
-            <p className="text-muted-foreground">Loading guards...</p>
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-64" />
           </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+          <Skeleton className="h-10 flex-1" />
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-5 w-24 rounded-full" />
+                </div>
+                <Skeleton className="h-8 w-8 rounded-full" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                </div>
+                <div className="space-y-2">
+                  {[...Array(4)].map((_, j) => (
+                    <Skeleton key={j} className="h-4 w-full" />
+                  ))}
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Skeleton className="h-8 flex-1" />
+                  <Skeleton className="h-8 w-8" />
+                  <Skeleton className="h-8 w-8" />
+                  <Skeleton className="h-8 w-8" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     );
@@ -461,12 +505,12 @@ const Guards = () => {
                 type="search"
                 placeholder="Search by name, email or badge number..."
                 className="pl-8"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
+                defaultValue={searchTerm}
+                onChange={e => setGuardFilter('search', e.target.value, 300)}
               />
             </div>
             
-            <Tabs defaultValue="permanent" className="w-full md:w-auto" onValueChange={(v) => setGuardType(v as 'permanent' | 'contract')}>
+            <Tabs value={guardType} className="w-full md:w-auto" onValueChange={(v) => setGuardFilter('type', v)}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="permanent">Permanent</TabsTrigger>
                 <TabsTrigger value="contract">Contract</TabsTrigger>
@@ -479,7 +523,15 @@ const Guards = () => {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <m.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.06 } }
+            }}
+          >
             {filteredGuards.length === 0 ? (
               <p className="col-span-full text-center py-10 text-muted-foreground">
                 No guards found. Try a different search term or add a new guard.
@@ -487,34 +539,42 @@ const Guards = () => {
             ) : (
               filteredGuards.map(guard => {
                 const monthlyEarnings = getCurrentMonthEarnings(guard);
-            
+
                 return (
-                  <GuardOverviewCard
+                  <m.div
                     key={guard.id}
-                    guard={guard}
-                    monthlyEarnings={monthlyEarnings}
-                    onEdit={handleEditGuard}
-                    onDelete={handleDeleteClick}
-                    onPayment={handlePaymentDialog}
-                    onViewDetails={setSelectedGuardForDetail}
-                  />
+                    variants={{
+                      hidden: { opacity: 0, y: 12 },
+                      visible: { opacity: 1, y: 0 }
+                    }}
+                  >
+                    <GuardOverviewCard
+                      guard={guard}
+                      monthlyEarnings={monthlyEarnings}
+                      onEdit={handleEditGuard}
+                      onDelete={handleDeleteClick}
+                      onPayment={handlePaymentDialog}
+                      onViewDetails={setSelectedGuardForDetail}
+                    />
+                  </m.div>
                 );
               })
             )}
-          </div>
+          </m.div>
         </TabsContent>
       </Tabs>
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] p-0">
+          <DialogHeader className="px-6 pt-6">
             <DialogTitle>{isEditMode ? 'Edit Guard' : 'Add New Guard'}</DialogTitle>
             <DialogDescription>
-              {isEditMode 
-                ? 'Update guard profile and details' 
+              {isEditMode
+                ? 'Update guard profile and details'
                 : 'Create a comprehensive security guard profile'}
             </DialogDescription>
           </DialogHeader>
+          <ScrollArea className="max-h-[calc(90vh-8rem)] px-6 pb-6">
           <GuardForm
             guard={selectedGuardForForm}
             onSubmit={handleFormSubmit}
@@ -522,18 +582,19 @@ const Guards = () => {
             isLoading={createGuardMutation.isPending || updateGuardMutation.isPending}
             isEditMode={isEditMode}
           />
+          </ScrollArea>
         </DialogContent>
       </Dialog>
-      
+
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] p-0">
+          <DialogHeader className="px-6 pt-6">
             <DialogTitle>Payment Management - {selectedGuard?.name}</DialogTitle>
             <DialogDescription>
               Record new payments and manage payment history
             </DialogDescription>
           </DialogHeader>
-          
+          <ScrollArea className="max-h-[calc(80vh-8rem)] px-6 pb-6">
           <Tabs value={paymentHistoryTab} onValueChange={setPaymentHistoryTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="new">
@@ -702,6 +763,7 @@ const Guards = () => {
               </div>
             </TabsContent>
           </Tabs>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 

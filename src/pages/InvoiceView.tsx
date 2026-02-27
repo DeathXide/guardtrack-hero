@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Download, Send, Check, X, Phone, Mail, MapPin, Building2, Hash, Calendar, Info } from 'lucide-react';
+import { Edit, Download, Send, Phone, Mail, MapPin, Building2, Hash, Calendar, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,9 @@ import { numberToWords } from '@/lib/numberToWords';
 import { companyApi } from '@/lib/companyApi';
 import { Invoice } from '@/types/invoice';
 import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
+import { PageHeader } from '@/components/layout/PageHeader';
+
 export default function InvoiceView() {
   const {
     id
@@ -23,6 +26,8 @@ export default function InvoiceView() {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [companySettings, setCompanySettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const invoiceContentRef = useRef<HTMLDivElement>(null);
+  const [contentScale, setContentScale] = useState(1);
   useEffect(() => {
     if (id) {
       loadInvoice(id);
@@ -39,6 +44,23 @@ export default function InvoiceView() {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [id]);
+
+  // Auto-scale invoice content to fit one A4 page
+  useEffect(() => {
+    if (!invoiceContentRef.current || loading || !invoice) return;
+
+    const el = invoiceContentRef.current;
+    const A4_HEIGHT = 1123; // A4 height in px at 96dpi
+    // scrollHeight is unaffected by CSS transform, always returns natural height
+    const naturalHeight = el.scrollHeight;
+
+    if (naturalHeight > A4_HEIGHT) {
+      setContentScale(A4_HEIGHT / naturalHeight);
+    } else {
+      setContentScale(1);
+    }
+  }, [invoice, loading]);
+
   const loadInvoice = async (invoiceId: string) => {
     setLoading(true);
     try {
@@ -80,18 +102,18 @@ export default function InvoiceView() {
       toast.error('Failed to update status');
     }
   };
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/invoices');
+  };
+
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'paid':
-        return 'default';
-      case 'sent':
-        return 'secondary';
-      case 'overdue':
-        return 'destructive';
-      case 'draft':
-        return 'outline';
-      default:
-        return 'outline';
+      case 'paid': return 'success' as const;
+      case 'sent': return 'info' as const;
+      case 'overdue': return 'warning' as const;
+      case 'draft': return 'outline' as const;
+      default: return 'outline' as const;
     }
   };
   const handleDownloadPDF = async () => {
@@ -123,43 +145,44 @@ export default function InvoiceView() {
     }
   };
   if (loading) {
-    return <div className="container mx-auto p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-muted rounded w-1/4"></div>
-          <div className="h-96 bg-muted rounded"></div>
+    return <div className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-8 w-64" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <Skeleton className="h-[600px] w-full rounded-lg" />
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-48 w-full rounded-lg" />
+            <Skeleton className="h-48 w-full rounded-lg" />
+          </div>
         </div>
       </div>;
   }
   if (!invoice) {
-    return <div className="container mx-auto p-6">
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-bold mb-4">Invoice Not Found</h2>
-          <Button onClick={() => navigate('/invoices')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Invoices
-          </Button>
-        </div>
+    return <div className="text-center py-12">
+        <h2 className="text-2xl font-bold mb-4">Invoice Not Found</h2>
+        <Button onClick={handleBack}>
+          Back to Invoices
+        </Button>
       </div>;
   }
   const isPersonal = invoice.gstType === 'PERSONAL';
   const displayCompanyName = isPersonal ? invoice.companyName : (companySettings?.company_name || invoice.companyName);
-  return <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/invoices')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Invoices
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Invoice {invoice.invoiceNumber}</h1>
-            <p className="text-muted-foreground">
-              Created on {new Date(invoice.created_at).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={getStatusBadgeVariant(invoice.status)}>
-            {invoice.status.toUpperCase()}
+  return <div className="space-y-6">
+      <PageHeader
+        title={`Invoice ${invoice.invoiceNumber}`}
+        subtitle={`Created on ${new Date(invoice.created_at).toLocaleDateString()}`}
+        breadcrumbs={[
+          { label: 'Invoices', href: '/invoices' },
+          { label: invoice.invoiceNumber },
+        ]}
+        backButton
+        actions={<div className="flex items-center gap-2">
+          <Badge variant={getStatusBadgeVariant(invoice.status)} className="capitalize">
+            {invoice.status}
           </Badge>
           <Select value={invoice.status} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-32">
@@ -184,14 +207,30 @@ export default function InvoiceView() {
             <Send className="h-4 w-4 mr-2" />
             Send Invoice
           </Button>
-        </div>
-      </div>
+        </div>}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Invoice Content */}
         <div className="lg:col-span-2">
-          <Card className="shadow-sm border-0">
-            <CardContent id="invoice-content" className="p-0 font-sans bg-white w-[794px] mx-auto box-border min-h-[1123px] flex flex-col">
+          <Card className="shadow-sm border-0 overflow-hidden">
+            <div
+              className="mx-auto"
+              style={{
+                width: '794px',
+                height: contentScale < 1 ? '1123px' : undefined,
+                overflow: contentScale < 1 ? 'hidden' : undefined,
+              }}
+            >
+            <CardContent
+              id="invoice-content"
+              ref={invoiceContentRef}
+              className="p-0 font-sans bg-white w-[794px] box-border min-h-[1123px] flex flex-col"
+              style={{
+                transform: contentScale < 1 ? `scale(${contentScale})` : undefined,
+                transformOrigin: 'top left',
+              }}
+            >
               {/* Header */}
               <div className="bg-gradient-to-r from-slate-50 to-gray-50 p-4 mb-6">
                 <div className="flex justify-between items-start">
@@ -494,6 +533,7 @@ export default function InvoiceView() {
 
 
             </CardContent>
+            </div>
           </Card>
         </div>
 
@@ -507,7 +547,7 @@ export default function InvoiceView() {
               <div className="flex justify-between">
                 <span>Status:</span>
                 <Badge variant={getStatusBadgeVariant(invoice.status)}>
-                  {invoice.status.toUpperCase()}
+                  {invoice.status}
                 </Badge>
               </div>
               <div className="flex justify-between">

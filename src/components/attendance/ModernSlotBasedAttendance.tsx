@@ -2,7 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Calendar, MapPin, AlertCircle, Sun, Moon, Search, Filter, CheckCircle } from 'lucide-react';
+import { m } from 'motion/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -386,27 +388,42 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
                 </Badge>
               </h4>
             </div>
-            <div className="attendance-grid">
+            <m.div
+              className="attendance-grid"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: {},
+                visible: { transition: { staggerChildren: 0.04 } }
+              }}
+            >
               {roleSlots.map(slot => {
                 const assignedGuard = guards.find(g => g.id === slot.assigned_guard_id);
                 return (
-                  <ModernSlotCard
+                  <m.div
                     key={slot.id}
-                    slot={slot}
-                    assignedGuard={assignedGuard}
-                    onAssignGuard={handleOpenAllocation}
-                    onUnassignGuard={(slotId) => unassignGuardMutation.mutate(slotId)}
-                    onReplaceGuard={(slotId, shiftType, roleType, originalGuardId) => 
-                      handleOpenAllocation(slotId, shiftType, roleType, true, originalGuardId)
-                    }
-                    onMarkAttendance={(slotId, isPresent) => 
-                      markAttendanceMutation.mutate({ slotId, isPresent })
-                    }
-                    isLoading={assignGuardMutation.isPending || unassignGuardMutation.isPending || markAttendanceMutation.isPending}
-                  />
+                    variants={{
+                      hidden: { opacity: 0, y: 12 },
+                      visible: { opacity: 1, y: 0 }
+                    }}
+                  >
+                    <ModernSlotCard
+                      slot={slot}
+                      assignedGuard={assignedGuard}
+                      onAssignGuard={handleOpenAllocation}
+                      onUnassignGuard={(slotId) => unassignGuardMutation.mutate(slotId)}
+                      onReplaceGuard={(slotId, shiftType, roleType, originalGuardId) =>
+                        handleOpenAllocation(slotId, shiftType, roleType, true, originalGuardId)
+                      }
+                      onMarkAttendance={(slotId, isPresent) =>
+                        markAttendanceMutation.mutate({ slotId, isPresent })
+                      }
+                      isLoading={assignGuardMutation.isPending || unassignGuardMutation.isPending || markAttendanceMutation.isPending}
+                    />
+                  </m.div>
                 );
               })}
-            </div>
+            </m.div>
           </div>
         ))}
       </div>
@@ -595,12 +612,23 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
                 {slotsLoading ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {Array.from({ length: 8 }).map((_, i) => (
-                      <Card key={i} className="animate-pulse">
-                        <CardContent className="p-4">
-                          <div className="space-y-3">
-                            <div className="h-4 bg-muted rounded"></div>
-                            <div className="h-10 bg-muted rounded"></div>
-                            <div className="h-8 bg-muted rounded"></div>
+                      <Card key={i}>
+                        <CardContent className="p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Skeleton className="h-4 w-20" />
+                            <Skeleton className="h-5 w-16 rounded-full" />
+                          </div>
+                          <Skeleton className="h-5 w-24 rounded-full" />
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <div className="flex-1 space-y-1.5">
+                              <Skeleton className="h-4 w-28" />
+                              <Skeleton className="h-3 w-20" />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Skeleton className="h-8" />
+                            <Skeleton className="h-8" />
                           </div>
                         </CardContent>
                       </Card>
