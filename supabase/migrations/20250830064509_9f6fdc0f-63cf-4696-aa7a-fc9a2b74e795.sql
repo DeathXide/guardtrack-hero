@@ -80,8 +80,8 @@ USING (
   public.is_admin_or_supervisor(auth.uid()) OR
   -- Guards can view their own payments
   (public.get_user_role(auth.uid()) = 'guard' AND guard_id IN (
-    SELECT id FROM public.guards g
-    JOIN public.profiles p ON p.email = (SELECT email FROM auth.users WHERE id = auth.uid())
+    SELECT g.id FROM public.guards g
+    JOIN public.profiles p ON p.email = (SELECT email FROM auth.users u WHERE u.id = auth.uid())
     WHERE g.id = guard_id
   ))
 );
@@ -174,64 +174,26 @@ USING (
   public.is_admin_or_supervisor(auth.uid()) OR
   -- Guards can view their own attendance records
   (public.get_user_role(auth.uid()) = 'guard' AND employee_id IN (
-    SELECT id FROM public.guards g
-    JOIN public.profiles p ON p.email = (SELECT email FROM auth.users WHERE id = auth.uid())
+    SELECT g.id FROM public.guards g
+    JOIN public.profiles p ON p.email = (SELECT email FROM auth.users u WHERE u.id = auth.uid())
     WHERE g.id = employee_id
   ))
 );
 
--- SECURE LEAVE REQUESTS TABLE
-DROP POLICY IF EXISTS "Authenticated users can create leave requests" ON public.leave_requests;
-DROP POLICY IF EXISTS "Authenticated users can delete leave requests" ON public.leave_requests;
-DROP POLICY IF EXISTS "Authenticated users can update leave requests" ON public.leave_requests;
-DROP POLICY IF EXISTS "Authenticated users can view leave requests" ON public.leave_requests;
+-- SECURE LEAVE REQUESTS TABLE (only if it exists)
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'leave_requests') THEN
+    EXECUTE 'DROP POLICY IF EXISTS "Authenticated users can create leave requests" ON public.leave_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "Authenticated users can delete leave requests" ON public.leave_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "Authenticated users can update leave requests" ON public.leave_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "Authenticated users can view leave requests" ON public.leave_requests';
 
-CREATE POLICY "Users can create their own leave requests"
-ON public.leave_requests FOR INSERT
-TO authenticated
-WITH CHECK (
-  public.profile_is_admin(auth.uid()) OR
-  public.is_admin_or_supervisor(auth.uid()) OR
-  -- Guards can create requests for themselves
-  (public.get_user_role(auth.uid()) = 'guard' AND employee_id IN (
-    SELECT id FROM public.guards g
-    JOIN public.profiles p ON p.email = (SELECT email FROM auth.users WHERE id = auth.uid())
-    WHERE g.id = employee_id
-  ))
-);
-
-CREATE POLICY "Role-based leave request updates"
-ON public.leave_requests FOR UPDATE
-TO authenticated
-USING (
-  public.profile_is_admin(auth.uid()) OR
-  public.is_admin_or_supervisor(auth.uid()) OR
-  -- Guards can update their own pending requests
-  (public.get_user_role(auth.uid()) = 'guard' AND status = 'pending' AND employee_id IN (
-    SELECT id FROM public.guards g
-    JOIN public.profiles p ON p.email = (SELECT email FROM auth.users WHERE id = auth.uid())
-    WHERE g.id = employee_id
-  ))
-);
-
-CREATE POLICY "Admins can delete leave requests"
-ON public.leave_requests FOR DELETE
-TO authenticated
-USING (public.profile_is_admin(auth.uid()));
-
-CREATE POLICY "Role-based leave request viewing"
-ON public.leave_requests FOR SELECT
-TO authenticated
-USING (
-  public.profile_is_admin(auth.uid()) OR
-  public.is_admin_or_supervisor(auth.uid()) OR
-  -- Guards can view their own leave requests
-  (public.get_user_role(auth.uid()) = 'guard' AND employee_id IN (
-    SELECT id FROM public.guards g
-    JOIN public.profiles p ON p.email = (SELECT email FROM auth.users WHERE id = auth.uid())
-    WHERE g.id = employee_id
-  ))
-);
+    EXECUTE 'CREATE POLICY "Users can create their own leave requests" ON public.leave_requests FOR INSERT TO authenticated WITH CHECK (public.profile_is_admin(auth.uid()) OR public.is_admin_or_supervisor(auth.uid()) OR (public.get_user_role(auth.uid()) = ''guard'' AND employee_id IN (SELECT g.id FROM public.guards g JOIN public.profiles p ON p.email = (SELECT email FROM auth.users u WHERE u.id = auth.uid()) WHERE g.id = employee_id)))';
+    EXECUTE 'CREATE POLICY "Role-based leave request updates" ON public.leave_requests FOR UPDATE TO authenticated USING (public.profile_is_admin(auth.uid()) OR public.is_admin_or_supervisor(auth.uid()) OR (public.get_user_role(auth.uid()) = ''guard'' AND status = ''pending'' AND employee_id IN (SELECT g.id FROM public.guards g JOIN public.profiles p ON p.email = (SELECT email FROM auth.users u WHERE u.id = auth.uid()) WHERE g.id = employee_id)))';
+    EXECUTE 'CREATE POLICY "Admins can delete leave requests" ON public.leave_requests FOR DELETE TO authenticated USING (public.profile_is_admin(auth.uid()))';
+    EXECUTE 'CREATE POLICY "Role-based leave request viewing" ON public.leave_requests FOR SELECT TO authenticated USING (public.profile_is_admin(auth.uid()) OR public.is_admin_or_supervisor(auth.uid()) OR (public.get_user_role(auth.uid()) = ''guard'' AND employee_id IN (SELECT g.id FROM public.guards g JOIN public.profiles p ON p.email = (SELECT email FROM auth.users u WHERE u.id = auth.uid()) WHERE g.id = employee_id)))';
+  END IF;
+END $$;
 
 -- SECURE DAILY ATTENDANCE SLOTS TABLE
 DROP POLICY IF EXISTS "Authenticated users can manage daily attendance slots" ON public.daily_attendance_slots;
@@ -265,8 +227,8 @@ USING (
   public.is_admin_or_supervisor(auth.uid()) OR
   -- Guards can view slots they're assigned to
   (public.get_user_role(auth.uid()) = 'guard' AND assigned_guard_id IN (
-    SELECT id FROM public.guards g
-    JOIN public.profiles p ON p.email = (SELECT email FROM auth.users WHERE id = auth.uid())
+    SELECT g.id FROM public.guards g
+    JOIN public.profiles p ON p.email = (SELECT email FROM auth.users u WHERE u.id = auth.uid())
     WHERE g.id = assigned_guard_id
   ))
 );

@@ -132,8 +132,16 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
       const selectedSiteData = filteredSites.filter(site => selectedSites.has(site.id));
       let createdCount = 0;
       let skippedCount = 0;
+      let skippedInactiveCount = 0;
 
       const processSite = async (siteData: any) => {
+        // Block invoice generation for inactive sites
+        if (siteData.status === 'inactive') {
+          console.warn(`Skipping site ${siteData.site_name} - site is inactive`);
+          skippedInactiveCount++;
+          return;
+        }
+
         // Check if site has staffing requirements
         if (!siteData.staffing_requirements || siteData.staffing_requirements.length === 0) {
           console.warn(`Skipping site ${siteData.site_name} - no staffing requirements defined`);
@@ -221,13 +229,16 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
       }
 
       if (createdCount > 0) {
-        const message = skippedCount > 0 
-          ? `Created ${createdCount} invoice(s) successfully. ${skippedCount} site(s) skipped (already have invoices for this month or missing requirements).`
-          : `Created ${createdCount} invoice(s) successfully`;
-        toast.success(message);
+        const parts: string[] = [`Created ${createdCount} invoice(s) successfully.`];
+        if (skippedCount > 0) parts.push(`${skippedCount} skipped (missing requirements).`);
+        if (skippedInactiveCount > 0) parts.push(`${skippedInactiveCount} skipped (inactive sites).`);
+        toast.success(parts.join(' '));
         onInvoicesCreated();
-      } else if (skippedCount > 0) {
-        toast.warning(`No new invoices were created. ${skippedCount} site(s) either already have invoices for this month or are missing staffing requirements.`);
+      } else if (skippedCount > 0 || skippedInactiveCount > 0) {
+        const parts: string[] = ['No new invoices were created.'];
+        if (skippedInactiveCount > 0) parts.push(`${skippedInactiveCount} inactive site(s) blocked.`);
+        if (skippedCount > 0) parts.push(`${skippedCount} site(s) missing requirements.`);
+        toast.warning(parts.join(' '));
       } else {
         toast.warning('No invoices were created. Please ensure sites have staffing requirements configured.');
       }

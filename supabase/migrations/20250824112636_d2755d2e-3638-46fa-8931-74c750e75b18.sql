@@ -5,7 +5,11 @@ DROP POLICY IF EXISTS "Allow all operations on guards" ON public.guards;
 DROP POLICY IF EXISTS "Allow all operations on payments" ON public.payments;
 DROP POLICY IF EXISTS "Allow all operations on invoices" ON public.invoices;
 DROP POLICY IF EXISTS "Allow all operations on attendance_records" ON public.attendance_records;
-DROP POLICY IF EXISTS "Allow all operations on leave_requests" ON public.leave_requests;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'leave_requests') THEN
+    EXECUTE 'DROP POLICY IF EXISTS "Allow all operations on leave_requests" ON public.leave_requests';
+  END IF;
+END $$;
 DROP POLICY IF EXISTS "Allow all operations on company_settings" ON public.company_settings;
 DROP POLICY IF EXISTS "Allow all operations on sites" ON public.sites;
 DROP POLICY IF EXISTS "Allow all operations on shifts" ON public.shifts;
@@ -13,7 +17,11 @@ DROP POLICY IF EXISTS "Allow all operations on daily_attendance_slots" ON public
 DROP POLICY IF EXISTS "Allow all operations on staffing_requirements" ON public.staffing_requirements;
 DROP POLICY IF EXISTS "Allow all operations on site_utility_charges" ON public.site_utility_charges;
 DROP POLICY IF EXISTS "Allow all operations on attendance_settings" ON public.attendance_settings;
-DROP POLICY IF EXISTS "Allow all operations on employee_types" ON public.employee_types;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'employee_types') THEN
+    EXECUTE 'DROP POLICY IF EXISTS "Allow all operations on employee_types" ON public.employee_types';
+  END IF;
+END $$;
 DROP POLICY IF EXISTS "Allow all operations on invoice_sequences" ON public.invoice_sequences;
 
 -- Create secure RLS policies for guards table (most sensitive)
@@ -116,30 +124,15 @@ FOR DELETE
 TO authenticated 
 USING (true);
 
--- Create secure RLS policies for leave_requests table
-CREATE POLICY "Authenticated users can view leave requests" 
-ON public.leave_requests 
-FOR SELECT 
-TO authenticated 
-USING (true);
-
-CREATE POLICY "Authenticated users can create leave requests" 
-ON public.leave_requests 
-FOR INSERT 
-TO authenticated 
-WITH CHECK (true);
-
-CREATE POLICY "Authenticated users can update leave requests" 
-ON public.leave_requests 
-FOR UPDATE 
-TO authenticated 
-USING (true);
-
-CREATE POLICY "Authenticated users can delete leave requests" 
-ON public.leave_requests 
-FOR DELETE 
-TO authenticated 
-USING (true);
+-- Create secure RLS policies for leave_requests table (if it exists)
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'leave_requests') THEN
+    EXECUTE 'CREATE POLICY "Authenticated users can view leave requests" ON public.leave_requests FOR SELECT TO authenticated USING (true)';
+    EXECUTE 'CREATE POLICY "Authenticated users can create leave requests" ON public.leave_requests FOR INSERT TO authenticated WITH CHECK (true)';
+    EXECUTE 'CREATE POLICY "Authenticated users can update leave requests" ON public.leave_requests FOR UPDATE TO authenticated USING (true)';
+    EXECUTE 'CREATE POLICY "Authenticated users can delete leave requests" ON public.leave_requests FOR DELETE TO authenticated USING (true)';
+  END IF;
+END $$;
 
 -- Create secure RLS policies for company_settings table
 CREATE POLICY "Authenticated users can view company settings" 
@@ -227,12 +220,11 @@ TO authenticated
 USING (true) 
 WITH CHECK (true);
 
-CREATE POLICY "Authenticated users can manage employee types" 
-ON public.employee_types 
-FOR ALL 
-TO authenticated 
-USING (true) 
-WITH CHECK (true);
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'employee_types') THEN
+    EXECUTE 'CREATE POLICY "Authenticated users can manage employee types" ON public.employee_types FOR ALL TO authenticated USING (true) WITH CHECK (true)';
+  END IF;
+END $$;
 
 CREATE POLICY "Authenticated users can manage invoice sequences" 
 ON public.invoice_sequences 

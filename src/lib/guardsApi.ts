@@ -172,7 +172,13 @@ export const paymentsApi = {
 
   // Get payment summary for a guard in a specific month with shift-based calculation
   async getGuardMonthlySummary(guardId: string, month: string) {
-    // Get payments, guard's base salary, and actual shifts worked
+    // Parse month to get actual days in month (e.g. "2026-02" → 28)
+    const [yearStr, monthStr] = month.split('-');
+    const year = parseInt(yearStr, 10);
+    const monthNum = parseInt(monthStr, 10);
+    const daysInMonth = new Date(year, monthNum, 0).getDate();
+
+    // Get payments, guard's pay rates, and actual shifts worked (with guard_pay_override)
     const [paymentsResult, guardResult, shiftsResult] = await Promise.all([
       supabase
         .from('payments')
@@ -181,15 +187,15 @@ export const paymentsApi = {
         .eq('payment_month', month),
       supabase
         .from('guards')
-        .select('monthly_pay_rate')
+        .select('monthly_pay_rate, per_shift_rate')
         .eq('id', guardId)
         .single(),
       supabase
         .from('daily_attendance_slots')
-        .select('is_present, shift_type')
+        .select('is_present, shift_type, guard_pay_override')
         .eq('assigned_guard_id', guardId)
         .gte('attendance_date', `${month}-01`)
-        .lte('attendance_date', `${month}-31`) // Get all days in the month
+        .lte('attendance_date', `${month}-${daysInMonth}`)
     ]);
 
     if (paymentsResult.error) throw paymentsResult.error;
@@ -197,23 +203,37 @@ export const paymentsApi = {
     if (shiftsResult.error) throw shiftsResult.error;
 
     const monthlyPayRate = Number(guardResult.data?.monthly_pay_rate || 0);
-    
-    // Calculate daily rate (monthly rate / 30 days)
-    const dailyRate = monthlyPayRate / 30;
-    
-    // Count actual shifts worked (where is_present = true)
-    const shiftsWorked = shiftsResult.data.filter(shift => shift.is_present === true).length;
-    
-    // Calculate shift-based salary
-    const shiftBasedSalary = shiftsWorked * dailyRate;
+    const perShiftRate = Number(guardResult.data?.per_shift_rate || 0);
+
+    // Guard's default daily rate:
+    //   - If per_shift_rate is set, use it directly
+    //   - Otherwise, derive from monthly: monthly_pay_rate / actual days in month
+    const defaultDailyRate = perShiftRate > 0
+      ? perShiftRate
+      : (monthlyPayRate > 0 ? monthlyPayRate / daysInMonth : 0);
+
+    // Calculate earnings per present shift, respecting guard_pay_override
+    let shiftBasedSalary = 0;
+    let shiftsWorked = 0;
+
+    for (const slot of shiftsResult.data) {
+      if (slot.is_present === true) {
+        shiftsWorked++;
+        // Priority: slot.guard_pay_override > guard default daily rate
+        const dayRate = slot.guard_pay_override != null
+          ? Number(slot.guard_pay_override)
+          : defaultDailyRate;
+        shiftBasedSalary += dayRate;
+      }
+    }
 
     const summary = {
       totalBonus: 0,
       totalDeduction: 0,
-      baseSalary: monthlyPayRate, // Keep original monthly rate for reference
-      shiftBasedSalary: shiftBasedSalary, // Actual earnings based on shifts worked
-      shiftsWorked: shiftsWorked,
-      totalShifts: shiftsResult.data.length, // Total assigned shifts
+      baseSalary: monthlyPayRate || perShiftRate, // Reference base rate
+      shiftBasedSalary,
+      shiftsWorked,
+      totalShifts: shiftsResult.data.length,
       netAmount: 0
     };
 
@@ -225,7 +245,7 @@ export const paymentsApi = {
       }
     });
 
-    // Calculate net amount: shift-based salary + bonuses - deductions
+    // Net = shift-based earnings + bonuses - deductions
     summary.netAmount = summary.shiftBasedSalary + summary.totalBonus - summary.totalDeduction;
     return summary;
   }

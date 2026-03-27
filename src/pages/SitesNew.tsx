@@ -21,15 +21,21 @@ import { Card } from "@/components/ui/card";
 
 const GST_TYPES = ['GST', 'NGST', 'RCM', 'PERSONAL'] as const;
 const SITE_CATEGORIES = [
-  'Office Building', 
-  'Residential Complex', 
-  'Hospital', 
-  'School/College', 
-  'Mall/Shopping Center', 
-  'Industrial Site',
-  'Hotel',
+  'Residential Complex',
+  'Private Residence',
+  'Corporate Office',
+  'Commercial Complex',
+  'Automobile Dealership',
+  'Restaurant/Cafe',
+  'Hospital/Healthcare',
+  'School/Educational Institution',
+  'Retail/Showroom',
+  'Industrial/Manufacturing',
+  'Warehouse/Godown',
+  'Cinema/Entertainment',
+  'Construction Site',
+  'Service Station',
   'Government Building',
-  'Other'
 ];
 const ROLE_TYPES = [
   'Security Guard', 
@@ -213,10 +219,12 @@ export default function SitesNew() {
   const handleSubmit = () => {
     // Validate required fields
     const errors = new Set<string>();
-    
+
     if (!formData.site_name.trim()) errors.add("site_name");
     if (!formData.organization_name.trim()) errors.add("organization_name");
     if (!formData.site_category) errors.add("site_category");
+    if (!formData.address_line1.trim()) errors.add("address_line1");
+    if (formData.gst_type === 'PERSONAL' && !formData.personal_billing_name) errors.add("personal_billing_name");
 
     if (errors.size > 0) {
       setValidationErrors(errors);
@@ -275,25 +283,27 @@ export default function SitesNew() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="site_name">Site Name *</Label>
+                <Label htmlFor="site_name">Site Name / Location *</Label>
                 <Input
                   id="site_name"
                   value={formData.site_name}
                   onChange={(e) => handleInputChange("site_name", e.target.value)}
-                  placeholder="Enter site name"
+                  placeholder="e.g. Midtown Complex, Tower A"
                   className={validationErrors.has("site_name") ? "border-destructive" : ""}
                 />
+                <p className="text-xs text-muted-foreground">A unique name to identify this location</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="organization_name">Organization Name *</Label>
+                <Label htmlFor="organization_name">Client / Organization *</Label>
                 <Input
                   id="organization_name"
                   value={formData.organization_name}
                   onChange={(e) => handleInputChange("organization_name", e.target.value)}
-                  placeholder="Enter organization name"
+                  placeholder="e.g. ABC Corporation Pvt. Ltd."
                   className={validationErrors.has("organization_name") ? "border-destructive" : ""}
                 />
+                <p className="text-xs text-muted-foreground">The billing entity or company name</p>
               </div>
 
               <div className="space-y-2">
@@ -326,12 +336,12 @@ export default function SitesNew() {
 
               {formData.gst_type === 'PERSONAL' && (
                 <div className="space-y-2">
-                  <Label htmlFor="personal_billing_name">Personal Billing Name</Label>
+                  <Label htmlFor="personal_billing_name">Personal Billing Name *</Label>
                   <Select
                     value={formData.personal_billing_name}
                     onValueChange={(value) => handleInputChange("personal_billing_name", value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={validationErrors.has("personal_billing_name") ? "border-destructive" : ""}>
                       <SelectValue placeholder="Select personal billing name" />
                     </SelectTrigger>
                     <SelectContent>
@@ -370,9 +380,24 @@ export default function SitesNew() {
                     <SelectValue placeholder="Select site status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="temp">Temporary</SelectItem>
+                    <SelectItem value="active">
+                      <div className="flex flex-col">
+                        <span>Active</span>
+                        <span className="text-xs text-muted-foreground">Regular site, generates attendance & invoices</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="inactive">
+                      <div className="flex flex-col">
+                        <span>Inactive</span>
+                        <span className="text-xs text-muted-foreground">Paused — no attendance or invoicing</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="temp">
+                      <div className="flex flex-col">
+                        <span>Temporary</span>
+                        <span className="text-xs text-muted-foreground">Short-term / event-based site</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -388,7 +413,7 @@ export default function SitesNew() {
             </div>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="address_line1">Address Line 1</Label>
+                <Label htmlFor="address_line1">Address Line 1 *</Label>
                 <Input
                   id="address_line1"
                   value={formData.address_line1}

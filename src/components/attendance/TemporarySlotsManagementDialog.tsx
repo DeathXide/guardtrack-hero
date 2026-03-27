@@ -81,6 +81,7 @@ const TemporarySlotsManagementDialog: React.FC<TemporarySlotsManagementDialogPro
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
       queryClient.invalidateQueries({ queryKey: ['temporary-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['all-sites-attendance'] });
       toast({ title: 'Temporary slot created successfully' });
       setShowAddForm(false);
       setFormData({ shift_type: 'day', role_type: '', pay_rate: '' });
@@ -101,6 +102,7 @@ const TemporarySlotsManagementDialog: React.FC<TemporarySlotsManagementDialogPro
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
       queryClient.invalidateQueries({ queryKey: ['temporary-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['all-sites-attendance'] });
       toast({ title: 'Temporary slot updated successfully' });
       setEditingSlot(null);
     },
@@ -119,6 +121,7 @@ const TemporarySlotsManagementDialog: React.FC<TemporarySlotsManagementDialogPro
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
       queryClient.invalidateQueries({ queryKey: ['temporary-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['all-sites-attendance'] });
       toast({ title: 'Temporary slot deleted successfully' });
       setDeleteConfirmation(null);
     },
@@ -137,6 +140,7 @@ const TemporarySlotsManagementDialog: React.FC<TemporarySlotsManagementDialogPro
     onSuccess: (_, slotId) => {
       queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
       queryClient.invalidateQueries({ queryKey: ['temporary-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['all-sites-attendance'] });
       // After unassigning, delete the slot
       deleteSlotMutation.mutate(slotId);
     },

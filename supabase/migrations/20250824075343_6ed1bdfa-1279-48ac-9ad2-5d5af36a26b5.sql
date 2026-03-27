@@ -1,5 +1,5 @@
 -- Fix the search path security warning for the function we just created
-DROP FUNCTION IF EXISTS check_monthly_invoice_constraint();
+DROP FUNCTION IF EXISTS check_monthly_invoice_constraint() CASCADE;
 
 CREATE OR REPLACE FUNCTION check_monthly_invoice_constraint()
 RETURNS TRIGGER AS $$

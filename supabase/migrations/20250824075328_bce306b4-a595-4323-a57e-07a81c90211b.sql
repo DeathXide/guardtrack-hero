@@ -1,17 +1,19 @@
--- Add status column to sites table
-ALTER TABLE public.sites 
-ADD COLUMN status text NOT NULL DEFAULT 'active';
+-- Add status column to sites table (if not already added by previous migration)
+ALTER TABLE public.sites
+ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active';
 
--- Add check constraint for valid status values
-ALTER TABLE public.sites 
-ADD CONSTRAINT sites_status_check 
-CHECK (status IN ('active', 'inactive', 'custom'));
+-- Add check constraint for valid status values (skip if exists)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'sites_status_check') THEN
+    ALTER TABLE public.sites ADD CONSTRAINT sites_status_check CHECK (status IN ('active', 'inactive', 'custom'));
+  END IF;
+END $$;
 
 -- Create index for better performance on status filtering
-CREATE INDEX idx_sites_status ON public.sites(status);
+CREATE INDEX IF NOT EXISTS idx_sites_status ON public.sites(status);
 
 -- Create index for invoice period queries
-CREATE INDEX idx_invoices_period ON public.invoices(site_id, period_from, period_to);
+CREATE INDEX IF NOT EXISTS idx_invoices_period ON public.invoices(site_id, period_from, period_to);
 
 -- Create function to check monthly billing constraint
 CREATE OR REPLACE FUNCTION check_monthly_invoice_constraint()

@@ -113,39 +113,18 @@ CREATE POLICY "Supervisors can manage staffing requirements" ON public.staffing_
 FOR ALL USING (is_admin_or_supervisor(auth.uid()))
 WITH CHECK (is_admin_or_supervisor(auth.uid()));
 
--- Leave requests - ensure proper access
-DROP POLICY IF EXISTS "Role-based leave request viewing" ON public.leave_requests;
-DROP POLICY IF EXISTS "Users can create their own leave requests" ON public.leave_requests;
-DROP POLICY IF EXISTS "Role-based leave request updates" ON public.leave_requests;
-DROP POLICY IF EXISTS "Admins can delete leave requests" ON public.leave_requests;
-
-CREATE POLICY "Admins have full access to leave requests" ON public.leave_requests
-FOR ALL USING (profile_is_admin(auth.uid()))
-WITH CHECK (profile_is_admin(auth.uid()));
-
-CREATE POLICY "Supervisors can manage leave requests" ON public.leave_requests
-FOR ALL USING (is_admin_or_supervisor(auth.uid()))
-WITH CHECK (is_admin_or_supervisor(auth.uid()));
-
-CREATE POLICY "Guards can manage their own leave requests" ON public.leave_requests
-FOR ALL USING (
-  get_user_role(auth.uid()) = 'guard' AND
-  employee_id = (
-    SELECT g.id FROM guards g
-    JOIN profiles p ON (p.email = (SELECT users.email FROM auth.users WHERE users.id = auth.uid()))
-    WHERE (g.name = p.full_name OR p.email ILIKE '%' || g.name || '%')
-    LIMIT 1
-  )
-)
-WITH CHECK (
-  get_user_role(auth.uid()) = 'guard' AND
-  employee_id = (
-    SELECT g.id FROM guards g
-    JOIN profiles p ON (p.email = (SELECT users.email FROM auth.users WHERE users.id = auth.uid()))
-    WHERE (g.name = p.full_name OR p.email ILIKE '%' || g.name || '%')
-    LIMIT 1
-  )
-);
+-- Leave requests - ensure proper access (only if table exists)
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'leave_requests') THEN
+    EXECUTE 'DROP POLICY IF EXISTS "Role-based leave request viewing" ON public.leave_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "Users can create their own leave requests" ON public.leave_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "Role-based leave request updates" ON public.leave_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "Admins can delete leave requests" ON public.leave_requests';
+    EXECUTE 'CREATE POLICY "Admins have full access to leave requests" ON public.leave_requests FOR ALL USING (profile_is_admin(auth.uid())) WITH CHECK (profile_is_admin(auth.uid()))';
+    EXECUTE 'CREATE POLICY "Supervisors can manage leave requests" ON public.leave_requests FOR ALL USING (is_admin_or_supervisor(auth.uid())) WITH CHECK (is_admin_or_supervisor(auth.uid()))';
+    EXECUTE 'CREATE POLICY "Guards can manage their own leave requests" ON public.leave_requests FOR ALL USING (get_user_role(auth.uid()) = ''guard'' AND employee_id = (SELECT g.id FROM guards g JOIN profiles p ON (p.email = (SELECT users.email FROM auth.users WHERE users.id = auth.uid())) WHERE (g.name = p.full_name OR p.email ILIKE ''%'' || g.name || ''%'') LIMIT 1)) WITH CHECK (get_user_role(auth.uid()) = ''guard'' AND employee_id = (SELECT g.id FROM guards g JOIN profiles p ON (p.email = (SELECT users.email FROM auth.users WHERE users.id = auth.uid())) WHERE (g.name = p.full_name OR p.email ILIKE ''%'' || g.name || ''%'') LIMIT 1))';
+  END IF;
+END $$;
 
 -- Payments - ensure admins have full access
 DROP POLICY IF EXISTS "Role-based payment viewing" ON public.payments;

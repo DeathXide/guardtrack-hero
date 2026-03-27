@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,16 +7,20 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Search, 
-  User, 
+import {
+  Search,
+  User,
   Filter,
   Star,
   Clock,
   MapPin,
   Phone,
-  Mail
+  Mail,
+  UserPlus
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { guardsApi, CreateGuardData } from '@/lib/guardsApi';
+import GuardForm, { GuardFormData } from '@/components/forms/GuardForm';
 
 interface Guard {
   id: string;
@@ -52,6 +57,58 @@ const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = 
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [experienceFilter, setExperienceFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState('all');
+  const [showGuardForm, setShowGuardForm] = useState(false);
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const mapFormToSupabase = (formData: GuardFormData): CreateGuardData => ({
+    name: formData.name,
+    dob: formData.dateOfBirth || null,
+    gender: formData.gender,
+    languages: formData.languagesSpoken || [],
+    guard_photo_url: formData.guardPhoto || null,
+    aadhaar_number: formData.aadhaarNumber || null,
+    aadhaar_card_photo_url: formData.aadhaarCardPhoto || null,
+    pan_card_number: formData.panCard || null,
+    phone_number: formData.phone,
+    alternate_phone_number: formData.alternatePhone || null,
+    current_address: formData.currentAddress || null,
+    permanent_address: formData.permanentAddress || null,
+    guard_type: formData.type,
+    status: formData.status,
+    monthly_pay_rate: formData.payType === 'monthly' ? Number(formData.payRate) : null,
+    per_shift_rate: formData.payType === 'per_shift' ? Number(formData.perShiftRate) : null,
+    bank_name: formData.bankName || null,
+    account_number: formData.accountNumber || null,
+    ifsc_code: formData.ifscCode || null,
+    upi_id: formData.upiId || null,
+  });
+
+  const createGuardMutation = useMutation({
+    mutationFn: (formData: GuardFormData) => {
+      const supabaseData = mapFormToSupabase(formData);
+      return guardsApi.createGuard(supabaseData);
+    },
+  });
+
+  const handleCreateGuard = async (data: GuardFormData) => {
+    try {
+      const newGuard = await createGuardMutation.mutateAsync(data);
+      queryClient.invalidateQueries({ queryKey: ['guards'] });
+      setShowGuardForm(false);
+      // Auto-select the newly created guard
+      onGuardSelect(newGuard.id);
+    } catch (error: any) {
+      toast({
+        title: 'Error creating guard',
+        description: error.message,
+        variant: 'destructive',
+      });
+      // Re-throw so GuardForm's await catches it and does NOT show success dialog
+      throw error;
+    }
+  };
 
   // Filter available guards
   const availableGuards = useMemo(() => {
@@ -224,6 +281,16 @@ const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = 
         </DialogHeader>
 
         <div className="flex-1 space-y-4 overflow-hidden">
+          {/* Create New Guard */}
+          <Button
+            variant="outline"
+            className="w-full gap-2 border-dashed border-primary/50 text-primary hover:bg-primary/5"
+            onClick={() => setShowGuardForm(true)}
+          >
+            <UserPlus className="h-4 w-4" />
+            Create New Guard
+          </Button>
+
           {/* Search and Filters */}
           <div className="space-y-3">
             <div className="relative">
@@ -325,6 +392,23 @@ const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = 
           </Tabs>
         </div>
       </DialogContent>
+
+      {/* Nested Guard Creation Dialog */}
+      <Dialog open={showGuardForm} onOpenChange={setShowGuardForm}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Guard</DialogTitle>
+            <DialogDescription>
+              Fill in the guard details. The guard will be automatically assigned to the slot after creation.
+            </DialogDescription>
+          </DialogHeader>
+          <GuardForm
+            onSubmit={handleCreateGuard}
+            onCancel={() => setShowGuardForm(false)}
+            isLoading={createGuardMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

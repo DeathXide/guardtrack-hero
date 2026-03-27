@@ -257,6 +257,7 @@ export type Database = {
           assigned_guard_id: string | null
           attendance_date: string
           created_at: string
+          guard_pay_override: number | null
           id: string
           is_present: boolean | null
           is_temporary: boolean
@@ -271,6 +272,7 @@ export type Database = {
           assigned_guard_id?: string | null
           attendance_date: string
           created_at?: string
+          guard_pay_override?: number | null
           id?: string
           is_present?: boolean | null
           is_temporary?: boolean
@@ -285,6 +287,7 @@ export type Database = {
           assigned_guard_id?: string | null
           attendance_date?: string
           created_at?: string
+          guard_pay_override?: number | null
           id?: string
           is_present?: boolean | null
           is_temporary?: boolean
@@ -337,22 +340,23 @@ export type Database = {
         Row: {
           aadhaar_card_photo_url: string | null
           aadhaar_number: string | null
-          account_number: string
+          account_number: string | null
           alternate_phone_number: string | null
           badge_number: string
-          bank_name: string
+          bank_name: string | null
           created_at: string
-          current_address: string
-          dob: string
+          current_address: string | null
+          dob: string | null
           gender: Database["public"]["Enums"]["gender_type"]
           guard_photo_url: string | null
           guard_type: Database["public"]["Enums"]["guard_type"]
           id: string
           ifsc_code: string | null
           languages: string[]
-          monthly_pay_rate: number
+          monthly_pay_rate: number | null
           name: string
           pan_card_number: string | null
+          per_shift_rate: number | null
           permanent_address: string | null
           phone_number: string
           status: Database["public"]["Enums"]["guard_status"]
@@ -362,22 +366,23 @@ export type Database = {
         Insert: {
           aadhaar_card_photo_url?: string | null
           aadhaar_number?: string | null
-          account_number: string
+          account_number?: string | null
           alternate_phone_number?: string | null
           badge_number: string
-          bank_name: string
+          bank_name?: string | null
           created_at?: string
-          current_address: string
-          dob: string
+          current_address?: string | null
+          dob?: string | null
           gender: Database["public"]["Enums"]["gender_type"]
           guard_photo_url?: string | null
           guard_type: Database["public"]["Enums"]["guard_type"]
           id?: string
           ifsc_code?: string | null
           languages?: string[]
-          monthly_pay_rate: number
+          monthly_pay_rate?: number | null
           name: string
           pan_card_number?: string | null
+          per_shift_rate?: number | null
           permanent_address?: string | null
           phone_number: string
           status?: Database["public"]["Enums"]["guard_status"]
@@ -387,22 +392,23 @@ export type Database = {
         Update: {
           aadhaar_card_photo_url?: string | null
           aadhaar_number?: string | null
-          account_number?: string
+          account_number?: string | null
           alternate_phone_number?: string | null
           badge_number?: string
-          bank_name?: string
+          bank_name?: string | null
           created_at?: string
-          current_address?: string
-          dob?: string
+          current_address?: string | null
+          dob?: string | null
           gender?: Database["public"]["Enums"]["gender_type"]
           guard_photo_url?: string | null
           guard_type?: Database["public"]["Enums"]["guard_type"]
           id?: string
           ifsc_code?: string | null
           languages?: string[]
-          monthly_pay_rate?: number
+          monthly_pay_rate?: number | null
           name?: string
           pan_card_number?: string | null
+          per_shift_rate?: number | null
           permanent_address?: string | null
           phone_number?: string
           status?: Database["public"]["Enums"]["guard_status"]

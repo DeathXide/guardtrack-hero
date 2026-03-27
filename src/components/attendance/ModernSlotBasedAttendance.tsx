@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Calendar, MapPin, AlertCircle, Sun, Moon, Search, Filter, CheckCircle } from 'lucide-react';
+import { Calendar, MapPin, AlertCircle, Sun, Moon, Search } from 'lucide-react';
 import { m } from 'motion/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,6 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { sitesApi } from '@/lib/sitesApi';
 import { guardsApi } from '@/lib/guardsApi';
@@ -48,7 +47,6 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
   }>({ isOpen: false, slotId: '', shiftType: 'day', roleType: '', isReplacement: false });
   
   const [temporarySlotsDialog, setTemporarySlotsDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'attendance'>('overview');
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -314,12 +312,6 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
     });
   };
 
-  const handleQuickMarkAttendance = (siteId: string) => {
-    setSelectedDate(new Date()); // Set to today
-    setSelectedSite(siteId);
-    setActiveTab('attendance'); // Switch to attendance tab
-  };
-
   const handleGuardAssignment = (guardId: string) => {
     if (allocationModal.slotId) {
       assignGuardMutation.mutate({
@@ -445,74 +437,8 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
           </div>
         </div>
 
-        {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'overview' | 'attendance')} className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="overview" className="text-sm">
-              <MapPin className="h-4 w-4 mr-2" />
-              Sites Overview
-            </TabsTrigger>
-            <TabsTrigger value="attendance" className="text-sm">
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Mark Attendance
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Sites Overview
-                </CardTitle>
-                <CardDescription>
-                  Click "Mark Attendance" to quickly start attendance marking for today
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Site Name</TableHead>
-                      <TableHead>Organization</TableHead>
-                      <TableHead>Address</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sites.map((site) => (
-                      <TableRow key={site.id}>
-                        <TableCell className="font-medium">{site.site_name}</TableCell>
-                        <TableCell>{site.organization_name}</TableCell>
-                        <TableCell className="max-w-xs truncate">{site.address}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{site.site_category}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            onClick={() => handleQuickMarkAttendance(site.id)}
-                            size="sm"
-                            variant="default"
-                            className="gap-2"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                            Mark Attendance
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Attendance Marking Tab */}
-          <TabsContent value="attendance" className="space-y-6">
-            {/* Date and Site Selection */}
-            <Card className="glass-card">
+        {/* Date and Site Selection */}
+        <Card className="glass-card">
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
                   <div className="space-y-3 flex-1 sm:min-w-[220px]">
@@ -681,8 +607,6 @@ const ModernSlotBasedAttendance: React.FC<ModernSlotBasedAttendanceProps> = ({
                 )}
               </>
             )}
-          </TabsContent>
-        </Tabs>
 
         {/* Floating Action Toolbar */}
         {selectedSite && (
