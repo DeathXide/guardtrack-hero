@@ -34,7 +34,7 @@ const mapSupabaseGuardToLocal = (supabaseGuard: SupabaseGuard): Guard => {
   return {
     id: supabaseGuard.id,
     name: supabaseGuard.name,
-    dateOfBirth: supabaseGuard.dob,
+    dateOfBirth: supabaseGuard.dob || '',
     gender: supabaseGuard.gender,
     languagesSpoken: supabaseGuard.languages || [],
     guardPhoto: supabaseGuard.guard_photo_url || '',
@@ -47,7 +47,9 @@ const mapSupabaseGuardToLocal = (supabaseGuard: SupabaseGuard): Guard => {
     permanentAddress: supabaseGuard.permanent_address || '',
     type: supabaseGuard.guard_type,
     status: supabaseGuard.status,
-    payRate: Number(supabaseGuard.monthly_pay_rate),
+    payType: supabaseGuard.per_shift_rate ? 'per_shift' : 'monthly',
+    payRate: supabaseGuard.monthly_pay_rate ? Number(supabaseGuard.monthly_pay_rate) : undefined,
+    perShiftRate: supabaseGuard.per_shift_rate ? Number(supabaseGuard.per_shift_rate) : undefined,
     bankName: supabaseGuard.bank_name || '',
     accountNumber: supabaseGuard.account_number || '',
     ifscCode: supabaseGuard.ifsc_code || '',
@@ -60,24 +62,25 @@ const mapSupabaseGuardToLocal = (supabaseGuard: SupabaseGuard): Guard => {
 const mapLocalGuardToSupabase = (localGuard: any): CreateGuardData => {
   return {
     name: localGuard.name,
-    dob: localGuard.dateOfBirth,
+    dob: localGuard.dateOfBirth || null,
     gender: localGuard.gender,
     languages: localGuard.languagesSpoken || [],
-    guard_photo_url: localGuard.guardPhoto,
-    aadhaar_number: localGuard.aadhaarNumber,
-    aadhaar_card_photo_url: localGuard.aadhaarCardPhoto,
-    pan_card_number: localGuard.panCard,
+    guard_photo_url: localGuard.guardPhoto || null,
+    aadhaar_number: localGuard.aadhaarNumber || null,
+    aadhaar_card_photo_url: localGuard.aadhaarCardPhoto || null,
+    pan_card_number: localGuard.panCard || null,
     phone_number: localGuard.phone,
-    alternate_phone_number: localGuard.alternatePhone,
-    current_address: localGuard.currentAddress,
-    permanent_address: localGuard.permanentAddress,
+    alternate_phone_number: localGuard.alternatePhone || null,
+    current_address: localGuard.currentAddress || null,
+    permanent_address: localGuard.permanentAddress || null,
     guard_type: localGuard.type,
     status: localGuard.status,
-    monthly_pay_rate: Number(localGuard.payRate),
-    bank_name: localGuard.bankName,
-    account_number: localGuard.accountNumber,
-    ifsc_code: localGuard.ifscCode,
-    upi_id: localGuard.upiId
+    monthly_pay_rate: localGuard.payType === 'monthly' ? Number(localGuard.payRate) : null,
+    per_shift_rate: localGuard.payType === 'per_shift' ? Number(localGuard.perShiftRate) : null,
+    bank_name: localGuard.bankName || null,
+    account_number: localGuard.accountNumber || null,
+    ifsc_code: localGuard.ifscCode || null,
+    upi_id: localGuard.upiId || null,
   };
 };
 import GuardForm from '@/components/forms/GuardForm';
@@ -127,21 +130,6 @@ const Guards = () => {
       const supabaseGuardData = mapLocalGuardToSupabase(guardData);
       return guardsApi.createGuard(supabaseGuardData);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['guards'] });
-      toast({
-        title: "Guard Added",
-        description: "Guard has been successfully added",
-      });
-      handleDialogClose();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: `Failed to add guard: ${error.message}`,
-        variant: "destructive"
-      });
-    }
   });
 
   const updateGuardMutation = useMutation({
@@ -149,21 +137,6 @@ const Guards = () => {
       const supabaseGuardData = mapLocalGuardToSupabase(guard);
       return guardsApi.updateGuard(id, supabaseGuardData);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['guards'] });
-      toast({
-        title: "Guard Updated",
-        description: "Guard has been successfully updated",
-      });
-      handleDialogClose();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: `Failed to update guard: ${error.message}`,
-        variant: "destructive"
-      });
-    }
   });
 
   const deleteGuardMutation = useMutation({
@@ -338,14 +311,27 @@ const Guards = () => {
     setIsDialogOpen(true);
   };
 
-  const handleFormSubmit = (data: any) => {
-    if (isEditMode && selectedGuardForForm) {
-      updateGuardMutation.mutate({ 
-        id: selectedGuardForForm.id, 
-        guard: data
+  const handleFormSubmit = async (data: any) => {
+    try {
+      if (isEditMode && selectedGuardForForm) {
+        await updateGuardMutation.mutateAsync({
+          id: selectedGuardForForm.id,
+          guard: data
+        });
+        toast({ title: "Guard Updated", description: "Guard has been successfully updated" });
+      } else {
+        await createGuardMutation.mutateAsync(data);
+        toast({ title: "Guard Added", description: "Guard has been successfully added" });
+      }
+      queryClient.invalidateQueries({ queryKey: ['guards'] });
+      handleDialogClose();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save guard",
+        variant: "destructive"
       });
-    } else {
-      createGuardMutation.mutate(data);
+      throw error; // Re-throw so GuardForm's try/catch catches it
     }
   };
 

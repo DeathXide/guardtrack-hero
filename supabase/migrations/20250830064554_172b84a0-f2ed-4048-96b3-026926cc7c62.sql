@@ -17,8 +17,8 @@ SECURITY DEFINER
 SET search_path = 'public'
 AS $$
   SELECT EXISTS (
-    SELECT 1 FROM public.profiles 
-    WHERE user_id = _user_id 
+    SELECT 1 FROM public.profiles
+    WHERE user_id = _user_id
     AND role IN ('admin', 'supervisor')
   );
 $$;
@@ -28,6 +28,11 @@ DROP POLICY IF EXISTS "Authenticated users can create invoices" ON public.invoic
 DROP POLICY IF EXISTS "Authenticated users can delete invoices" ON public.invoices;
 DROP POLICY IF EXISTS "Authenticated users can update invoices" ON public.invoices;
 DROP POLICY IF EXISTS "Authenticated users can view invoices" ON public.invoices;
+-- Drop policies from previous migration that conflict
+DROP POLICY IF EXISTS "Only admins can create invoices" ON public.invoices;
+DROP POLICY IF EXISTS "Only admins can update invoices" ON public.invoices;
+DROP POLICY IF EXISTS "Only admins can delete invoices" ON public.invoices;
+DROP POLICY IF EXISTS "Only admins can view invoices" ON public.invoices;
 
 -- Only admins can manage invoices (financial data)
 CREATE POLICY "Only admins can create invoices"
@@ -36,7 +41,7 @@ TO authenticated
 WITH CHECK (public.profile_is_admin(auth.uid()));
 
 CREATE POLICY "Only admins can update invoices"
-ON public.invoices FOR UPDATE  
+ON public.invoices FOR UPDATE
 TO authenticated
 USING (public.profile_is_admin(auth.uid()));
 
@@ -50,11 +55,16 @@ ON public.invoices FOR SELECT
 TO authenticated
 USING (public.profile_is_admin(auth.uid()));
 
--- SECURE PAYMENTS TABLE  
+-- SECURE PAYMENTS TABLE
 DROP POLICY IF EXISTS "Authenticated users can create payments" ON public.payments;
 DROP POLICY IF EXISTS "Authenticated users can delete payments" ON public.payments;
 DROP POLICY IF EXISTS "Authenticated users can update payments" ON public.payments;
 DROP POLICY IF EXISTS "Authenticated users can view payments" ON public.payments;
+-- Drop policies from previous migration that conflict
+DROP POLICY IF EXISTS "Admins can create payments" ON public.payments;
+DROP POLICY IF EXISTS "Admins can update payments" ON public.payments;
+DROP POLICY IF EXISTS "Admins can delete payments" ON public.payments;
+DROP POLICY IF EXISTS "Role-based payment viewing" ON public.payments;
 
 -- Admins can manage all payments, guards can only view their own
 CREATE POLICY "Admins can create payments"
@@ -92,6 +102,11 @@ DROP POLICY IF EXISTS "Authenticated users can create company settings" ON publi
 DROP POLICY IF EXISTS "Authenticated users can delete company settings" ON public.company_settings;
 DROP POLICY IF EXISTS "Authenticated users can update company settings" ON public.company_settings;
 DROP POLICY IF EXISTS "Authenticated users can view company settings" ON public.company_settings;
+-- Drop policies from previous migration that conflict
+DROP POLICY IF EXISTS "Only admins can create company settings" ON public.company_settings;
+DROP POLICY IF EXISTS "Only admins can update company settings" ON public.company_settings;
+DROP POLICY IF EXISTS "Only admins can delete company settings" ON public.company_settings;
+DROP POLICY IF EXISTS "Only admins can view company settings" ON public.company_settings;
 
 -- Only admins can manage company settings (sensitive business data)
 CREATE POLICY "Only admins can create company settings"
@@ -116,6 +131,11 @@ USING (public.profile_is_admin(auth.uid()));
 
 -- SECURE SITE UTILITY CHARGES TABLE
 DROP POLICY IF EXISTS "Authenticated users can manage site utility charges" ON public.site_utility_charges;
+-- Drop policies from previous migration that conflict
+DROP POLICY IF EXISTS "Admins can create site utility charges" ON public.site_utility_charges;
+DROP POLICY IF EXISTS "Admins can update site utility charges" ON public.site_utility_charges;
+DROP POLICY IF EXISTS "Admins can delete site utility charges" ON public.site_utility_charges;
+DROP POLICY IF EXISTS "Role-based site utility charges viewing" ON public.site_utility_charges;
 
 CREATE POLICY "Admins can create site utility charges"
 ON public.site_utility_charges FOR INSERT
@@ -145,6 +165,11 @@ DROP POLICY IF EXISTS "Authenticated users can create attendance records" ON pub
 DROP POLICY IF EXISTS "Authenticated users can delete attendance records" ON public.attendance_records;
 DROP POLICY IF EXISTS "Authenticated users can update attendance records" ON public.attendance_records;
 DROP POLICY IF EXISTS "Authenticated users can view attendance records" ON public.attendance_records;
+-- Drop policies from previous migration that conflict
+DROP POLICY IF EXISTS "Role-based attendance record creation" ON public.attendance_records;
+DROP POLICY IF EXISTS "Role-based attendance record updates" ON public.attendance_records;
+DROP POLICY IF EXISTS "Admins can delete attendance records" ON public.attendance_records;
+DROP POLICY IF EXISTS "Role-based attendance record viewing" ON public.attendance_records;
 
 CREATE POLICY "Role-based attendance record creation"
 ON public.attendance_records FOR INSERT
@@ -182,64 +207,33 @@ USING (
   ))
 );
 
--- SECURE LEAVE REQUESTS TABLE
-DROP POLICY IF EXISTS "Authenticated users can create leave requests" ON public.leave_requests;
-DROP POLICY IF EXISTS "Authenticated users can delete leave requests" ON public.leave_requests;
-DROP POLICY IF EXISTS "Authenticated users can update leave requests" ON public.leave_requests;
-DROP POLICY IF EXISTS "Authenticated users can view leave requests" ON public.leave_requests;
+-- SECURE LEAVE REQUESTS TABLE (only if table exists)
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'leave_requests') THEN
+    EXECUTE 'DROP POLICY IF EXISTS "Authenticated users can create leave requests" ON public.leave_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "Authenticated users can delete leave requests" ON public.leave_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "Authenticated users can update leave requests" ON public.leave_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "Authenticated users can view leave requests" ON public.leave_requests';
+    -- Drop policies from previous migration that conflict
+    EXECUTE 'DROP POLICY IF EXISTS "Users can create their own leave requests" ON public.leave_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "Role-based leave request updates" ON public.leave_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "Admins can delete leave requests" ON public.leave_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "Role-based leave request viewing" ON public.leave_requests';
 
-CREATE POLICY "Users can create their own leave requests"
-ON public.leave_requests FOR INSERT
-TO authenticated
-WITH CHECK (
-  public.profile_is_admin(auth.uid()) OR
-  public.is_admin_or_supervisor(auth.uid()) OR
-  -- Guards can create requests for themselves
-  (public.get_user_role(auth.uid()) = 'guard' AND employee_id = (
-    SELECT g.id FROM public.guards g
-    JOIN public.profiles p ON p.email = (SELECT email FROM auth.users WHERE auth.users.id = auth.uid())
-    WHERE g.name = p.full_name OR p.email LIKE '%' || g.name || '%'
-    LIMIT 1
-  ))
-);
-
-CREATE POLICY "Role-based leave request updates"
-ON public.leave_requests FOR UPDATE
-TO authenticated
-USING (
-  public.profile_is_admin(auth.uid()) OR
-  public.is_admin_or_supervisor(auth.uid()) OR
-  -- Guards can update their own pending requests
-  (public.get_user_role(auth.uid()) = 'guard' AND status = 'pending' AND employee_id = (
-    SELECT g.id FROM public.guards g
-    JOIN public.profiles p ON p.email = (SELECT email FROM auth.users WHERE auth.users.id = auth.uid())
-    WHERE g.name = p.full_name OR p.email LIKE '%' || g.name || '%'
-    LIMIT 1
-  ))
-);
-
-CREATE POLICY "Admins can delete leave requests"
-ON public.leave_requests FOR DELETE
-TO authenticated
-USING (public.profile_is_admin(auth.uid()));
-
-CREATE POLICY "Role-based leave request viewing"
-ON public.leave_requests FOR SELECT
-TO authenticated
-USING (
-  public.profile_is_admin(auth.uid()) OR
-  public.is_admin_or_supervisor(auth.uid()) OR
-  -- Guards can view their own leave requests
-  (public.get_user_role(auth.uid()) = 'guard' AND employee_id = (
-    SELECT g.id FROM public.guards g
-    JOIN public.profiles p ON p.email = (SELECT email FROM auth.users WHERE auth.users.id = auth.uid())
-    WHERE g.name = p.full_name OR p.email LIKE '%' || g.name || '%'
-    LIMIT 1
-  ))
-);
+    EXECUTE 'CREATE POLICY "Users can create their own leave requests" ON public.leave_requests FOR INSERT TO authenticated WITH CHECK (public.profile_is_admin(auth.uid()) OR public.is_admin_or_supervisor(auth.uid()) OR (public.get_user_role(auth.uid()) = ''guard'' AND employee_id = (SELECT g.id FROM public.guards g JOIN public.profiles p ON p.email = (SELECT email FROM auth.users WHERE auth.users.id = auth.uid()) WHERE g.name = p.full_name OR p.email LIKE ''%'' || g.name || ''%'' LIMIT 1)))';
+    EXECUTE 'CREATE POLICY "Role-based leave request updates" ON public.leave_requests FOR UPDATE TO authenticated USING (public.profile_is_admin(auth.uid()) OR public.is_admin_or_supervisor(auth.uid()) OR (public.get_user_role(auth.uid()) = ''guard'' AND status = ''pending'' AND employee_id = (SELECT g.id FROM public.guards g JOIN public.profiles p ON p.email = (SELECT email FROM auth.users WHERE auth.users.id = auth.uid()) WHERE g.name = p.full_name OR p.email LIKE ''%'' || g.name || ''%'' LIMIT 1)))';
+    EXECUTE 'CREATE POLICY "Admins can delete leave requests" ON public.leave_requests FOR DELETE TO authenticated USING (public.profile_is_admin(auth.uid()))';
+    EXECUTE 'CREATE POLICY "Role-based leave request viewing" ON public.leave_requests FOR SELECT TO authenticated USING (public.profile_is_admin(auth.uid()) OR public.is_admin_or_supervisor(auth.uid()) OR (public.get_user_role(auth.uid()) = ''guard'' AND employee_id = (SELECT g.id FROM public.guards g JOIN public.profiles p ON p.email = (SELECT email FROM auth.users WHERE auth.users.id = auth.uid()) WHERE g.name = p.full_name OR p.email LIKE ''%'' || g.name || ''%'' LIMIT 1)))';
+  END IF;
+END $$;
 
 -- SECURE DAILY ATTENDANCE SLOTS TABLE
 DROP POLICY IF EXISTS "Authenticated users can manage daily attendance slots" ON public.daily_attendance_slots;
+-- Drop policies from previous migration that conflict
+DROP POLICY IF EXISTS "Role-based attendance slot creation" ON public.daily_attendance_slots;
+DROP POLICY IF EXISTS "Role-based attendance slot updates" ON public.daily_attendance_slots;
+DROP POLICY IF EXISTS "Admins can delete attendance slots" ON public.daily_attendance_slots;
+DROP POLICY IF EXISTS "Role-based attendance slot viewing" ON public.daily_attendance_slots;
 
 CREATE POLICY "Role-based attendance slot creation"
 ON public.daily_attendance_slots FOR INSERT

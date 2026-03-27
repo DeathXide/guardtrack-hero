@@ -31,7 +31,7 @@ export interface Site {
   siteType: string;
   staffingSlots: StaffingSlot[];
   personalBillingName?: string;
-  status?: 'active' | 'inactive' | 'custom';
+  status?: 'active' | 'inactive' | 'temp';
   // Legacy fields for backward compatibility
   location?: string;
   daySlots?: number;
@@ -87,7 +87,9 @@ export interface Guard {
   status: 'active' | 'inactive';
   
   // Compensation
+  payType: 'monthly' | 'per_shift';
   payRate?: number;
+  perShiftRate?: number;
   shiftRate?: number;
   
   // Banking & Payments

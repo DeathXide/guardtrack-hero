@@ -4,11 +4,37 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Building, Edit, Users, IndianRupee } from 'lucide-react';
+import { MapPin, Building, Edit, Users, IndianRupee, Calendar } from 'lucide-react';
 import { sitesApi } from '@/lib/sitesApi';
 import { PageLoader } from '@/components/ui/loader';
 import { PageHeader } from '@/components/layout/PageHeader';
 import UtilityChargesManagement from '@/components/sites/UtilityChargesManagement';
+
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case 'active':
+      return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200">Active</Badge>;
+    case 'inactive':
+      return <Badge className="bg-gray-100 text-gray-500 hover:bg-gray-100 border-gray-200">Inactive</Badge>;
+    case 'temp':
+      return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200">Temporary</Badge>;
+    default:
+      return <Badge variant="secondary">{status}</Badge>;
+  }
+};
+
+const getStatusDescription = (status: string) => {
+  switch (status) {
+    case 'active':
+      return 'Regular site — generates attendance & invoices';
+    case 'inactive':
+      return 'Paused — no attendance or invoice generation';
+    case 'temp':
+      return 'Short-term / event-based site';
+    default:
+      return '';
+  }
+};
 
 const SiteDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -24,7 +50,7 @@ const SiteDetail = () => {
   // Calculate total budget and slots
   const calculateTotals = () => {
     if (!site?.staffing_requirements) return { totalBudget: 0, totalSlots: 0, daySlots: 0, nightSlots: 0 };
-    
+
     return site.staffing_requirements.reduce((acc: any, req: any) => ({
       totalBudget: acc.totalBudget + (req.budget_per_slot * (req.day_slots + req.night_slots)),
       totalSlots: acc.totalSlots + req.day_slots + req.night_slots,
@@ -54,6 +80,19 @@ const SiteDetail = () => {
     );
   }
 
+  // Build address display from address lines only
+  const addressParts = [site.address_line1, site.address_line2, site.address_line3].filter(Boolean);
+  const displayAddress = addressParts.length > 0 ? addressParts.join(', ') : site.address;
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '—';
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -65,12 +104,24 @@ const SiteDetail = () => {
         ]}
         backButton
         actions={
-          <Button onClick={() => navigate(`/sites/edit/${id}`)} className="flex items-center gap-2">
+          <Button onClick={() => navigate('/sites', { state: { editSiteId: id } })} className="flex items-center gap-2">
             <Edit className="h-4 w-4" />
             Edit Site
           </Button>
         }
       />
+
+      {/* Status Banner for inactive/temp sites */}
+      {site.status !== 'active' && (
+        <Card className={site.status === 'inactive' ? 'border-gray-300 bg-gray-50' : 'border-amber-300 bg-amber-50'}>
+          <CardContent className="py-3 flex items-center gap-3">
+            {getStatusBadge(site.status)}
+            <span className="text-sm text-muted-foreground">
+              {getStatusDescription(site.status)}
+            </span>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Site Information */}
@@ -86,9 +137,9 @@ const SiteDetail = () => {
               <label className="text-sm font-medium text-muted-foreground">Site Name</label>
               <p className="text-lg font-medium">{site.site_name}</p>
             </div>
-            
+
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Organization</label>
+              <label className="text-sm font-medium text-muted-foreground">Client / Organization</label>
               <p>{site.organization_name}</p>
             </div>
 
@@ -101,12 +152,7 @@ const SiteDetail = () => {
 
             <div>
               <label className="text-sm font-medium text-muted-foreground">Status</label>
-              <Badge 
-                variant={site.status === 'active' ? 'default' : 'secondary'}
-                className="mt-1"
-              >
-                {site.status}
-              </Badge>
+              <div className="mt-1">{getStatusBadge(site.status)}</div>
             </div>
 
             <div>
@@ -135,35 +181,53 @@ const SiteDetail = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5" />
-              Address Information
+              Address
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Full Address</label>
-              <p>{site.address}</p>
-            </div>
-
             {site.address_line1 && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Address Line 1</label>
+                <label className="text-sm font-medium text-muted-foreground">Street / Building</label>
                 <p>{site.address_line1}</p>
               </div>
             )}
 
             {site.address_line2 && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Address Line 2</label>
+                <label className="text-sm font-medium text-muted-foreground">Area / Locality</label>
                 <p>{site.address_line2}</p>
               </div>
             )}
 
             {site.address_line3 && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Address Line 3</label>
+                <label className="text-sm font-medium text-muted-foreground">City / State / Pincode</label>
                 <p>{site.address_line3}</p>
               </div>
             )}
+
+            {!site.address_line1 && !site.address_line2 && !site.address_line3 && site.address && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Address</label>
+                <p>{site.address}</p>
+              </div>
+            )}
+
+            {/* Timestamps */}
+            <div className="pt-3 border-t space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">Created:</span>
+                <span>{formatDate(site.created_at)}</span>
+              </div>
+              {site.updated_at && site.updated_at !== site.created_at && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">Updated:</span>
+                  <span>{formatDate(site.updated_at)}</span>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -190,7 +254,7 @@ const SiteDetail = () => {
                 </p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-3 border rounded-lg">
                 <p className="text-sm text-muted-foreground">Day Shifts</p>
@@ -227,7 +291,7 @@ const SiteDetail = () => {
                         ₹{req.budget_per_slot.toLocaleString()}
                       </span>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Day Slots:</span>
@@ -238,7 +302,7 @@ const SiteDetail = () => {
                         <span className="ml-2 font-medium">{req.night_slots}</span>
                       </div>
                     </div>
-                    
+
                     <div className="pt-2 border-t">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Total Slots:</span>
@@ -249,7 +313,7 @@ const SiteDetail = () => {
                         <span>₹{(req.budget_per_slot * (req.day_slots + req.night_slots)).toLocaleString()}</span>
                       </div>
                     </div>
-                    
+
                     {req.description && (
                       <div className="pt-2 border-t">
                         <p className="text-sm text-muted-foreground">
@@ -288,8 +352,8 @@ const SiteDetail = () => {
 
       {/* Utility Charges Section */}
       <div className="mt-6">
-        <UtilityChargesManagement 
-          siteId={site.id} 
+        <UtilityChargesManagement
+          siteId={site.id}
           siteName={site.site_name}
         />
       </div>

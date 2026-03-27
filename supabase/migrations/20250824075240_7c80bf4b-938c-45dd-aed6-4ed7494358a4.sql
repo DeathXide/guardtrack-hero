@@ -7,11 +7,10 @@ ALTER TABLE public.sites
 ADD CONSTRAINT sites_status_check 
 CHECK (status IN ('active', 'inactive', 'custom'));
 
--- Create unique constraint for monthly billing (one invoice per site per month)
+-- Create unique index for monthly billing (one invoice per site per month)
 -- This prevents duplicate invoices for the same site and month
-ALTER TABLE public.invoices 
-ADD CONSTRAINT unique_site_month_invoice 
-UNIQUE (site_id, EXTRACT(YEAR FROM period_from), EXTRACT(MONTH FROM period_from));
+CREATE UNIQUE INDEX IF NOT EXISTS unique_site_month_invoice
+ON public.invoices (site_id, EXTRACT(YEAR FROM period_from), EXTRACT(MONTH FROM period_from));
 
 -- Create index for better performance on status filtering
 CREATE INDEX idx_sites_status ON public.sites(status);

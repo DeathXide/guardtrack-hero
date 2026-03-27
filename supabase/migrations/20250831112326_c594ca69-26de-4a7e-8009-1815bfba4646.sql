@@ -1,6 +1,6 @@
 -- Fix permission error by updating the security definer function
 -- Remove the function that accesses auth.users table directly
-DROP FUNCTION IF EXISTS public.get_current_user_guard_id();
+DROP FUNCTION IF EXISTS public.get_current_user_guard_id() CASCADE;
 
 -- Create a new function that uses auth.email() instead of accessing auth.users
 CREATE OR REPLACE FUNCTION public.get_current_user_guard_id()
