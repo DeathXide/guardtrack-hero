@@ -440,6 +440,7 @@ export default function Invoices() {
                 {/* Generate last 12 months */}
                 {Array.from({ length: 12 }, (_, i) => {
                   const date = new Date();
+                  date.setDate(1); // Avoid month overflow (e.g. March 31 → "February 31" → March 3)
                   date.setMonth(date.getMonth() - i);
                   const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
                   const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
