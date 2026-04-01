@@ -62,7 +62,7 @@ export async function createInvoiceInDB(invoice: Omit<Invoice, 'id' | 'created_a
       error.message.includes('invoices_invoice_number_key');
 
     if (isInvoiceNumberDuplicate && attempt < 2) {
-      invoiceNumber = await generateInvoiceNumber();
+      invoiceNumber = await generateInvoiceNumber(invoice.periodFrom);
       continue;
     }
 

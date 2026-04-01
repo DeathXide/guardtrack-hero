@@ -728,7 +728,7 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
               </div>
               <p class="rcm-description">
                 Recipient liable for CGST (${(invoice.cgstRate || 0).toFixed(1)}%) & SGST (${(invoice.sgstRate || 0).toFixed(1)}%) 
-                totaling ${formatCurrency(invoice.subtotal * (invoice.cgstRate || 0) / 100 + invoice.subtotal * (invoice.sgstRate || 0) / 100)}
+                totaling ${formatCurrency((invoice.cgstAmount || 0) + (invoice.sgstAmount || 0))}
               </p>
             </div>
           </div>
@@ -768,11 +768,11 @@ function generateInvoiceHTML(invoice: any, companySettings?: any): string {
                 <div class="rcm-gst-title">Tax Payable by Recipient</div>
                 <div class="rcm-gst-row">
                   <span>CGST (${(invoice.cgstRate || 0).toFixed(1)}%)</span>
-                  <span style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;">${formatCurrency(invoice.subtotal * (invoice.cgstRate || 0) / 100)}</span>
+                  <span style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;">${formatCurrency(invoice.cgstAmount || 0)}</span>
                 </div>
                 <div class="rcm-gst-row">
                   <span>SGST (${(invoice.sgstRate || 0).toFixed(1)}%)</span>
-                  <span style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;">${formatCurrency(invoice.subtotal * (invoice.sgstRate || 0) / 100)}</span>
+                  <span style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;">${formatCurrency(invoice.sgstAmount || 0)}</span>
                 </div>
               </div>
             ` : ''}

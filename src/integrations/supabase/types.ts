@@ -359,7 +359,10 @@ export type Database = {
           per_shift_rate: number | null
           permanent_address: string | null
           phone_number: string
+          staff_role: string
           status: Database["public"]["Enums"]["guard_status"]
+          uniform_issued: boolean
+          uniform_issued_date: string | null
           updated_at: string
           upi_id: string | null
         }
@@ -385,7 +388,10 @@ export type Database = {
           per_shift_rate?: number | null
           permanent_address?: string | null
           phone_number: string
+          staff_role?: string
           status?: Database["public"]["Enums"]["guard_status"]
+          uniform_issued?: boolean
+          uniform_issued_date?: string | null
           updated_at?: string
           upi_id?: string | null
         }
@@ -411,7 +417,10 @@ export type Database = {
           per_shift_rate?: number | null
           permanent_address?: string | null
           phone_number?: string
+          staff_role?: string
           status?: Database["public"]["Enums"]["guard_status"]
+          uniform_issued?: boolean
+          uniform_issued_date?: string | null
           updated_at?: string
           upi_id?: string | null
         }
@@ -591,7 +600,9 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          bonus_category: string | null
           created_at: string
+          deduction_category: string | null
           guard_id: string
           id: string
           note: string | null
@@ -602,7 +613,9 @@ export type Database = {
         }
         Insert: {
           amount: number
+          bonus_category?: string | null
           created_at?: string
+          deduction_category?: string | null
           guard_id: string
           id?: string
           note?: string | null
@@ -613,7 +626,9 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bonus_category?: string | null
           created_at?: string
+          deduction_category?: string | null
           guard_id?: string
           id?: string
           note?: string | null
@@ -800,6 +815,88 @@ export type Database = {
         }
         Relationships: []
       }
+      uniform_issuances: {
+        Row: {
+          id: string
+          guard_id: string
+          item_id: string
+          quantity: number
+          cost_per_unit: number
+          total_cost: number
+          issued_date: string
+          condition: string
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          guard_id: string
+          item_id: string
+          quantity?: number
+          cost_per_unit: number
+          issued_date?: string
+          condition?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          guard_id?: string
+          item_id?: string
+          quantity?: number
+          cost_per_unit?: number
+          issued_date?: string
+          condition?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "uniform_issuances_guard_id_fkey"
+            columns: ["guard_id"]
+            isOneToOne: false
+            referencedRelation: "guards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "uniform_issuances_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "uniform_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      uniform_items: {
+        Row: {
+          id: string
+          item_name: string
+          default_cost: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          item_name: string
+          default_cost?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          item_name?: string
+          default_cost?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       staffing_requirements: {
         Row: {
           budget_per_slot: number
@@ -853,16 +950,16 @@ export type Database = {
     }
     Functions: {
       generate_badge_number: { Args: never; Returns: string }
-      get_current_financial_year: { Args: never; Returns: string }
+      get_current_financial_year: { Args: { p_date?: string }; Returns: string }
       get_current_user_guard_id: { Args: never; Returns: string }
-      get_next_invoice_number: { Args: never; Returns: string }
+      get_next_invoice_number: { Args: { p_invoice_date?: string }; Returns: string }
       get_user_role: { Args: { _user_id: string }; Returns: string }
       is_admin_or_supervisor: { Args: { _user_id: string }; Returns: boolean }
       profile_is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       gender_type: "male" | "female" | "other"
-      guard_status: "active" | "inactive"
+      guard_status: "active" | "inactive" | "terminated" | "resigned"
       guard_type: "permanent" | "contract"
       payment_type: "bonus" | "deduction"
     }

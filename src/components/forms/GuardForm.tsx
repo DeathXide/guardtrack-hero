@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Guard } from "@/types";
+import { guardUtils } from "@/lib/guardsApi";
 
 // --- Schema: only name + phone + pay required ---
 const guardSchema = z.object({
@@ -48,8 +49,12 @@ const guardSchema = z.object({
   perShiftRate: z.number().nullable().optional(),
   // Defaults
   type: z.enum(["permanent", "contract"]),
-  status: z.enum(["active", "inactive"]),
+  status: z.enum(["active", "inactive", "terminated", "resigned"]),
+  staffRole: z.string().default("Security Guard"),
   gender: z.enum(["male", "female", "other"]),
+  // Uniform
+  uniformIssued: z.boolean().optional(),
+  uniformIssuedDate: z.string().optional(),
   // Optional
   dateOfBirth: z.string().optional(),
   languagesSpoken: z.array(z.string()).optional(),
@@ -87,6 +92,16 @@ interface GuardFormProps {
   isEditMode?: boolean;
 }
 
+const STAFF_ROLE_OPTIONS = [
+  "Security Guard",
+  "Supervisor",
+  "Housekeeping",
+  "Receptionist",
+  "Maintenance",
+  "Office Boy",
+  "Other",
+];
+
 const languageOptions = [
   { value: "english", label: "English" },
   { value: "hindi", label: "Hindi" },
@@ -103,7 +118,10 @@ const defaultValues: GuardFormData = {
   perShiftRate: null,
   type: "permanent",
   status: "active",
+  staffRole: "Security Guard",
   gender: "male",
+  uniformIssued: false,
+  uniformIssuedDate: "",
   dateOfBirth: "",
   languagesSpoken: [],
   guardPhoto: "",
@@ -142,6 +160,9 @@ const GuardForm: React.FC<GuardFormProps> = ({
           payRate: guard.payRate || null,
           perShiftRate: guard.perShiftRate || null,
           languagesSpoken: Array.isArray(guard.languagesSpoken) ? guard.languagesSpoken : [],
+          staffRole: guard.staffRole || "Security Guard",
+          uniformIssued: guard.uniformIssued || false,
+          uniformIssuedDate: guard.uniformIssuedDate || "",
         }
       : defaultValues,
     mode: "onTouched",
@@ -156,6 +177,8 @@ const GuardForm: React.FC<GuardFormProps> = ({
         payRate: guard.payRate || null,
         perShiftRate: guard.perShiftRate || null,
         languagesSpoken: Array.isArray(guard.languagesSpoken) ? guard.languagesSpoken : [],
+        uniformIssued: guard.uniformIssued || false,
+        uniformIssuedDate: guard.uniformIssuedDate || "",
       });
     } else {
       form.reset(defaultValues);
@@ -176,12 +199,7 @@ const GuardForm: React.FC<GuardFormProps> = ({
     onCancel();
   };
 
-  const formatCurrency = (amount: number): string =>
-    new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-    }).format(amount);
+  const formatCurrency = guardUtils.formatCurrency;
 
   const calculateShiftRate = (monthlyRate: number | null | undefined) => {
     if (!monthlyRate || typeof monthlyRate !== "number" || isNaN(monthlyRate)) return 0;
@@ -315,10 +333,27 @@ const GuardForm: React.FC<GuardFormProps> = ({
               )}
             </div>
 
-            {/* Guard Type & Status — inline, not hidden */}
+            {/* Staff Role, Employment Type & Status */}
+            <div className="space-y-2">
+              <Label>Staff Role</Label>
+              <Select
+                value={form.watch("staffRole") || "Security Guard"}
+                onValueChange={value => form.setValue("staffRole", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STAFF_ROLE_OPTIONS.map(role => (
+                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Guard Type</Label>
+                <Label>Employment Type</Label>
                 <Select
                   value={form.watch("type")}
                   onValueChange={value => form.setValue("type", value as "permanent" | "contract")}
@@ -336,7 +371,7 @@ const GuardForm: React.FC<GuardFormProps> = ({
                 <Label>Status</Label>
                 <Select
                   value={form.watch("status")}
-                  onValueChange={value => form.setValue("status", value as "active" | "inactive")}
+                  onValueChange={value => form.setValue("status", value as "active" | "inactive" | "terminated" | "resigned")}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -344,6 +379,8 @@ const GuardForm: React.FC<GuardFormProps> = ({
                   <SelectContent>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="terminated">Terminated</SelectItem>
+                    <SelectItem value="resigned">Resigned</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -360,6 +397,40 @@ const GuardForm: React.FC<GuardFormProps> = ({
                     : "Auto-generated on creation"}
                 </span>
               </div>
+            </div>
+
+            {/* Uniform tracking */}
+            <div className="border rounded-md p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Uniform Issued
+                </Label>
+                <input
+                  type="checkbox"
+                  checked={form.watch("uniformIssued") || false}
+                  onChange={e => {
+                    form.setValue("uniformIssued", e.target.checked);
+                    if (e.target.checked && !form.getValues("uniformIssuedDate")) {
+                      form.setValue("uniformIssuedDate", new Date().toISOString().split('T')[0]);
+                    }
+                    if (!e.target.checked) {
+                      form.setValue("uniformIssuedDate", "");
+                    }
+                  }}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+              </div>
+              {form.watch("uniformIssued") && (
+                <div className="space-y-2">
+                  <Label htmlFor="uniformIssuedDate">Date Issued</Label>
+                  <Input
+                    id="uniformIssuedDate"
+                    type="date"
+                    {...form.register("uniformIssuedDate")}
+                  />
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -533,7 +604,7 @@ const GuardForm: React.FC<GuardFormProps> = ({
         <div className="flex justify-end items-center gap-3 pt-4 border-t">
           <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Saving..." : isEditMode ? "Update Guard" : "Add Guard"}
+            {isLoading ? "Saving..." : isEditMode ? "Update Staff" : "Add Staff"}
           </Button>
         </div>
       </form>
@@ -546,12 +617,12 @@ const GuardForm: React.FC<GuardFormProps> = ({
               <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
             <DialogTitle className="text-xl font-semibold">
-              {isEditMode ? "Guard Updated Successfully!" : "Guard Added Successfully!"}
+              {isEditMode ? "Staff Updated Successfully!" : "Staff Added Successfully!"}
             </DialogTitle>
             <DialogDescription className="text-base mt-2">
               {isEditMode
-                ? "The guard's details have been updated."
-                : "The new guard has been added and is ready for duty assignment."}
+                ? "The staff member's details have been updated."
+                : "The new staff member has been added and is ready for assignment."}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center mt-6">

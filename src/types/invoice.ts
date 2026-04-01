@@ -13,6 +13,8 @@ export interface InvoiceLineItem {
   utilityType?: string;
   daySlots?: number;
   nightSlots?: number;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export interface Invoice {

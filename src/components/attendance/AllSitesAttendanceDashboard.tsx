@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import {
   Rocket, Calendar, Sun, Moon, Search, Building2,
-  Users, UserCheck, UserX, Clock, TrendingUp, Filter,
+  Users, UserCheck, UserX, Clock, TrendingUp, Filter, X,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,17 +26,27 @@ import { guardsApi } from '@/lib/guardsApi';
 
 interface AllSitesAttendanceDashboardProps {
   onViewSiteDetails?: (siteId: string) => void;
+  selectedDate?: Date;
+  onDateChange?: (date: Date) => void;
 }
 
 type FilterTab = 'all' | 'attention' | 'completed' | 'new';
 
 const AllSitesAttendanceDashboard: React.FC<AllSitesAttendanceDashboardProps> = ({
   onViewSiteDetails,
+  selectedDate: controlledDate,
+  onDateChange,
 }) => {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [internalDate, setInternalDate] = useState<Date>(new Date());
+  const selectedDate = controlledDate ?? internalDate;
+  const setSelectedDate = (date: Date) => {
+    setInternalDate(date);
+    onDateChange?.(date);
+  };
   const [shiftFilter, setShiftFilter] = useState<'day' | 'night' | undefined>(undefined);
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [gstTypeFilter, setGstTypeFilter] = useState<string | undefined>(undefined);
   const [startDayDialogOpen, setStartDayDialogOpen] = useState(false);
   const [startDayResult, setStartDayResult] = useState<BulkStartDayResult | null>(null);
 
@@ -96,6 +106,9 @@ const AllSitesAttendanceDashboard: React.FC<AllSitesAttendanceDashboardProps> = 
     enabled: guardModal.isOpen,
   });
 
+  // Check if any extra filters are active
+  const hasActiveFilters = gstTypeFilter !== undefined;
+
   // Aggregate stats
   const aggregateStats = useMemo(() => {
     const totalSites = summaries.length;
@@ -111,6 +124,11 @@ const AllSitesAttendanceDashboard: React.FC<AllSitesAttendanceDashboardProps> = 
   // Filter summaries
   const filteredSummaries = useMemo(() => {
     let filtered = summaries;
+
+    // GST type filter
+    if (gstTypeFilter) {
+      filtered = filtered.filter(s => s.gstType === gstTypeFilter);
+    }
 
     // Search
     if (searchTerm) {
@@ -142,15 +160,21 @@ const AllSitesAttendanceDashboard: React.FC<AllSitesAttendanceDashboardProps> = 
     }
 
     return filtered;
-  }, [summaries, searchTerm, filterTab]);
+  }, [summaries, searchTerm, filterTab, gstTypeFilter]);
+
+  // Pre-filter by GST type before computing tab counts (so counts reflect active filter)
+  const baseFiltered = useMemo(() => {
+    if (!gstTypeFilter) return summaries;
+    return summaries.filter(s => s.gstType === gstTypeFilter);
+  }, [summaries, gstTypeFilter]);
 
   // Filter counts for tab badges
   const filterCounts = useMemo(() => ({
-    all: summaries.length,
-    attention: summaries.filter(s => s.pendingSlots > 0 || s.absentGuards > 0 || s.unfilledSlots > 0).length,
-    completed: summaries.filter(s => s.totalSlots > 0 && s.presentGuards === s.assignedSlots && s.unfilledSlots === 0).length,
-    new: summaries.filter(s => s.totalSlots === 0 && s.hasStaffingRequirements).length,
-  }), [summaries]);
+    all: baseFiltered.length,
+    attention: baseFiltered.filter(s => s.pendingSlots > 0 || s.absentGuards > 0 || s.unfilledSlots > 0).length,
+    completed: baseFiltered.filter(s => s.totalSlots > 0 && s.presentGuards === s.assignedSlots && s.unfilledSlots === 0).length,
+    new: baseFiltered.filter(s => s.totalSlots === 0 && s.hasStaffingRequirements).length,
+  }), [baseFiltered]);
 
   // Check if day already has some slots
   const dayAlreadyStarted = summaries.some(s => s.totalSlots > 0);
@@ -220,10 +244,22 @@ const AllSitesAttendanceDashboard: React.FC<AllSitesAttendanceDashboardProps> = 
     },
   });
 
-  // Guard modal helpers
-  const getAvailableGuards = () => {
-    const assignedMap = guardsAssignedForShift || new Map();
-    return allGuards.filter(g => g.status === 'active' && !assignedMap.has(g.id));
+  const unassignGuardMutation = useMutation({
+    mutationFn: (slotId: string) => dailyAttendanceSlotsApi.unassignGuardFromSlot(slotId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-sites-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['guards-assigned-shift'] });
+      toast({ title: 'Guard unassigned' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error unassigning guard', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Guard modal helpers - return ALL active guards (modal will show assigned-elsewhere info)
+  const getActiveGuards = () => {
+    return allGuards.filter(g => g.status === 'active');
   };
 
   const handleOpenStartDay = () => {
@@ -300,7 +336,7 @@ const AllSitesAttendanceDashboard: React.FC<AllSitesAttendanceDashboardProps> = 
                 size="sm"
                 variant={!shiftFilter ? 'default' : 'ghost'}
                 onClick={() => setShiftFilter(undefined)}
-                className="rounded-r-none h-9 px-3 text-xs"
+                className="rounded-r-none h-10 px-4 text-sm"
               >
                 All
               </Button>
@@ -308,24 +344,24 @@ const AllSitesAttendanceDashboard: React.FC<AllSitesAttendanceDashboardProps> = 
                 size="sm"
                 variant={shiftFilter === 'day' ? 'default' : 'ghost'}
                 onClick={() => setShiftFilter('day')}
-                className="rounded-none h-9 px-3 text-xs gap-1 border-x"
+                className="rounded-none h-10 px-4 text-sm gap-1.5 border-x"
               >
-                <Sun className="h-3 w-3" /> Day
+                <Sun className="h-4 w-4" /> Day
               </Button>
               <Button
                 size="sm"
                 variant={shiftFilter === 'night' ? 'default' : 'ghost'}
                 onClick={() => setShiftFilter('night')}
-                className="rounded-l-none h-9 px-3 text-xs gap-1"
+                className="rounded-l-none h-10 px-4 text-sm gap-1.5"
               >
-                <Moon className="h-3 w-3" /> Night
+                <Moon className="h-4 w-4" /> Night
               </Button>
             </div>
 
             {/* Start Day Button */}
-            <Button onClick={handleOpenStartDay} className="gap-2">
+            <Button onClick={handleOpenStartDay} disabled={startDayMutation.isPending} className="gap-2">
               <Rocket className="h-4 w-4" />
-              {dayAlreadyStarted ? 'Start Day' : 'Start Day'}
+              Start Day
             </Button>
           </div>
         </div>
@@ -336,13 +372,13 @@ const AllSitesAttendanceDashboard: React.FC<AllSitesAttendanceDashboardProps> = 
             const Icon = stat.icon;
             return (
               <Card key={i} className={`${stat.bg} ${stat.border}`}>
-                <CardContent className="p-3">
+                <CardContent className="p-3 md:p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{stat.label}</p>
-                      <p className={`text-xl font-bold ${stat.color} mt-0.5`}>{stat.value}</p>
+                      <p className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wide">{stat.label}</p>
+                      <p className={`text-xl md:text-2xl font-bold ${stat.color} mt-0.5`}>{stat.value}</p>
                     </div>
-                    <Icon className={`h-4 w-4 ${stat.color}`} />
+                    <Icon className={`h-4 w-4 md:h-5 md:w-5 ${stat.color}`} />
                   </div>
                 </CardContent>
               </Card>
@@ -360,35 +396,97 @@ const AllSitesAttendanceDashboard: React.FC<AllSitesAttendanceDashboardProps> = 
         />
 
         {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search sites..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 h-9"
-            />
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search sites..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 h-11"
+              />
+            </div>
+
+            <Tabs value={filterTab} onValueChange={(v) => setFilterTab(v as FilterTab)} className="w-auto">
+              <TabsList className="h-11">
+                <TabsTrigger value="all" className="text-sm h-9 px-4">
+                  All ({filterCounts.all})
+                </TabsTrigger>
+                <TabsTrigger value="attention" className="text-sm h-9 px-4">
+                  Needs Attention ({filterCounts.attention})
+                </TabsTrigger>
+                <TabsTrigger value="completed" className="text-sm h-9 px-4">
+                  Completed ({filterCounts.completed})
+                </TabsTrigger>
+                {filterCounts.new > 0 && (
+                  <TabsTrigger value="new" className="text-sm h-9 px-4">
+                    New ({filterCounts.new})
+                  </TabsTrigger>
+                )}
+              </TabsList>
+            </Tabs>
           </div>
 
-          <Tabs value={filterTab} onValueChange={(v) => setFilterTab(v as FilterTab)} className="w-auto">
-            <TabsList className="h-9">
-              <TabsTrigger value="all" className="text-xs h-7 px-3">
-                All ({filterCounts.all})
-              </TabsTrigger>
-              <TabsTrigger value="attention" className="text-xs h-7 px-3">
-                Needs Attention ({filterCounts.attention})
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="text-xs h-7 px-3">
-                Completed ({filterCounts.completed})
-              </TabsTrigger>
-              {filterCounts.new > 0 && (
-                <TabsTrigger value="new" className="text-xs h-7 px-3">
-                  New ({filterCounts.new})
-                </TabsTrigger>
-              )}
-            </TabsList>
-          </Tabs>
+          {/* GST Type & Organization Filters */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* GST Type Toggle */}
+            <div className="flex items-center border rounded-md">
+              <Button
+                size="sm"
+                variant={!gstTypeFilter ? 'default' : 'ghost'}
+                onClick={() => setGstTypeFilter(undefined)}
+                className="rounded-r-none h-10 px-4 text-sm"
+              >
+                All Types
+              </Button>
+              <Button
+                size="sm"
+                variant={gstTypeFilter === 'GST' ? 'default' : 'ghost'}
+                onClick={() => setGstTypeFilter('GST')}
+                className="rounded-none h-10 px-4 text-sm border-x"
+              >
+                GST
+              </Button>
+              <Button
+                size="sm"
+                variant={gstTypeFilter === 'NGST' ? 'default' : 'ghost'}
+                onClick={() => setGstTypeFilter('NGST')}
+                className="rounded-none h-10 px-4 text-sm border-r"
+              >
+                NGST
+              </Button>
+              <Button
+                size="sm"
+                variant={gstTypeFilter === 'RCM' ? 'default' : 'ghost'}
+                onClick={() => setGstTypeFilter('RCM')}
+                className="rounded-none h-10 px-4 text-sm border-r"
+              >
+                RCM
+              </Button>
+              <Button
+                size="sm"
+                variant={gstTypeFilter === 'PERSONAL' ? 'default' : 'ghost'}
+                onClick={() => setGstTypeFilter('PERSONAL')}
+                className="rounded-l-none h-10 px-4 text-sm"
+              >
+                Personal
+              </Button>
+            </div>
+
+            {/* Clear Filter */}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setGstTypeFilter(undefined)}
+                className="h-10 px-3 text-sm text-muted-foreground hover:text-foreground gap-1.5"
+              >
+                <X className="h-4 w-4" />
+                Clear
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Site List */}
@@ -434,10 +532,11 @@ const AllSitesAttendanceDashboard: React.FC<AllSitesAttendanceDashboardProps> = 
                 }
                 onAssignGuard={handleAssignGuard}
                 onReplaceGuard={handleReplaceGuard}
+                onUnassignGuard={(slotId) => unassignGuardMutation.mutate(slotId)}
                 onMarkAllPresent={(siteId) => markAllPresentForSiteMutation.mutate(siteId)}
                 onViewDetails={handleViewDetails}
                 onManageTempSlots={handleManageTempSlots}
-                isLoading={markAttendanceMutation.isPending || assignGuardMutation.isPending}
+                isLoading={markAttendanceMutation.isPending || assignGuardMutation.isPending || unassignGuardMutation.isPending}
                 defaultExpanded={
                   filterTab === 'attention' &&
                   (site.pendingSlots > 0 || site.absentGuards > 0 || site.unfilledSlots > 0)
@@ -463,7 +562,7 @@ const AllSitesAttendanceDashboard: React.FC<AllSitesAttendanceDashboardProps> = 
         <EnhancedGuardSelectionModal
           isOpen={guardModal.isOpen}
           onClose={() => setGuardModal(prev => ({ ...prev, isOpen: false }))}
-          guards={getAvailableGuards()}
+          guards={getActiveGuards()}
           onGuardSelect={(guardId) =>
             assignGuardMutation.mutate({
               slotId: guardModal.slotId,
@@ -474,6 +573,7 @@ const AllSitesAttendanceDashboard: React.FC<AllSitesAttendanceDashboardProps> = 
           title={guardModal.isReplacement ? 'Replace Guard' : 'Assign Guard'}
           excludeGuardIds={guardModal.originalGuardId ? [guardModal.originalGuardId] : []}
           preferredRole={guardModal.roleType}
+          assignedElsewhere={guardsAssignedForShift || new Map()}
         />
 
         {/* Temporary Slots Management Dialog */}

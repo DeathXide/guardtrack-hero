@@ -84,7 +84,12 @@ export interface Guard {
   
   // Employment Status
   type: 'permanent' | 'contract';
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'terminated' | 'resigned';
+  staffRole?: string;
+
+  // Uniform
+  uniformIssued?: boolean;
+  uniformIssuedDate?: string;
   
   // Compensation
   payType: 'monthly' | 'per_shift';

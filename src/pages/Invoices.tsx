@@ -12,7 +12,7 @@ import { fetchInvoicesFromDB, deleteInvoiceFromDB, updateInvoiceInDB } from '@/l
 import { formatCurrency } from '@/lib/invoiceUtils';
 import { generatePDF, generatePDFFromHTML } from '@/lib/pdfUtils';
 import { Invoice } from '@/types/invoice';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
 import { usePersistedFilters } from '@/hooks/usePersistedFilters';
@@ -22,10 +22,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { AnimatedNumber } from '@/components/ui/animated-number';
 
 export default function Invoices() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const defaultMonth = useMemo(() => {
     const now = new Date();
@@ -59,6 +59,21 @@ export default function Invoices() {
     try {
       const data = await fetchInvoicesFromDB();
       setInvoices(data);
+
+      // If the current month has no invoices, fall back to the most recent month that does
+      const currentMonth = defaultMonth;
+      const hasCurrentMonth = data.some(inv => {
+        const d = new Date(inv.periodFrom);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === currentMonth;
+      });
+
+      if (!hasCurrentMonth && data.length > 0 && !searchParams.get('month')) {
+        // Find the most recent month with invoices
+        const sorted = [...data].sort((a, b) => new Date(b.periodFrom).getTime() - new Date(a.periodFrom).getTime());
+        const latest = new Date(sorted[0].periodFrom);
+        const latestMonth = `${latest.getFullYear()}-${String(latest.getMonth() + 1).padStart(2, '0')}`;
+        setFilter('month', latestMonth);
+      }
     } catch (error) {
       console.error('Error loading invoices:', error);
       toast.error('Failed to load invoices');
@@ -254,10 +269,11 @@ export default function Invoices() {
   };
 
   const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch = 
+    const matchesSearch =
       invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.siteName.toLowerCase().includes(searchTerm.toLowerCase());
+      invoice.siteName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (invoice.clientAddress || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
     const matchesGstType = gstTypeFilter === 'all' || invoice.gstType === gstTypeFilter;
@@ -379,14 +395,14 @@ export default function Invoices() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
             <FileText className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold"><AnimatedNumber value={totalInvoices} /></div>
+            <div className="text-2xl font-bold">{totalInvoices}</div>
           </CardContent>
         </Card>
         <Card>
@@ -395,7 +411,7 @@ export default function Invoices() {
             <IndianRupee className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold"><AnimatedNumber value={totalAmount} prefix="₹" /></div>
+            <div className="text-2xl font-bold">{formatCurrency(totalAmount)}</div>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-emerald-500">
@@ -404,7 +420,7 @@ export default function Invoices() {
             <CheckCircle className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600"><AnimatedNumber value={paidAmount} prefix="₹" /></div>
+            <div className="text-2xl font-bold text-emerald-600">{formatCurrency(paidAmount)}</div>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-amber-500">
@@ -413,7 +429,7 @@ export default function Invoices() {
             <Clock className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600"><AnimatedNumber value={pendingAmount} prefix="₹" /></div>
+            <div className="text-2xl font-bold text-amber-600">{formatCurrency(pendingAmount)}</div>
           </CardContent>
         </Card>
       </div>
@@ -423,16 +439,16 @@ export default function Invoices() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search invoices..."
                 defaultValue={searchTerm}
                 onChange={(e) => setFilter('search', e.target.value, 300)}
-                className="pl-10"
+                className="pl-10 h-11"
               />
             </div>
             <Select value={selectedMonth} onValueChange={(v) => setFilter('month', v)}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-48 h-11">
                 <Calendar className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Select month" />
               </SelectTrigger>
@@ -453,7 +469,7 @@ export default function Invoices() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(v) => setFilter('status', v)}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-48 h-11">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -466,7 +482,7 @@ export default function Invoices() {
               </SelectContent>
             </Select>
             <Select value={gstTypeFilter} onValueChange={(v) => setFilter('gst', v)}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-48 h-11">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filter by GST type" />
               </SelectTrigger>
@@ -522,6 +538,7 @@ export default function Invoices() {
             </div>
           )}
 
+          <div className="overflow-x-auto -mx-6 px-6">
           <Table>
             <TableHeader>
               <TableRow>
@@ -551,7 +568,12 @@ export default function Invoices() {
                     />
                   </TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{invoice.invoiceNumber}</TableCell>
-                  <TableCell className="font-medium">{invoice.siteName}</TableCell>
+                  <TableCell>
+                    <div className="font-medium">{invoice.siteName}</div>
+                    {invoice.clientAddress && (
+                      <p className="text-xs text-muted-foreground truncate max-w-[250px] mt-0.5">{invoice.clientAddress}</p>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline">
                       {invoice.gstType === 'GST' ? 'Standard GST' :
@@ -575,7 +597,7 @@ export default function Invoices() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-10 w-10"
                             onClick={() => navigate(`/invoices/${invoice.id}`)}
                           >
                             <Eye className="h-4 w-4" />
@@ -588,7 +610,7 @@ export default function Invoices() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-10 w-10"
                             onClick={() => navigate(`/invoices/${invoice.id}/edit`)}
                           >
                             <Edit className="h-4 w-4" />
@@ -601,7 +623,7 @@ export default function Invoices() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-10 w-10"
                             onClick={() => setDeleteConfirmId(invoice.id)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -615,6 +637,7 @@ export default function Invoices() {
               ))}
             </TableBody>
           </Table>
+          </div>
           {filteredInvoices.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-30" />
