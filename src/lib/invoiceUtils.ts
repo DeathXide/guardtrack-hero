@@ -42,10 +42,13 @@ export function calculateGST(amount: number, gstType: string): {
     igstAmount = Number(((validAmount * igstRate) / 100).toFixed(2));
     totalGstAmount = igstAmount;
   } else if (gstType === 'RCM') {
-    // RCM - client pays GST, but we show the breakdown
+    // RCM - recipient pays GST directly to government, not added to invoice total
+    // But we calculate and store amounts for display and audit trail
     cgstRate = Number((gstRate / 2).toFixed(2));
     sgstRate = Number((gstRate / 2).toFixed(2));
-    totalGstAmount = 0; // Client pays, not added to invoice total
+    cgstAmount = Number(((validAmount * cgstRate) / 100).toFixed(2));
+    sgstAmount = Number(((validAmount * sgstRate) / 100).toFixed(2));
+    totalGstAmount = 0; // Not added to invoice total - recipient is liable
   }
   // NGST and PERSONAL have 0% GST
 
@@ -64,16 +67,18 @@ export function calculateGST(amount: number, gstType: string): {
   };
 }
 
-export async function generateInvoiceNumber(): Promise<string> {
+export async function generateInvoiceNumber(periodFrom?: string): Promise<string> {
   const { supabase } = await import('@/integrations/supabase/client');
-  
-  const { data, error } = await supabase.rpc('get_next_invoice_number');
-  
+
+  const { data, error } = await supabase.rpc('get_next_invoice_number', {
+    p_invoice_date: periodFrom || new Date().toISOString().split('T')[0]
+  });
+
   if (error) {
     console.error('Error generating invoice number:', error);
     throw new Error('Failed to generate invoice number');
   }
-  
+
   return data;
 }
 
@@ -211,6 +216,12 @@ export async function calculateInvoiceFromSite(
     igstAmount: gstCalculation.igstAmount,
     totalAmount: gstCalculation.totalAmount
   };
+}
+
+export function calculateRoundOff(totalAmount: number): { roundOff: number; roundedTotal: number } {
+  const roundedTotal = Math.round(totalAmount);
+  const roundOff = Number((roundedTotal - totalAmount).toFixed(2));
+  return { roundOff, roundedTotal };
 }
 
 export function formatCurrency(amount: number): string {

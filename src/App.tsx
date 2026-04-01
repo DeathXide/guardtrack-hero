@@ -24,6 +24,7 @@ import InvoiceCreate from "./pages/InvoiceCreate";
 import InvoiceView from "./pages/InvoiceView";
 import InvoiceEdit from "./pages/InvoiceEdit";
 import CustomInvoiceForm from "./components/invoices/CustomInvoiceForm";
+import Uniforms from "./pages/Uniforms";
 import CompanySettings from "./pages/CompanySettings";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/guards" element={<ProtectedRoute><DashboardLayout><Guards /></DashboardLayout></ProtectedRoute>} />
             <Route path="/attendance" element={<ProtectedRoute><DashboardLayout><Attendance /></DashboardLayout></ProtectedRoute>} />
             <Route path="/schedule" element={<ProtectedRoute><DashboardLayout><Schedule /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/uniforms" element={<ProtectedRoute><DashboardLayout><Uniforms /></DashboardLayout></ProtectedRoute>} />
             <Route path="/invoices" element={<ProtectedRoute><DashboardLayout><Invoices /></DashboardLayout></ProtectedRoute>} />
             <Route path="/invoices/create" element={<ProtectedRoute><DashboardLayout><InvoiceCreate /></DashboardLayout></ProtectedRoute>} />
             <Route path="/invoices/create-custom" element={<ProtectedRoute><DashboardLayout><CustomInvoiceForm /></DashboardLayout></ProtectedRoute>} />
@@ -81,8 +83,14 @@ const AnimatedPage = ({ children }: { children: React.ReactNode }) => {
 };
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
+  // Desktop (wide + mouse): sidebar starts open and pushes content.
+  // iPad / tablet (touch device): sidebar starts closed, opens as overlay.
+  const isDesktopInitial = typeof window !== 'undefined'
+    && window.innerWidth >= 1024
+    && !window.matchMedia('(pointer: coarse)').matches;
+
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={isDesktopInitial}>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
         <AppSidebar />
         <SidebarInset>

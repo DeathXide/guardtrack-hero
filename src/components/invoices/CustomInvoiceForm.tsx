@@ -107,15 +107,21 @@ export default function CustomInvoiceForm() {
     }
   };
 
+  const getDaysInPeriod = () => {
+    if (!formData.periodFrom || !formData.periodTo) return 1;
+    const from = new Date(formData.periodFrom);
+    const to = new Date(formData.periodTo);
+    return Math.ceil((to.getTime() - from.getTime()) / (1000 * 3600 * 24)) + 1;
+  };
+
   const updateLineItem = (id: string, field: keyof LineItem, value: string | number) => {
     setLineItems(items =>
       items.map(item => {
         if (item.id === id) {
           const updatedItem = { ...item, [field]: value };
-          // Recalculate total and manDays when quantity or rate changes
-          if (field === 'quantity' || field === 'ratePerSlot') {
-            updatedItem.manDays = updatedItem.quantity;
-            updatedItem.lineTotal = updatedItem.quantity * updatedItem.ratePerSlot;
+          // Recalculate lineTotal when relevant fields change
+          if (field === 'quantity' || field === 'ratePerSlot' || field === 'manDays') {
+            updatedItem.lineTotal = updatedItem.quantity * updatedItem.manDays * updatedItem.ratePerSlot;
           }
           return updatedItem;
         }
@@ -123,6 +129,17 @@ export default function CustomInvoiceForm() {
       })
     );
   };
+
+  // Update manDays for all line items when period changes
+  useEffect(() => {
+    const days = getDaysInPeriod();
+    setLineItems(items =>
+      items.map(item => {
+        const newManDays = days;
+        return { ...item, manDays: newManDays, lineTotal: item.quantity * newManDays * item.ratePerSlot };
+      })
+    );
+  }, [formData.periodFrom, formData.periodTo]);
 
   const subtotal = lineItems.reduce((sum, item) => sum + item.lineTotal, 0);
   const gstCalculation = calculateGST(subtotal, siteData.gstType);
@@ -145,7 +162,7 @@ export default function CustomInvoiceForm() {
       const companySettings = await companyApi.getCompanySettings();
       
       // Generate invoice number
-      const invoiceNumber = await generateInvoiceNumber();
+      const invoiceNumber = await generateInvoiceNumber(formData.periodFrom);
       
       // Create temporary site (will be marked as 'custom' status)
       const tempSiteId = `custom-${Date.now()}`;
@@ -581,6 +598,20 @@ export default function CustomInvoiceForm() {
                       </div>
                     )}
                     
+                    {siteData.gstType === 'RCM' && (
+                      <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs space-y-1">
+                        <p className="font-medium text-blue-900">Tax Payable by Recipient (RCM)</p>
+                        <div className="flex justify-between text-blue-800">
+                          <span>CGST ({gstCalculation.cgstRate}%)</span>
+                          <span>{formatCurrency(gstCalculation.cgstAmount)}</span>
+                        </div>
+                        <div className="flex justify-between text-blue-800">
+                          <span>SGST ({gstCalculation.sgstRate}%)</span>
+                          <span>{formatCurrency(gstCalculation.sgstAmount)}</span>
+                        </div>
+                      </div>
+                    )}
+
                     {(siteData.gstType === 'NGST' || siteData.gstType === 'PERSONAL') && (
                       <div className="flex justify-between">
                         <span>GST ({gstCalculation.gstRate}%):</span>

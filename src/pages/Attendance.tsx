@@ -5,6 +5,7 @@ import ModernSlotBasedAttendance from '@/components/attendance/ModernSlotBasedAt
 
 const Attendance: React.FC = () => {
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [sharedDate, setSharedDate] = useState<Date>(new Date());
 
   return (
     <>
@@ -13,20 +14,17 @@ const Attendance: React.FC = () => {
         <meta name="description" content="Manage attendance and guard allocation for security sites with slot-based system" />
       </Helmet>
       {selectedSiteId ? (
-        <div>
-          <div className="container mx-auto p-6 pb-0">
-            <button
-              onClick={() => setSelectedSiteId(null)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors mb-2 flex items-center gap-1"
-            >
-              &larr; Back to All Sites
-            </button>
-          </div>
-          <ModernSlotBasedAttendance preselectedSiteId={selectedSiteId} />
-        </div>
+        <ModernSlotBasedAttendance
+          preselectedSiteId={selectedSiteId}
+          initialDate={sharedDate}
+          onBack={() => setSelectedSiteId(null)}
+          onDateChange={setSharedDate}
+        />
       ) : (
         <AllSitesAttendanceDashboard
           onViewSiteDetails={(siteId) => setSelectedSiteId(siteId)}
+          selectedDate={sharedDate}
+          onDateChange={setSharedDate}
         />
       )}
     </>

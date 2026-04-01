@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Save, RotateCcw, Trash2 } from 'lucide-react';
+import { Save, RotateCcw, Trash2, Calculator, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -213,12 +213,12 @@ export default function InvoiceEdit() {
       if (value === 'shift' && prev.rateType === 'monthly' && prev.monthlyRate) {
         // Monthly → Shift: ratePerSlot = monthlyRate / days in the billing month
         const daysInMonth = getDaysInBillingMonth(formData.periodFrom);
-        newLineItems[index].ratePerSlot = Math.round(prev.monthlyRate / daysInMonth);
+        newLineItems[index].ratePerSlot = Number((prev.monthlyRate / daysInMonth).toFixed(2));
         newLineItems[index].manDays = daysInMonth;
       } else if (value === 'monthly' && prev.rateType === 'shift' && prev.ratePerSlot) {
         // Shift → Monthly: monthlyRate = ratePerSlot × days in the billing month
         const daysInMonth = getDaysInBillingMonth(formData.periodFrom);
-        newLineItems[index].monthlyRate = Math.round(prev.ratePerSlot * daysInMonth);
+        newLineItems[index].monthlyRate = Number((prev.ratePerSlot * daysInMonth).toFixed(2));
       }
     }
 
@@ -582,123 +582,198 @@ export default function InvoiceEdit() {
                   </Card>
                 ) : (
                   /* Service Line Item Card */
-                  <Card key={item.id} className="p-4 space-y-4">
-                    {/* Row 1: Role Type, Rate Type, Delete */}
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
-                        <div className="space-y-2">
-                          <Label>Role Type</Label>
-                          <Select
-                            value={item.role}
-                            onValueChange={(value) => updateLineItem(index, 'role', value)}
-                            disabled={!editability.lineItems}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ROLE_TYPES.map(role => (
-                                <SelectItem key={role} value={role}>{role}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Rate Type</Label>
-                          <Select
-                            value={item.rateType}
-                            onValueChange={(value) => updateLineItem(index, 'rateType', value)}
-                            disabled={!editability.lineItems}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="shift">Shift</SelectItem>
-                              <SelectItem value="monthly">Monthly</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      {editability.lineItems && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeLineItem(index)}
-                          className="text-destructive shrink-0 mt-7"
+                  <Card key={item.id} className="overflow-hidden">
+                    {/* Card header with role, rate type, amount, delete */}
+                    <div className="flex items-center justify-between gap-3 px-4 py-3 bg-muted/30 border-b">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <span className="text-xs font-medium text-muted-foreground w-5">{index + 1}.</span>
+                        <Select
+                          value={item.role}
+                          onValueChange={(value) => updateLineItem(index, 'role', value)}
+                          disabled={!editability.lineItems}
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-
-                    {/* Row 2: Day Slots, Night Slots, Rate, Man Days */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="space-y-2">
-                        <Label>Day Slots</Label>
-                        <Input
-                          type="number"
-                          value={item.daySlots ?? 0}
-                          onChange={(e) => updateLineItem(index, 'daySlots', parseInt(e.target.value) || 0)}
+                          <SelectTrigger className="h-8 w-40 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ROLE_TYPES.map(role => (
+                              <SelectItem key={role} value={role}>{role}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={item.rateType}
+                          onValueChange={(value) => updateLineItem(index, 'rateType', value)}
                           disabled={!editability.lineItems}
-                        />
+                        >
+                          <SelectTrigger className="h-8 w-28 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="shift">Shift</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Night Slots</Label>
-                        <Input
-                          type="number"
-                          value={item.nightSlots ?? 0}
-                          onChange={(e) => updateLineItem(index, 'nightSlots', parseInt(e.target.value) || 0)}
-                          disabled={!editability.lineItems}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>{item.rateType === 'monthly' ? 'Monthly Rate (₹)' : 'Rate Per Slot (₹)'}</Label>
-                        {item.rateType === 'monthly' ? (
-                          <Input
-                            type="number"
-                            value={item.monthlyRate || 0}
-                            onChange={(e) => updateLineItem(index, 'monthlyRate', parseFloat(e.target.value) || 0)}
-                            disabled={!editability.lineItems}
-                          />
-                        ) : (
-                          <Input
-                            type="number"
-                            value={item.ratePerSlot}
-                            onChange={(e) => updateLineItem(index, 'ratePerSlot', parseFloat(e.target.value) || 0)}
-                            disabled={!editability.lineItems}
-                          />
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-semibold text-sm">{formatCurrency(item.lineTotal)}</span>
+                        {editability.lineItems && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeLineItem(index)}
+                            className="text-destructive h-7 w-7"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         )}
                       </div>
-                      {item.rateType === 'shift' && (
-                        <div className="space-y-2">
-                          <Label>Man Days</Label>
+                    </div>
+
+                    <div className="p-4 space-y-3">
+                      {/* Slots + Rate row */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Day Slots</Label>
                           <Input
                             type="number"
-                            value={item.manDays}
-                            onChange={(e) => updateLineItem(index, 'manDays', parseInt(e.target.value) || 0)}
+                            className="h-9"
+                            value={item.daySlots ?? 0}
+                            onChange={(e) => updateLineItem(index, 'daySlots', parseInt(e.target.value) || 0)}
                             disabled={!editability.lineItems}
                           />
                         </div>
-                      )}
-                    </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Night Slots</Label>
+                          <Input
+                            type="number"
+                            className="h-9"
+                            value={item.nightSlots ?? 0}
+                            onChange={(e) => updateLineItem(index, 'nightSlots', parseInt(e.target.value) || 0)}
+                            disabled={!editability.lineItems}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">{item.rateType === 'monthly' ? 'Monthly Rate (₹)' : 'Rate/Slot (₹)'}</Label>
+                          {item.rateType === 'monthly' ? (
+                            <Input
+                              type="number"
+                              className="h-9"
+                              value={item.monthlyRate || 0}
+                              onChange={(e) => updateLineItem(index, 'monthlyRate', parseFloat(e.target.value) || 0)}
+                              disabled={!editability.lineItems}
+                            />
+                          ) : (
+                            <Input
+                              type="number"
+                              className="h-9"
+                              value={item.ratePerSlot}
+                              onChange={(e) => updateLineItem(index, 'ratePerSlot', parseFloat(e.target.value) || 0)}
+                              disabled={!editability.lineItems}
+                            />
+                          )}
+                        </div>
+                        {item.rateType === 'shift' && !item.dateFrom && (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1">
+                              <Label className="text-xs">Man Days</Label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4"
+                                title="Auto-calculate from dates"
+                                disabled={!editability.lineItems}
+                                onClick={() => {
+                                  const newItems = [...lineItems];
+                                  const from = formData.periodFrom;
+                                  const to = formData.periodTo;
+                                  const days = Math.max(Math.ceil((new Date(to).getTime() - new Date(from).getTime()) / (1000 * 3600 * 24)) + 1, 0);
+                                  newItems[index] = { ...newItems[index], dateFrom: from, dateTo: to, manDays: days, lineTotal: newItems[index].quantity * days * newItems[index].ratePerSlot };
+                                  setLineItems(newItems);
+                                }}
+                              >
+                                <Calculator className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <Input
+                              type="number"
+                              className="h-9"
+                              value={item.manDays}
+                              onChange={(e) => updateLineItem(index, 'manDays', parseInt(e.target.value) || 0)}
+                              disabled={!editability.lineItems}
+                            />
+                          </div>
+                        )}
+                      </div>
 
-                    {/* Row 3: Service Description */}
-                    <div className="space-y-2">
-                      <Label>Service Description</Label>
-                      <Textarea
+                      {/* Man Days date-range row (only when in auto-calculate mode) */}
+                      {item.rateType === 'shift' && item.dateFrom && (
+                        <div className="flex items-end gap-3 p-3 bg-muted/20 rounded-md border border-dashed">
+                          <div className="space-y-1 flex-1">
+                            <Label className="text-xs">Working From</Label>
+                            <Input
+                              type="date"
+                              className="h-9"
+                              value={item.dateFrom}
+                              onChange={(e) => {
+                                const from = e.target.value;
+                                const to = item.dateTo || formData.periodTo;
+                                const newItems = [...lineItems];
+                                const days = (from && to) ? Math.max(Math.ceil((new Date(to).getTime() - new Date(from).getTime()) / (1000 * 3600 * 24)) + 1, 0) : item.manDays;
+                                newItems[index] = { ...newItems[index], dateFrom: from, manDays: days, lineTotal: newItems[index].quantity * days * newItems[index].ratePerSlot };
+                                setLineItems(newItems);
+                              }}
+                              disabled={!editability.lineItems}
+                            />
+                          </div>
+                          <div className="space-y-1 flex-1">
+                            <Label className="text-xs">Working To</Label>
+                            <Input
+                              type="date"
+                              className="h-9"
+                              value={item.dateTo || formData.periodTo}
+                              onChange={(e) => {
+                                const to = e.target.value;
+                                const from = item.dateFrom || formData.periodFrom;
+                                const newItems = [...lineItems];
+                                const days = (from && to) ? Math.max(Math.ceil((new Date(to).getTime() - new Date(from).getTime()) / (1000 * 3600 * 24)) + 1, 0) : item.manDays;
+                                newItems[index] = { ...newItems[index], dateTo: to, manDays: days, lineTotal: newItems[index].quantity * days * newItems[index].ratePerSlot };
+                                setLineItems(newItems);
+                              }}
+                              disabled={!editability.lineItems}
+                            />
+                          </div>
+                          <div className="text-center pb-1 min-w-[60px]">
+                            <div className="text-lg font-mono font-bold">{item.manDays}</div>
+                            <div className="text-[10px] text-muted-foreground leading-none">days</div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 shrink-0"
+                            title="Switch to manual entry"
+                            disabled={!editability.lineItems}
+                            onClick={() => {
+                              const newItems = [...lineItems];
+                              newItems[index] = { ...newItems[index], dateFrom: '', dateTo: '' };
+                              setLineItems(newItems);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Service Description */}
+                      <Input
                         value={item.customDescription || ''}
                         onChange={(e) => updateLineItem(index, 'customDescription', e.target.value)}
-                        placeholder="Describe the service scope for this role (will appear on invoices)"
-                        rows={2}
+                        placeholder="Service description (optional)"
+                        className="h-9 text-xs"
                         disabled={!editability.lineItems}
                       />
-                    </div>
-
-                    {/* Footer: Amount */}
-                    <div className="flex justify-end pt-1 border-t">
-                      <span className="text-sm text-muted-foreground mr-2">Amount:</span>
-                      <span className="font-mono font-semibold">{formatCurrency(item.lineTotal)}</span>
                     </div>
                   </Card>
                 )
@@ -725,9 +800,18 @@ export default function InvoiceEdit() {
                     </span>
                     <span className="font-mono">{formatCurrency(gstAmount)}</span>
                   </div>
+                  {(() => {
+                    const roundOff = Number((Math.round(totalAmount) - totalAmount).toFixed(2));
+                    return roundOff !== 0 ? (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Round Off</span>
+                        <span className="font-mono">{roundOff > 0 ? '+' : ''}{roundOff.toFixed(2)}</span>
+                      </div>
+                    ) : null;
+                  })()}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
-                    <span className="font-mono">{formatCurrency(totalAmount)}</span>
+                    <span className="font-mono">{formatCurrency(Math.round(totalAmount))}</span>
                   </div>
                 </div>
               </div>

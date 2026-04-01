@@ -714,7 +714,7 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
               </div>
               <p class="rcm-description">
                 Recipient liable for CGST (${(invoice.cgstRate || 0).toFixed(1)}%) & SGST (${(invoice.sgstRate || 0).toFixed(1)}%) 
-                totaling ${formatCurrency(invoice.subtotal * (invoice.cgstRate || 0) / 100 + invoice.subtotal * (invoice.sgstRate || 0) / 100)}
+                totaling ${formatCurrency((invoice.cgstAmount || 0) + (invoice.sgstAmount || 0))}
               </p>
             </div>
           </div>
@@ -754,11 +754,11 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
                 <div class="rcm-gst-title">Tax Payable by Recipient</div>
                 <div class="rcm-gst-row">
                   <span>CGST (${(invoice.cgstRate || 0).toFixed(1)}%)</span>
-                  <span style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;">${formatCurrency(invoice.subtotal * (invoice.cgstRate || 0) / 100)}</span>
+                  <span style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;">${formatCurrency(invoice.cgstAmount || 0)}</span>
                 </div>
                 <div class="rcm-gst-row">
                   <span>SGST (${(invoice.sgstRate || 0).toFixed(1)}%)</span>
-                  <span style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;">${formatCurrency(invoice.subtotal * (invoice.sgstRate || 0) / 100)}</span>
+                  <span style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;">${formatCurrency(invoice.sgstAmount || 0)}</span>
                 </div>
               </div>
             ` : ''}
@@ -772,16 +772,27 @@ export function generateInvoiceHTML(invoice: Invoice, companySettings?: CompanyS
               </div>
             ` : ''}
             
-            <div class="final-total">
-              <div class="final-total-row">
-                <span class="final-total-label">Total Amount</span>
-                <span class="final-total-value">${formatCurrency(invoice.totalAmount || 0)}</span>
-              </div>
-            </div>
-            
-            <div class="amount-words">
-              <p class="amount-words-text">
-                Amount in Words: <span class="amount-words-value">${numberToWords(invoice.totalAmount || 0)}</span>
+            ${(() => {
+              const total = invoice.totalAmount || 0;
+              const rounded = Math.round(total);
+              const roundOff = Number((rounded - total).toFixed(2));
+              return `
+                ${roundOff !== 0 ? `
+                  <div class="total-row" style="font-size: 0.75rem;">
+                    <span class="total-label">Round Off</span>
+                    <span class="total-value">${roundOff > 0 ? '+' : ''}${roundOff.toFixed(2)}</span>
+                  </div>
+                ` : ''}
+                <div class="final-total">
+                  <div class="final-total-row">
+                    <span class="final-total-label">Total Amount</span>
+                    <span class="final-total-value">${formatCurrency(rounded)}</span>
+                  </div>
+                </div>
+                <div class="amount-words">
+                  <p class="amount-words-text">
+                    Amount in Words: <span class="amount-words-value">${numberToWords(rounded)}</span>`;
+            })()}
               </p>
             </div>
           </div>

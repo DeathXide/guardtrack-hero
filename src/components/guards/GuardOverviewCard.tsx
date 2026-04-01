@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { User, DollarSign, Edit, Trash, Shield } from 'lucide-react';
 import { Guard } from '@/lib/guardsApi';
 import { guardUtils } from '@/lib/guardsApi';
-import { m } from 'motion/react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface MonthlyEarning {
@@ -35,17 +34,21 @@ export const GuardOverviewCard: React.FC<GuardOverviewCardProps> = ({
   onViewDetails
 }) => {
   return (
-    <m.div whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
     <Card className="overflow-hidden border border-border/60 hover:shadow-md transition-shadow">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <div>
           <CardTitle className="text-base font-medium">{guard.name}</CardTitle>
-          <Badge 
-            variant={guard.guard_type === 'contract' ? 'outline' : 'default'}
-            className={`mt-1 ${guard.guard_type === 'contract' ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500' : ''}`}
-          >
-            {guard.guard_type || 'Permanent'} Guard
-          </Badge>
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            <Badge variant="secondary" className="text-xs">
+              {guard.staff_role || 'Security Guard'}
+            </Badge>
+            <Badge
+              variant={guard.guard_type === 'contract' ? 'outline' : 'default'}
+              className={`text-xs ${guard.guard_type === 'contract' ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500' : ''}`}
+            >
+              {guard.guard_type || 'Permanent'}
+            </Badge>
+          </div>
         </div>
         <User className="h-8 w-8 text-muted-foreground" />
       </CardHeader>
@@ -58,9 +61,9 @@ export const GuardOverviewCard: React.FC<GuardOverviewCardProps> = ({
           </div>
           <div>
             <span className="text-muted-foreground">Status:</span>
-            <Badge 
-              variant={guard.status === 'active' ? 'default' : 'secondary'}
-              className="ml-1"
+            <Badge
+              variant={guard.status === 'active' ? 'outline' : guard.status === 'terminated' || guard.status === 'resigned' ? 'destructive' : 'secondary'}
+              className={`ml-1 ${guard.status === 'active' ? 'bg-green-500/10 text-green-600 hover:bg-green-500/20' : ''}`}
             >
               {guard.status}
             </Badge>
@@ -72,22 +75,7 @@ export const GuardOverviewCard: React.FC<GuardOverviewCardProps> = ({
             <span className="text-muted-foreground">Shifts Worked:</span>
             <span className="font-medium">{monthlyEarnings.totalShifts}</span>
           </div>
-          
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Shift Earnings:</span>
-            <span className="font-medium">{guardUtils.formatCurrency(monthlyEarnings.baseSalary)}</span>
-          </div>
-          
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Bonuses:</span>
-            <span className="text-green-600 font-medium">+{guardUtils.formatCurrency(monthlyEarnings.bonuses)}</span>
-          </div>
-          
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Deductions:</span>
-            <span className="text-red-600 font-medium">-{guardUtils.formatCurrency(monthlyEarnings.deductions)}</span>
-          </div>
-          
+
           <div className="border-t pt-2">
             <div className="flex items-center justify-between font-medium">
               <span>Net Amount:</span>
@@ -141,6 +129,5 @@ export const GuardOverviewCard: React.FC<GuardOverviewCardProps> = ({
         </div>
       </CardContent>
     </Card>
-    </m.div>
   );
 };

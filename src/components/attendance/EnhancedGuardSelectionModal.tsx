@@ -16,7 +16,8 @@ import {
   MapPin,
   Phone,
   Mail,
-  UserPlus
+  UserPlus,
+  Building2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { guardsApi, CreateGuardData } from '@/lib/guardsApi';
@@ -42,6 +43,7 @@ interface EnhancedGuardSelectionModalProps {
   title?: string;
   excludeGuardIds?: string[];
   preferredRole?: string;
+  assignedElsewhere?: Map<string, string>; // guardId -> siteName
 }
 
 const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = ({
@@ -51,7 +53,8 @@ const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = 
   onGuardSelect,
   title = "Select Guard",
   excludeGuardIds = [],
-  preferredRole
+  preferredRole,
+  assignedElsewhere = new Map()
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -110,39 +113,47 @@ const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = 
     }
   };
 
-  // Filter available guards
-  const availableGuards = useMemo(() => {
-    return guards.filter(guard => 
-      guard.status === 'active' && 
+  // All active guards (excluding the guard being replaced)
+  const allActiveGuards = useMemo(() => {
+    return guards.filter(guard =>
+      guard.status === 'active' &&
       !excludeGuardIds.includes(guard.id)
     );
   }, [guards, excludeGuardIds]);
 
-  // Get unique roles for filtering
+  // Available guards (not assigned elsewhere)
+  const availableGuards = useMemo(() => {
+    return allActiveGuards.filter(guard => !assignedElsewhere.has(guard.id));
+  }, [allActiveGuards, assignedElsewhere]);
+
+  // Guards assigned at other sites for this shift
+  const assignedElsewhereGuards = useMemo(() => {
+    return allActiveGuards.filter(guard => assignedElsewhere.has(guard.id));
+  }, [allActiveGuards, assignedElsewhere]);
+
+  // Get unique roles for filtering (from all active guards so search works across both pools)
   const uniqueRoles = useMemo(() => {
-    const roles = new Set(availableGuards.map(guard => guard.role).filter(Boolean));
+    const roles = new Set(allActiveGuards.map(guard => guard.role).filter(Boolean));
     return Array.from(roles);
-  }, [availableGuards]);
+  }, [allActiveGuards]);
 
-  // Categorize guards
-  const categorizedGuards = useMemo(() => {
-    let filtered = availableGuards;
+  // Apply shared search/filter logic to any guard list
+  const applyFilters = (guardList: Guard[]) => {
+    let filtered = guardList;
 
-    // Apply search filter
     if (searchTerm) {
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter(guard =>
-        guard.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        guard.badge_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        guard.role?.toLowerCase().includes(searchTerm.toLowerCase())
+        guard.name.toLowerCase().includes(term) ||
+        guard.badge_number.toLowerCase().includes(term) ||
+        guard.role?.toLowerCase().includes(term)
       );
     }
 
-    // Apply role filter
     if (roleFilter !== 'all') {
       filtered = filtered.filter(guard => guard.role === roleFilter);
     }
 
-    // Apply experience filter
     if (experienceFilter !== 'all') {
       if (experienceFilter === 'experienced') {
         filtered = filtered.filter(guard => (guard.experience_years || 0) >= 2);
@@ -151,22 +162,31 @@ const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = 
       }
     }
 
-    // Categorize
-    const recommended = filtered.filter(guard => 
-      guard.role === preferredRole || 
+    return filtered;
+  };
+
+  // Categorize guards (search/filters applied to both available and assigned-elsewhere)
+  const categorizedGuards = useMemo(() => {
+    const filtered = applyFilters(availableGuards);
+    const filteredElsewhere = applyFilters(assignedElsewhereGuards);
+
+    // Categorize available guards
+    const recommended = filtered.filter(guard =>
+      guard.role === preferredRole ||
       (guard.experience_years || 0) >= 3
     );
     
-    const available = filtered.filter(guard => 
+    const available = filtered.filter(guard =>
       !recommended.includes(guard)
     );
 
     return {
       all: filtered,
       recommended,
-      available
+      available,
+      elsewhere: filteredElsewhere,
     };
-  }, [availableGuards, searchTerm, roleFilter, experienceFilter, preferredRole]);
+  }, [availableGuards, assignedElsewhereGuards, searchTerm, roleFilter, experienceFilter, preferredRole]);
 
   const handleGuardSelect = (guardId: string) => {
     onGuardSelect(guardId);
@@ -186,40 +206,50 @@ const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = 
     return { text: 'New', className: 'bg-green-100 text-green-700' };
   };
 
-  const GuardCard: React.FC<{ guard: Guard }> = ({ guard }) => {
+  const GuardCard: React.FC<{ guard: Guard; disabled?: boolean; disabledReason?: string }> = ({ guard, disabled, disabledReason }) => {
     const experienceBadge = getExperienceBadge(guard.experience_years || 0);
     const isRecommended = categorizedGuards.recommended.includes(guard);
 
     return (
       <div
-        className={`group relative p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-all duration-200 hover:shadow-md ${
-          isRecommended ? 'border-primary/30 bg-primary/5' : 'border-border'
+        className={`group relative p-4 md:p-5 border rounded-lg transition-all duration-200 ${
+          disabled
+            ? 'opacity-60 cursor-not-allowed bg-muted/30 border-muted'
+            : `hover:bg-muted/50 active:bg-muted/70 cursor-pointer hover:shadow-md ${
+                isRecommended ? 'border-primary/30 bg-primary/5' : 'border-border'
+              }`
         }`}
-        onClick={() => handleGuardSelect(guard.id)}
+        onClick={() => !disabled && handleGuardSelect(guard.id)}
       >
-        {isRecommended && (
+        {isRecommended && !disabled && (
           <div className="absolute top-2 right-2">
             <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
           </div>
         )}
-        
+
         <div className="flex items-start gap-3">
           <Avatar className="h-12 w-12">
-            <AvatarFallback className="bg-primary/10 text-primary font-medium">
+            <AvatarFallback className={`font-medium ${disabled ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'}`}>
               {getInitials(guard.name)}
             </AvatarFallback>
           </Avatar>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h4 className="font-medium text-sm truncate">{guard.name}</h4>
-              {isRecommended && (
+              {disabledReason && (
+                <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800">
+                  <Building2 className="h-3 w-3 mr-1" />
+                  {disabledReason}
+                </Badge>
+              )}
+              {isRecommended && !disabled && (
                 <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
                   Recommended
                 </Badge>
               )}
             </div>
-            
+
             <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
               <span className="flex items-center gap-1">
                 <User className="h-3 w-3" />
@@ -261,10 +291,12 @@ const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = 
               </div>
             )}
           </div>
-          
-          <Button variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-            Select
-          </Button>
+
+          {!disabled && (
+            <Button variant="outline" size="sm" className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-10 px-4">
+              Select
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -272,7 +304,7 @@ const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[80vh] flex flex-col">
+      <DialogContent className="sm:max-w-[700px] md:max-w-[760px] max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -284,22 +316,22 @@ const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = 
           {/* Create New Guard */}
           <Button
             variant="outline"
-            className="w-full gap-2 border-dashed border-primary/50 text-primary hover:bg-primary/5"
+            className="w-full gap-2 h-12 border-dashed border-primary/50 text-primary hover:bg-primary/5 active:bg-primary/10 text-sm"
             onClick={() => setShowGuardForm(true)}
           >
-            <UserPlus className="h-4 w-4" />
+            <UserPlus className="h-5 w-5" />
             Create New Guard
           </Button>
 
           {/* Search and Filters */}
           <div className="space-y-3">
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by name, badge, or role..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
+                className="pl-9 h-11"
               />
             </div>
             
@@ -331,9 +363,9 @@ const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = 
 
           {/* Tabs for different categories */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className={`grid w-full ${categorizedGuards.elsewhere.length > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
               <TabsTrigger value="all" className="text-xs">
-                All ({categorizedGuards.all.length})
+                All ({categorizedGuards.all.length + categorizedGuards.elsewhere.length})
               </TabsTrigger>
               <TabsTrigger value="recommended" className="text-xs">
                 Recommended ({categorizedGuards.recommended.length})
@@ -341,20 +373,56 @@ const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = 
               <TabsTrigger value="available" className="text-xs">
                 Available ({categorizedGuards.available.length})
               </TabsTrigger>
+              {categorizedGuards.elsewhere.length > 0 && (
+                <TabsTrigger value="elsewhere" className="text-xs">
+                  At Other Sites ({categorizedGuards.elsewhere.length})
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <div className="flex-1 mt-3">
               <TabsContent value="all" className="h-full mt-0">
                 <div className="h-[400px] overflow-y-auto space-y-3 pr-2">
-                  {categorizedGuards.all.length === 0 ? (
+                  {categorizedGuards.all.length === 0 && categorizedGuards.elsewhere.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p>No guards found matching your criteria</p>
                     </div>
                   ) : (
-                    categorizedGuards.all.map(guard => (
-                      <GuardCard key={guard.id} guard={guard} />
-                    ))
+                    <>
+                      {/* Available guards first */}
+                      {categorizedGuards.all.map(guard => (
+                        <GuardCard key={guard.id} guard={guard} />
+                      ))}
+
+                      {/* Assigned elsewhere guards at the bottom, with separator */}
+                      {categorizedGuards.elsewhere.length > 0 && (
+                        <>
+                          {categorizedGuards.all.length > 0 && (
+                            <div className="flex items-center gap-2 pt-2 pb-1">
+                              <div className="flex-1 border-t border-border" />
+                              <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide shrink-0">
+                                Assigned at other sites
+                              </span>
+                              <div className="flex-1 border-t border-border" />
+                            </div>
+                          )}
+                          {categorizedGuards.all.length === 0 && (
+                            <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2 mb-1">
+                              No available guards match your search. These guards are assigned at other sites:
+                            </div>
+                          )}
+                          {categorizedGuards.elsewhere.map(guard => (
+                            <GuardCard
+                              key={guard.id}
+                              guard={guard}
+                              disabled
+                              disabledReason={`At ${assignedElsewhere.get(guard.id) || 'another site'}`}
+                            />
+                          ))}
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
               </TabsContent>
@@ -384,6 +452,29 @@ const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = 
                   ) : (
                     categorizedGuards.available.map(guard => (
                       <GuardCard key={guard.id} guard={guard} />
+                    ))
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="elsewhere" className="h-full mt-0">
+                <div className="h-[400px] overflow-y-auto space-y-3 pr-2">
+                  <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2 mb-2">
+                    These guards are already assigned at other sites for this shift. They cannot be selected here.
+                  </div>
+                  {categorizedGuards.elsewhere.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No guards assigned at other sites</p>
+                    </div>
+                  ) : (
+                    categorizedGuards.elsewhere.map(guard => (
+                      <GuardCard
+                        key={guard.id}
+                        guard={guard}
+                        disabled
+                        disabledReason={`At ${assignedElsewhere.get(guard.id) || 'another site'}`}
+                      />
                     ))
                   )}
                 </div>

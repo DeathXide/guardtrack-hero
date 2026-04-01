@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { fetchInvoiceByIdFromDB, updateInvoiceInDB } from '@/lib/supabaseInvoiceApiNew';
-import { formatCurrency } from '@/lib/invoiceUtils';
+import { formatCurrency, calculateRoundOff } from '@/lib/invoiceUtils';
 import { generatePDF } from '@/lib/pdfUtils';
 import { numberToWords } from '@/lib/numberToWords';
 import { companyApi } from '@/lib/companyApi';
@@ -404,7 +404,7 @@ export default function InvoiceView() {
                           </div>
                           <p className="text-xs text-blue-800 leading-relaxed">
                             Recipient liable for CGST ({(invoice.cgstRate || 0).toFixed(1)}%) & SGST ({(invoice.sgstRate || 0).toFixed(1)}%) 
-                            totaling {formatCurrency(invoice.subtotal * (invoice.cgstRate || 0) / 100 + invoice.subtotal * (invoice.sgstRate || 0) / 100)}
+                            totaling {formatCurrency((invoice.cgstAmount || 0) + (invoice.sgstAmount || 0))}
                           </p>
                         </div>
                       </div>
@@ -445,11 +445,11 @@ export default function InvoiceView() {
                             <div className="space-y-0.5 text-xs">
                               <div className="flex justify-between text-blue-800">
                                 <span>CGST ({(invoice.cgstRate || 0).toFixed(1)}%)</span>
-                                <span className="font-mono">{formatCurrency(invoice.subtotal * (invoice.cgstRate || 0) / 100)}</span>
+                                <span className="font-mono">{formatCurrency(invoice.cgstAmount || 0)}</span>
                               </div>
                               <div className="flex justify-between text-blue-800">
                                 <span>SGST ({(invoice.sgstRate || 0).toFixed(1)}%)</span>
-                                <span className="font-mono">{formatCurrency(invoice.subtotal * (invoice.sgstRate || 0) / 100)}</span>
+                                <span className="font-mono">{formatCurrency(invoice.sgstAmount || 0)}</span>
                               </div>
                             </div>
                           </div>
@@ -462,18 +462,30 @@ export default function InvoiceView() {
                           </div>
                         )}
                         
-                        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mt-4">
-                          <div className="flex justify-between items-center">
-                            <span className="font-medium text-primary">Total Amount</span>
-                            <span className="text-xl font-mono font-bold text-primary">{formatCurrency(invoice.totalAmount || 0)}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="pt-3 border-t border-border">
-                          <p className="text-xs text-muted-foreground font-medium">
-                            Amount in Words: <span className="font-normal italic">{numberToWords(invoice.totalAmount || 0)}</span>
-                          </p>
-                        </div>
+                        {(() => {
+                          const { roundOff, roundedTotal } = calculateRoundOff(invoice.totalAmount || 0);
+                          return (
+                            <>
+                              {roundOff !== 0 && (
+                                <div className="flex justify-between text-xs py-1">
+                                  <span className="text-muted-foreground">Round Off</span>
+                                  <span className="font-mono">{roundOff > 0 ? '+' : ''}{roundOff.toFixed(2)}</span>
+                                </div>
+                              )}
+                              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mt-4">
+                                <div className="flex justify-between items-center">
+                                  <span className="font-medium text-primary">Total Amount</span>
+                                  <span className="text-xl font-mono font-bold text-primary">{formatCurrency(roundedTotal)}</span>
+                                </div>
+                              </div>
+                              <div className="pt-3 border-t border-border">
+                                <p className="text-xs text-muted-foreground font-medium">
+                                  Amount in Words: <span className="font-normal italic">{numberToWords(roundedTotal)}</span>
+                                </p>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>

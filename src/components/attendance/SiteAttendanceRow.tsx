@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, CheckCircle, XCircle, UserPlus, AlertCircle, Users, RefreshCw, Clock } from 'lucide-react';
+import { ChevronDown, ChevronRight, CheckCircle, XCircle, UserPlus, UserMinus, AlertCircle, Users, RefreshCw, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -11,6 +11,7 @@ interface SiteAttendanceRowProps {
   onMarkAttendance: (slotId: string, isPresent: boolean) => void;
   onAssignGuard: (slotId: string, shiftType: 'day' | 'night', roleType: string, siteId: string) => void;
   onReplaceGuard: (slotId: string, shiftType: 'day' | 'night', roleType: string, guardId: string, siteId: string) => void;
+  onUnassignGuard: (slotId: string) => void;
   onMarkAllPresent: (siteId: string) => void;
   onViewDetails: (siteId: string) => void;
   onManageTempSlots?: (siteId: string) => void;
@@ -23,6 +24,7 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
   onMarkAttendance,
   onAssignGuard,
   onReplaceGuard,
+  onUnassignGuard,
   onMarkAllPresent,
   onViewDetails,
   onManageTempSlots,
@@ -63,11 +65,11 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
       {/* Collapsed Header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-4 p-4 text-left hover:bg-muted/30 transition-colors rounded-lg"
+        className="w-full flex items-center gap-4 p-4 md:py-5 text-left hover:bg-muted/30 active:bg-muted/50 transition-colors rounded-lg"
         disabled={noRequirements}
       >
         <div className="text-muted-foreground">
-          {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          {expanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -152,9 +154,9 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
                 variant="outline"
                 onClick={(e) => { e.stopPropagation(); onMarkAllPresent(site.siteId); }}
                 disabled={isLoading}
-                className="text-xs h-7 gap-1 text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950"
+                className="text-sm h-10 gap-1.5 text-green-600 border-green-200 hover:bg-green-50 active:bg-green-100 dark:border-green-800 dark:hover:bg-green-950"
               >
-                <CheckCircle className="h-3 w-3" />
+                <CheckCircle className="h-4 w-4" />
                 Mark All Present
               </Button>
             )}
@@ -163,9 +165,9 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
                 size="sm"
                 variant="outline"
                 onClick={(e) => { e.stopPropagation(); onManageTempSlots(site.siteId); }}
-                className="text-xs h-7 gap-1 text-amber-600 border-amber-200 hover:bg-amber-50 dark:border-amber-800 dark:hover:bg-amber-950"
+                className="text-sm h-10 gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50 active:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-950"
               >
-                <Clock className="h-3 w-3" />
+                <Clock className="h-4 w-4" />
                 Temp Slots
               </Button>
             )}
@@ -173,14 +175,14 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
               size="sm"
               variant="ghost"
               onClick={(e) => { e.stopPropagation(); onViewDetails(site.siteId); }}
-              className="text-xs h-7 gap-1 text-muted-foreground ml-auto"
+              className="text-sm h-10 gap-1.5 text-muted-foreground ml-auto"
             >
               View Details
             </Button>
           </div>
 
           {/* Guard List */}
-          <div className="space-y-1">
+          <div className="space-y-2">
             {site.slots.map(slot => {
               const guard = slot.guards;
               const status = !guard ? 'empty'
@@ -191,7 +193,7 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
               return (
                 <div
                   key={slot.id}
-                  className={`flex items-center gap-3 py-2 px-3 rounded-md transition-colors ${
+                  className={`flex items-center gap-3 py-3 px-3 rounded-md transition-colors ${
                     status === 'present' ? 'bg-green-50/50 dark:bg-green-950/20'
                     : status === 'absent' ? 'bg-red-50/50 dark:bg-red-950/20'
                     : status === 'pending' ? 'bg-amber-50/30 dark:bg-amber-950/10'
@@ -201,22 +203,22 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
                   {/* Guard Info */}
                   {guard ? (
                     <>
-                      <Avatar className="h-7 w-7">
-                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-medium">
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback className="text-xs bg-primary/10 text-primary font-medium">
                           {getInitials(guard.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium truncate">{guard.name}</span>
-                          <Badge variant="outline" className="text-[10px] h-4 px-1">{slot.role_type}</Badge>
-                          <Badge variant="outline" className="text-[10px] h-4 px-1 capitalize">{slot.shift_type}</Badge>
+                          <Badge variant="outline" className="text-[11px] h-5 px-1.5">{slot.role_type}</Badge>
+                          <Badge variant="outline" className="text-[11px] h-5 px-1.5 capitalize">{slot.shift_type}</Badge>
                         </div>
-                        <span className="text-[11px] text-muted-foreground">{guard.badge_number}</span>
+                        <span className="text-xs text-muted-foreground">{guard.badge_number}</span>
                       </div>
 
                       {/* Attendance Buttons */}
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -224,13 +226,13 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
                               variant={status === 'present' ? 'default' : 'outline'}
                               onClick={(e) => { e.stopPropagation(); onMarkAttendance(slot.id, true); }}
                               disabled={isLoading}
-                              className={`h-7 w-7 p-0 ${
+                              className={`h-10 w-10 p-0 ${
                                 status === 'present'
-                                  ? 'bg-green-600 hover:bg-green-700 text-white'
-                                  : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
+                                  ? 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white'
+                                  : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300 active:bg-green-100'
                               }`}
                             >
-                              <CheckCircle className="h-3.5 w-3.5" />
+                              <CheckCircle className="h-5 w-5" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Mark Present</TooltipContent>
@@ -243,13 +245,13 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
                               variant={status === 'absent' ? 'default' : 'outline'}
                               onClick={(e) => { e.stopPropagation(); onMarkAttendance(slot.id, false); }}
                               disabled={isLoading}
-                              className={`h-7 w-7 p-0 ${
+                              className={`h-10 w-10 p-0 ${
                                 status === 'absent'
-                                  ? 'bg-red-600 hover:bg-red-700 text-white'
-                                  : 'hover:bg-red-50 hover:text-red-700 hover:border-red-300'
+                                  ? 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white'
+                                  : 'hover:bg-red-50 hover:text-red-700 hover:border-red-300 active:bg-red-100'
                               }`}
                             >
-                              <XCircle className="h-3.5 w-3.5" />
+                              <XCircle className="h-5 w-5" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Mark Absent</TooltipContent>
@@ -266,27 +268,45 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
                                   onReplaceGuard(slot.id, slot.shift_type, slot.role_type, guard.id, site.siteId);
                                 }}
                                 disabled={isLoading}
-                                className="h-7 px-2 text-xs gap-1"
+                                className="h-10 px-3 text-sm gap-1.5 active:bg-muted"
                               >
-                                <RefreshCw className="h-3 w-3" />
+                                <RefreshCw className="h-4 w-4" />
                                 Replace
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Replace this guard</TooltipContent>
                           </Tooltip>
                         )}
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onUnassignGuard(slot.id);
+                              }}
+                              disabled={isLoading}
+                              className="h-10 w-10 p-0 hover:bg-orange-50 hover:text-orange-700 hover:border-orange-300 active:bg-orange-100"
+                            >
+                              <UserMinus className="h-5 w-5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Unassign guard</TooltipContent>
+                        </Tooltip>
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="h-7 w-7 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
-                        <UserPlus className="h-3 w-3 text-muted-foreground/50" />
+                      <div className="h-9 w-9 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                        <UserPlus className="h-4 w-4 text-muted-foreground/50" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground italic">Empty Slot</span>
-                          <Badge variant="outline" className="text-[10px] h-4 px-1">{slot.role_type}</Badge>
-                          <Badge variant="outline" className="text-[10px] h-4 px-1 capitalize">{slot.shift_type}</Badge>
+                          <Badge variant="outline" className="text-[11px] h-5 px-1.5">{slot.role_type}</Badge>
+                          <Badge variant="outline" className="text-[11px] h-5 px-1.5 capitalize">{slot.shift_type}</Badge>
                         </div>
                       </div>
                       <Button
@@ -297,9 +317,9 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
                           onAssignGuard(slot.id, slot.shift_type, slot.role_type, site.siteId);
                         }}
                         disabled={isLoading}
-                        className="h-7 px-2 text-xs gap-1 border-dashed"
+                        className="h-10 px-3 text-sm gap-1.5 border-dashed active:bg-muted"
                       >
-                        <UserPlus className="h-3 w-3" />
+                        <UserPlus className="h-4 w-4" />
                         Assign
                       </Button>
                     </>
@@ -324,9 +344,9 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
                 size="sm"
                 variant="outline"
                 onClick={(e) => { e.stopPropagation(); onManageTempSlots(site.siteId); }}
-                className="text-xs h-7 gap-1 text-amber-600 border-amber-200 hover:bg-amber-50 dark:border-amber-800 dark:hover:bg-amber-950"
+                className="text-sm h-10 gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50 active:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-950"
               >
-                <Clock className="h-3 w-3" />
+                <Clock className="h-4 w-4" />
                 Temp Slots
               </Button>
             )}
@@ -334,7 +354,7 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
               size="sm"
               variant="ghost"
               onClick={(e) => { e.stopPropagation(); onViewDetails(site.siteId); }}
-              className="text-xs h-7 gap-1 text-muted-foreground ml-auto"
+              className="text-sm h-10 gap-1.5 text-muted-foreground ml-auto"
             >
               View Details
             </Button>

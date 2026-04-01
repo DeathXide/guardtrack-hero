@@ -27,7 +27,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
   const [sites, setSites] = useState<any[]>([]);
   const [companySettings, setCompanySettings] = useState<any | null>(null);
   const [selectedSites, setSelectedSites] = useState<Set<string>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('active');
   const [gstTypeFilter, setGstTypeFilter] = useState<string>('all');
   const [periodFrom, setPeriodFrom] = useState('');
   const [periodTo, setPeriodTo] = useState('');
@@ -36,7 +36,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
   const [sitesLoaded, setSitesLoaded] = useState(false);
   const [includeUtilities, setIncludeUtilities] = useState(true);
 
-  // Set default period based on selected month
+  // Set default period and invoice date based on selected month
   useEffect(() => {
     const [year, month] = selectedMonth.split('-').map(Number);
     const firstDay = new Date(year, month - 1, 1);
@@ -44,9 +44,10 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
 
     const pad = (n: number) => String(n).padStart(2, '0');
     const formatLocal = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    
+
     setPeriodFrom(formatLocal(firstDay));
     setPeriodTo(formatLocal(lastDay));
+    setInvoiceDate(lastDay);
   }, [selectedMonth]);
 
   const loadSites = async () => {
@@ -176,7 +177,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
               daySlots: req.day_slots,
               nightSlots: req.night_slots,
               budgetPerSlot: req.budget_per_slot,
-              rateType: 'monthly' as const,
+              rateType: (req.rate_type || 'monthly') as 'monthly' | 'shift',
               description: req.description
             })) || []
           };
@@ -203,7 +204,7 @@ export default function AutoGenerateInvoices({ onInvoicesCreated, selectedMonth 
             includeUtilities
           );
           
-          const freshNumber = await generateInvoiceNumber();
+          const freshNumber = await generateInvoiceNumber(periodFrom);
           await createInvoiceInDB({
             ...invoiceData,
             invoiceNumber: freshNumber,

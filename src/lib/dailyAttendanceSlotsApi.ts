@@ -51,6 +51,7 @@ export interface SiteAttendanceSummary {
   organizationName: string;
   address: string;
   status: string;
+  gstType: string | null;
   totalSlots: number;
   assignedSlots: number;
   presentGuards: number;
@@ -348,48 +349,99 @@ export const dailyAttendanceSlotsApi = {
     return data || [];
   },
 
-  // Assign guard to slot
+  // Assign guard to slot (with race condition protection)
   async assignGuardToSlot(slotId: string, guardId: string) {
-    // Check if guard is already assigned to another slot for the same date and shift
-    const { data: slot } = await supabase
+    // Verify slot exists and is still unassigned
+    const { data: slot, error: slotError } = await supabase
       .from('daily_attendance_slots')
-      .select('attendance_date, shift_type')
+      .select('attendance_date, shift_type, assigned_guard_id')
       .eq('id', slotId)
       .single();
 
-    if (slot) {
-      const { data: conflictingSlots } = await supabase
-        .from('daily_attendance_slots')
-        .select('id')
-        .eq('assigned_guard_id', guardId)
-        .eq('attendance_date', slot.attendance_date)
-        .eq('shift_type', slot.shift_type)
-        .neq('id', slotId);
-
-      if (conflictingSlots && conflictingSlots.length > 0) {
-        throw new Error('Guard is already assigned to another slot for this date and shift');
-      }
+    if (slotError || !slot) {
+      throw new Error('Slot not found — it may have been deleted or is no longer available');
     }
 
+    if (slot.assigned_guard_id) {
+      throw new Error('This slot was already assigned by another user. Please refresh and try again.');
+    }
+
+    // Check if guard is active before assigning
+    const { data: guardData, error: guardError } = await supabase
+      .from('guards')
+      .select('status, name')
+      .eq('id', guardId)
+      .single();
+
+    if (guardError || !guardData) {
+      throw new Error('Guard not found');
+    }
+
+    if (guardData.status !== 'active') {
+      throw new Error(`Cannot assign ${guardData.name} — guard is currently ${guardData.status}`);
+    }
+
+    // Check if guard is already assigned to another slot for the same date and shift
+    const { data: conflictingSlots } = await supabase
+      .from('daily_attendance_slots')
+      .select('id')
+      .eq('assigned_guard_id', guardId)
+      .eq('attendance_date', slot.attendance_date)
+      .eq('shift_type', slot.shift_type)
+      .neq('id', slotId);
+
+    if (conflictingSlots && conflictingSlots.length > 0) {
+      throw new Error('Guard is already assigned to another slot for this date and shift');
+    }
+
+    // Atomic update: only assign if slot is still empty (prevents race condition)
     const { data, error } = await supabase
       .from('daily_attendance_slots')
       .update({ assigned_guard_id: guardId })
       .eq('id', slotId)
+      .is('assigned_guard_id', null)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // If no rows matched, another admin assigned this slot between our check and update
+      if (error.code === 'PGRST116') {
+        throw new Error('This slot was just assigned by another user. Please refresh and try again.');
+      }
+      throw error;
+    }
     return data;
   },
 
-  // Replace guard in slot (resets attendance status)
+  // Replace guard in slot (resets attendance status, with race condition protection)
   async replaceGuardInSlot(slotId: string, guardId: string) {
-    // Check if guard is already assigned to another slot for the same date and shift
-    const { data: slot } = await supabase
+    // Fetch slot with current guard to verify state hasn't changed
+    const { data: slot, error: slotError } = await supabase
       .from('daily_attendance_slots')
-      .select('attendance_date, shift_type')
+      .select('attendance_date, shift_type, assigned_guard_id')
       .eq('id', slotId)
       .single();
+
+    if (slotError || !slot) {
+      throw new Error('Slot not found — it may have been deleted or is no longer available');
+    }
+
+    const currentGuardId = slot.assigned_guard_id;
+
+    // Check if replacement guard is active
+    const { data: guardData, error: guardError } = await supabase
+      .from('guards')
+      .select('status, name')
+      .eq('id', guardId)
+      .single();
+
+    if (guardError || !guardData) {
+      throw new Error('Guard not found');
+    }
+
+    if (guardData.status !== 'active') {
+      throw new Error(`Cannot assign ${guardData.name} — guard is currently ${guardData.status}`);
+    }
 
     if (slot) {
       const { data: conflictingSlots } = await supabase
@@ -405,18 +457,28 @@ export const dailyAttendanceSlotsApi = {
       }
     }
 
-    // Replace guard and reset attendance status
-    const { data, error } = await supabase
+    // Replace guard with optimistic locking: verify the guard we're replacing is still there
+    const updateQuery = supabase
       .from('daily_attendance_slots')
-      .update({ 
+      .update({
         assigned_guard_id: guardId,
         is_present: null // Reset attendance status for new guard
       })
-      .eq('id', slotId)
-      .select()
-      .single();
+      .eq('id', slotId);
 
-    if (error) throw error;
+    // If there was a guard, verify they're still assigned (prevents race with another admin)
+    if (currentGuardId) {
+      updateQuery.eq('assigned_guard_id', currentGuardId);
+    }
+
+    const { data, error } = await updateQuery.select().single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new Error('This slot was just modified by another user. Please refresh and try again.');
+      }
+      throw error;
+    }
     return data;
   },
 
@@ -714,7 +776,7 @@ export const dailyAttendanceSlotsApi = {
     // Fetch all active sites
     const { data: sites, error: sitesError } = await supabase
       .from('sites')
-      .select('id, site_name, organization_name, address, status')
+      .select('id, site_name, organization_name, address, status, gst_type')
       .in('status', ['active', 'temp'])
       .order('site_name');
 
@@ -778,6 +840,7 @@ export const dailyAttendanceSlotsApi = {
         organizationName: site.organization_name,
         address: site.address || '',
         status: site.status,
+        gstType: site.gst_type || null,
         totalSlots,
         assignedSlots,
         presentGuards,
@@ -1070,6 +1133,7 @@ export const dailyAttendanceSlotsApi = {
   },
 
   // Resolve a conflict by keeping a guard at one site and unassigning from others
+  // Uses guard ID verification to prevent race conditions with concurrent resolutions
   async resolveConflict(guardId: string, date: string, shiftType: 'day' | 'night', keepAtSiteId: string): Promise<void> {
     // Find all slots for this guard on this date+shift
     const { data: slots, error } = await supabase
@@ -1081,13 +1145,25 @@ export const dailyAttendanceSlotsApi = {
 
     if (error) throw error;
 
+    if (!slots || slots.length === 0) {
+      throw new Error('Conflict already resolved — this guard is no longer assigned to multiple sites.');
+    }
+
+    // Verify guard is still at the keep site
+    const keepSlot = slots.find(s => s.site_id === keepAtSiteId);
+    if (!keepSlot) {
+      throw new Error('Guard is no longer assigned at the selected site. Please refresh and try again.');
+    }
+
     // Unassign from all sites except the chosen one
-    for (const slot of slots || []) {
+    // Include assigned_guard_id check to prevent unassigning if another admin already resolved
+    for (const slot of slots) {
       if (slot.site_id !== keepAtSiteId) {
         await supabase
           .from('daily_attendance_slots')
           .update({ assigned_guard_id: null, is_present: null })
-          .eq('id', slot.id);
+          .eq('id', slot.id)
+          .eq('assigned_guard_id', guardId); // Only unassign if guard is still there
       }
     }
   }

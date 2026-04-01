@@ -151,7 +151,7 @@ export default function InvoiceCreate() {
     setLoading(true);
     try {
       // Generate a fresh invoice number at creation time to avoid duplicates
-      const freshInvoiceNumber = await generateInvoiceNumber();
+      const freshInvoiceNumber = await generateInvoiceNumber(formData.periodFrom);
       
       const invoiceData = {
         ...preview,

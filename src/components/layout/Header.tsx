@@ -2,14 +2,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { 
-  Bell, 
-  Moon, 
-  Sun, 
+import {
+  Bell,
+  Moon,
+  Sun,
   User,
   Menu
 } from 'lucide-react';
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,17 +20,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { useSidebar } from "@/components/ui/sidebar";
+import { useIsDesktop } from "@/hooks/use-mobile";
 
 const Header: React.FC = () => {
   const { user, profile, signOut } = useAuth();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  
+  const { toggleSidebar } = useSidebar();
+  const isDesktop = useIsDesktop();
+
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
-  
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -39,11 +42,22 @@ const Header: React.FC = () => {
       .join('')
       .toUpperCase();
   };
-  
+
   return (
     <header className="h-16 border-b bg-background/80 backdrop-blur-md flex items-center justify-between px-4">
       <div className="flex items-center gap-2">
-        <SidebarTrigger />
+        {/* Hamburger menu — only on tablet/iPad/mobile where sidebar is offcanvas */}
+        {!isDesktop && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSidebar}
+            aria-label="Open menu"
+            className="h-11 w-11 shrink-0"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        )}
         <Link to="/dashboard" className="flex items-center">
           <div className="rounded-md bg-primary p-1.5 mr-3">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -56,20 +70,20 @@ const Header: React.FC = () => {
         </Link>
       </div>
       
-      <div className="flex items-center space-x-2">
-        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
+      <div className="flex items-center space-x-1">
+        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className="h-11 w-11">
           {theme === 'light' ? (
             <Moon className="h-5 w-5" />
           ) : (
             <Sun className="h-5 w-5" />
           )}
         </Button>
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
+            <Button variant="ghost" size="icon" className="relative h-11 w-11" aria-label="Notifications">
               <Bell className="h-5 w-5" />
-              <Badge className="absolute -top-1 -right-1 h-4 min-w-4 p-0 flex items-center justify-center">
+              <Badge className="absolute -top-0.5 -right-0.5 h-4 min-w-4 p-0 flex items-center justify-center text-[10px]">
                 2
               </Badge>
             </Button>
@@ -103,8 +117,8 @@ const Header: React.FC = () => {
         {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full" aria-label="User menu">
-                <Avatar className="h-8 w-8">
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full" aria-label="User menu">
+                <Avatar className="h-10 w-10">
                   {profile?.avatar_url ? (
                     <AvatarImage src={profile.avatar_url} alt="Avatar" />
                   ) : (
