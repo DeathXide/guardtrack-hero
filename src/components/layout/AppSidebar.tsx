@@ -58,6 +58,12 @@ const navItems: NavItem[] = [
     roles: ['admin', 'supervisor'],
   },
   {
+    title: 'Invoices',
+    href: '/invoices',
+    icon: FileText,
+    roles: ['admin', 'supervisor'],
+  },
+  {
     title: 'Staff',
     href: '/guards',
     icon: Users,
@@ -67,12 +73,6 @@ const navItems: NavItem[] = [
     title: 'Uniforms',
     href: '/uniforms',
     icon: Shirt,
-    roles: ['admin', 'supervisor'],
-  },
-  {
-    title: 'Invoices',
-    href: '/invoices',
-    icon: FileText,
     roles: ['admin', 'supervisor'],
   },
   {
