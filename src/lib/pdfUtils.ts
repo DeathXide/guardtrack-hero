@@ -205,3 +205,39 @@ export const generatePDF = async (elementId: string, filename: string) => {
     throw error;
   }
 };
+
+export const generatePDFBlob = async (elementId: string): Promise<Blob> => {
+  const element = document.getElementById(elementId);
+  if (!element) throw new Error('Element not found');
+
+  const origTransform = element.style.transform;
+  const origTransformOrigin = element.style.transformOrigin;
+  element.style.transform = 'none';
+  element.style.transformOrigin = '';
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  const canvas = await html2canvas(element, {
+    scale: 3,
+    useCORS: true,
+    allowTaint: true,
+    width: element.scrollWidth,
+    height: element.scrollHeight,
+    backgroundColor: '#ffffff',
+    logging: false,
+  });
+
+  element.style.transform = origTransform;
+  element.style.transformOrigin = origTransformOrigin;
+
+  const a4Width = 210, a4Height = 297, margin = 6;
+  const contentWidth = a4Width - 2 * margin;
+  const contentHeight = a4Height - 2 * margin;
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const imgData = canvas.toDataURL('image/png');
+  const s = 3;
+  const scale = Math.min(contentWidth / (canvas.width / s), contentHeight / (canvas.height / s), 1);
+  const sw = (canvas.width / s) * scale;
+  const sh = (canvas.height / s) * scale;
+  pdf.addImage(imgData, 'PNG', margin + (contentWidth - sw) / 2, margin, sw, sh);
+  return pdf.output('blob') as unknown as Blob;
+};
