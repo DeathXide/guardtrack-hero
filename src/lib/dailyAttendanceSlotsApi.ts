@@ -132,7 +132,7 @@ export const dailyAttendanceSlotsApi = {
           shift_type: 'day',
           role_type: req.role_type,
           slot_number: i,
-          pay_rate: req.budget_per_slot
+          pay_rate: req.budget_per_slot || 0
         });
       }
 
@@ -144,7 +144,7 @@ export const dailyAttendanceSlotsApi = {
           shift_type: 'night',
           role_type: req.role_type,
           slot_number: i,
-          pay_rate: req.budget_per_slot
+          pay_rate: req.budget_per_slot || 0
         });
       }
     }
@@ -497,6 +497,28 @@ export const dailyAttendanceSlotsApi = {
 
   // Mark attendance
   async markAttendance(slotId: string, isPresent: boolean) {
+    // Fetch slot to check if its period is locked by an approved/paid payslip
+    const { data: slot } = await supabase
+      .from('daily_attendance_slots')
+      .select('attendance_date, assigned_guard_id')
+      .eq('id', slotId)
+      .single();
+
+    if (slot?.assigned_guard_id && slot?.attendance_date) {
+      const month = slot.attendance_date.substring(0, 7); // 'YYYY-MM'
+      const { data: payslip } = await supabase
+        .from('payslips')
+        .select('status')
+        .eq('guard_id', slot.assigned_guard_id)
+        .eq('month', month)
+        .in('status', ['approved', 'paid'])
+        .single();
+
+      if (payslip) {
+        throw new Error(`Cannot modify attendance — payslip for ${month} is already ${payslip.status}. Create an adjustment instead.`);
+      }
+    }
+
     const { data, error } = await supabase
       .from('daily_attendance_slots')
       .update({ is_present: isPresent })
@@ -996,7 +1018,7 @@ export const dailyAttendanceSlotsApi = {
             shift_type: 'day',
             role_type: req.role_type,
             slot_number: i,
-            pay_rate: req.budget_per_slot,
+            pay_rate: req.budget_per_slot || 0,
           });
         }
         for (let i = 1; i <= req.night_slots; i++) {
@@ -1006,7 +1028,7 @@ export const dailyAttendanceSlotsApi = {
             shift_type: 'night',
             role_type: req.role_type,
             slot_number: i,
-            pay_rate: req.budget_per_slot,
+            pay_rate: req.budget_per_slot || 0,
           });
         }
       }
