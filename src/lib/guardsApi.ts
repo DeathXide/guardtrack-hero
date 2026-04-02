@@ -170,7 +170,8 @@ export const paymentsApi = {
     return true;
   },
 
-  // Get payment summary for a guard in a specific month with shift-based calculation
+  // Get payment summary for a guard in a specific month with precision-safe calculation
+  // Rule: Never round intermediate values. Compute final amounts as single expressions, round ONCE.
   async getGuardMonthlySummary(guardId: string, month: string) {
     // Parse month to get actual days in month (e.g. "2026-02" → 28)
     const [yearStr, monthStr] = month.split('-');
@@ -192,7 +193,7 @@ export const paymentsApi = {
         .single(),
       supabase
         .from('daily_attendance_slots')
-        .select('is_present, shift_type, guard_pay_override')
+        .select('is_present, shift_type, guard_pay_override, pay_rate')
         .eq('assigned_guard_id', guardId)
         .gte('attendance_date', `${month}-01`)
         .lte('attendance_date', `${month}-${daysInMonth}`)
@@ -204,50 +205,68 @@ export const paymentsApi = {
 
     const monthlyPayRate = Number(guardResult.data?.monthly_pay_rate || 0);
     const perShiftRate = Number(guardResult.data?.per_shift_rate || 0);
+    const isPerShiftGuard = perShiftRate > 0;
 
-    // Guard's default daily rate:
-    //   - If per_shift_rate is set, use it directly
-    //   - Otherwise, derive from monthly: monthly_pay_rate / actual days in month
-    const defaultDailyRate = perShiftRate > 0
-      ? perShiftRate
-      : (monthlyPayRate > 0 ? monthlyPayRate / daysInMonth : 0);
-
-    // Calculate earnings per present shift, respecting guard_pay_override
-    let shiftBasedSalary = 0;
+    // Count present shifts, separating override slots from default-rate slots
     let shiftsWorked = 0;
+    let overrideTotal = 0;    // Sum of guard_pay_override for slots that have it
+    let defaultRateDays = 0;  // Count of present days using guard's default rate
 
     for (const slot of shiftsResult.data) {
       if (slot.is_present === true) {
         shiftsWorked++;
-        // Priority: slot.guard_pay_override > guard default daily rate
-        const dayRate = slot.guard_pay_override != null
-          ? Number(slot.guard_pay_override)
-          : defaultDailyRate;
-        shiftBasedSalary += dayRate;
+        if (slot.guard_pay_override != null) {
+          // Slot has an explicit override — add it directly
+          overrideTotal += Number(slot.guard_pay_override);
+        } else {
+          // Slot uses guard's default rate — just count the day
+          defaultRateDays++;
+        }
       }
     }
 
-    const summary = {
-      totalBonus: 0,
-      totalDeduction: 0,
-      baseSalary: monthlyPayRate || perShiftRate, // Reference base rate
+    // Calculate salary with precision — round ONCE at the end
+    let shiftBasedSalary: number;
+    if (isPerShiftGuard) {
+      // Per-shift guard: salary = per_shift_rate × days_at_default_rate + overrides
+      // No division needed, no precision loss
+      shiftBasedSalary = (perShiftRate * defaultRateDays) + overrideTotal;
+    } else if (monthlyPayRate > 0) {
+      // Monthly guard: salary = (monthly_rate × days_at_default_rate / days_in_month) + overrides
+      // Single division expression — no loop accumulation
+      shiftBasedSalary = ((monthlyPayRate * defaultRateDays) / daysInMonth) + overrideTotal;
+    } else {
+      shiftBasedSalary = overrideTotal;
+    }
+
+    // Round to paisa (2 decimals) — the ONE place we round
+    shiftBasedSalary = Math.round(shiftBasedSalary * 100) / 100;
+
+    // Aggregate bonuses and deductions
+    let totalBonus = 0;
+    let totalDeduction = 0;
+    for (const payment of paymentsResult.data) {
+      if (payment.payment_type === 'bonus') {
+        totalBonus += Number(payment.amount);
+      } else {
+        totalDeduction += Number(payment.amount);
+      }
+    }
+
+    // Net = shift-based earnings + bonuses - deductions, rounded to paisa
+    const netAmount = Math.round((shiftBasedSalary + totalBonus - totalDeduction) * 100) / 100;
+
+    return {
+      baseSalary: monthlyPayRate || perShiftRate,
       shiftBasedSalary,
       shiftsWorked,
       totalShifts: shiftsResult.data.length,
-      netAmount: 0
+      totalBonus: Math.round(totalBonus * 100) / 100,
+      totalDeduction: Math.round(totalDeduction * 100) / 100,
+      netAmount,
+      daysInMonth,
+      isPerShiftGuard,
     };
-
-    paymentsResult.data.forEach(payment => {
-      if (payment.payment_type === 'bonus') {
-        summary.totalBonus += Number(payment.amount);
-      } else {
-        summary.totalDeduction += Number(payment.amount);
-      }
-    });
-
-    // Net = shift-based earnings + bonuses - deductions
-    summary.netAmount = summary.shiftBasedSalary + summary.totalBonus - summary.totalDeduction;
-    return summary;
   }
 };
 
