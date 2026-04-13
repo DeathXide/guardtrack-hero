@@ -1,0 +1,45 @@
+Site,Address,Shift,Slot,Role,Guard,Badge,Guard Pay,Site Rate,Status
+M/s. Nikhit Reddy's Residency,Basheerbagh,day,1,Security Guard,Naidu,SSF-26-001,12000,15000,pending
+M/s. Nikhit Reddy's Residency,Basheerbagh,night,1,Security Guard,Sathey Babu,SSF-26-002,12000,15000,pending
+Aishwarya Builders,Banjara Hills Rd 7,day,1,Security Guard,Kumar,SSF-26-003,15000,8500,pending
+Akshara Enterprises India Pvt ltd,Himayathnagar,night,1,Security Guard,Shankaraiah,SSF-26-004,12499,16000,pending
+Arohan Holdings Pvt. Ltd.,Banjara Hills Rd 2,night,1,Security Guard,Bhaghat,SSF-26-005,11000,13200,pending
+Bhanu Automobiles PVT LTD,Erragadda,day,1,Security Guard,Dharmender,SSF-26-006,11000,14500,pending
+Bhanu Automobiles PVT LTD,Erragadda,day,2,Security Guard,Moinuddin,SSF-26-007,11000,14500,pending
+Bhanu Automobiles PVT LTD,Erragadda,day,3,Security Guard,Manikanta,SSF-26-008,7000,14500,pending
+Bhanu Automobiles PVT LTD,Erragadda,night,1,Security Guard,Dharmender,SSF-26-006,11000,14500,pending
+Bhanu Automobiles PVT LTD,Erragadda,night,2,Security Guard,Moinuddin,SSF-26-007,11000,14500,pending
+Bhanu Enclave Society,Erragadda,night,1,Security Guard,Krishna Singh,SSF-26-009,12000,14000,pending
+Brewvite,Madhapur,day,1,Security Guard,Jitender,SSF-26-010,10500,11500,pending
+Brewvite,Madhapur,night,1,Security Guard,Jitender,SSF-26-010,10500,11500,pending
+Deepaditya Developers,Gachibowli,day,1,Security Guard,Rishi,SSF-26-018,17000,22000,pending
+Deepaditya Developers,Gachibowli,night,1,Security Guard,Mukesh,SSF-26-019,17000,22000,pending
+Deepaditya Developers,Jubliee Hills,day,1,Security Guard,Narsing,SSF-26-020,11000,12500,pending
+Deepaditya Developers,Jubliee Hills,night,1,Security Guard,Narsing,SSF-26-020,11000,12500,pending
+Deepaditya Developers,Madhapur,day,1,Security Guard,Anjaneyulu,SSF-26-016,20000,22500,pending
+Deepaditya Developers,Madhapur,night,1,Security Guard,Rakesh,SSF-26-017,20000,22500,pending
+Deepaditya Developers,Manchirevula,day,1,Security Guard,Nitish,SSF-26-011,18000,22000,pending
+Deepaditya Developers,Manchirevula,day,2,Security Guard,Om Prakash,SSF-26-012,18000,22000,pending
+Deepaditya Developers,Manchirevula,day,3,Security Guard,Raju,SSF-26-013,18000,22000,pending
+Deepaditya Developers,Manchirevula,day,4,Security Guard,Niranjan,SSF-26-014,18000,22000,pending
+Deepaditya Developers,Manchirevula,night,1,Security Guard,Amit,SSF-26-015,18000,22000,pending
+Deepak Cinema Complex,Narayanguda,day,1,Security Guard,Bridge Kishore,SSF-26-021,14000,18000,pending
+Deepika Madam Residence,Jubilee Hills Rd 22,day,1,Security Guard,Anil,SSF-26-022,14000,17000,pending
+Devi Sri Ram Apartments,Ramanthapur,day,1,Security Guard,Srinivas Reddy,SSF-26-023,11650,12500,pending
+Devi Sri Ram Apartments,Ramanthapur,night,1,Security Guard,Nagamaya,SSF-26-024,11000,12500,pending
+Dil Raju Residency,Jubliee Hills,day,1,Security Guard,Raj Kumar Yadav,SSF-26-025,14000,17500,pending
+Dil Raju Residency,Jubliee Hills,night,1,Security Guard,Jyamuna Yadav,SSF-26-026,14000,17500,pending
+Dil Raju Sir's Residency,MLA Colony,night,1,Security Guard,Palguna,SSF-26-027,16000,17500,pending
+ESPI Building,Midtown B Block,day,1,Supervisor,Manoj,SSF-26-036,11000,20000,pending
+ESPI Building,Midtown B Block,day,1,Security Guard,Ramji,SSF-26-029,14000,17500,pending
+ESPI Building,Midtown B Block,day,2,Security Guard,Laddu,SSF-26-030,14000,17500,pending
+ESPI Building,Midtown B Block,day,3,Security Guard,Rajesh (Deepu),SSF-26-031,13000,17500,pending
+ESPI Building,Midtown B Block,day,4,Security Guard,Saroj,SSF-26-032,15000,17500,pending
+ESPI Building,Midtown B Block,day,5,Security Guard,Pentaiah,SSF-26-028,20000,17500,pending
+ESPI Building,Midtown B Block,night,1,Security Guard,Ratikanta,SSF-26-033,12000,17500,pending
+ESPI Building,Midtown B Block,night,2,Security Guard,Raju,SSF-26-034,12000,17500,pending
+ESPI Building,Midtown B Block,night,3,Security Guard,Umesh Singh,SSF-26-035,14000,17500,pending
+ESPI Building,Midtown Complex,day,1,Security Guard,Pandu,SSF-26-037,14500,17500,pending
+Excell Label Tech,Nacharam,day,1,Security Guard,Muneer,SSF-26-038,13000,15000,pending
+Excell Label Tech,Nacharam,night,1,Security Guard,Debhaiah,SSF-26-039,10000,15000,pending
+Gem Automotive LLP,Yousufguda,day,1,Security Guard,Lingaiah,SSF-26-040,14000,17000,pending

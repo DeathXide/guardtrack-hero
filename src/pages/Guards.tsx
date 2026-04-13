@@ -67,6 +67,7 @@ const mapSupabaseGuardToLocal = (supabaseGuard: SupabaseGuard): Guard => {
 const mapLocalGuardToSupabase = (localGuard: any): CreateGuardData => {
   return {
     name: localGuard.name,
+    nickname: localGuard.nickname || null,
     dob: localGuard.dateOfBirth || null,
     gender: localGuard.gender,
     languages: localGuard.languagesSpoken || [],

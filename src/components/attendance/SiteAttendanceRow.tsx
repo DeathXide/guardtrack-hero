@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, CheckCircle, XCircle, UserPlus, UserMinus, AlertCircle, Users, RefreshCw, Clock } from 'lucide-react';
+import { ChevronDown, ChevronRight, CheckCircle, XCircle, UserPlus, UserMinus, AlertCircle, Users, RefreshCw, Clock, IndianRupee } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -139,6 +139,18 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
             }`}>
               {attendanceRate}%
             </div>
+
+            {site.dailyBudget > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-0.5 text-xs font-medium text-muted-foreground">
+                    <IndianRupee className="h-3 w-3" />
+                    <span>{site.dailyBudget.toLocaleString('en-IN')}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>Daily site budget</TooltipContent>
+              </Tooltip>
+            )}
           </div>
         )}
       </button>
@@ -213,6 +225,16 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
                           <span className="text-sm font-medium truncate">{guard.name}</span>
                           <Badge variant="outline" className="text-[11px] h-5 px-1.5">{slot.role_type}</Badge>
                           <Badge variant="outline" className="text-[11px] h-5 px-1.5 capitalize">{slot.shift_type}</Badge>
+                          {slot.pay_rate && (
+                            <span className="text-[11px] text-muted-foreground font-medium">
+                              ₹{Number(slot.pay_rate).toLocaleString('en-IN')}
+                            </span>
+                          )}
+                          {(slot as any).description && (
+                            <span className="text-[11px] text-primary/70 font-medium truncate max-w-[180px]">
+                              {(slot as any).description.replace(/^\[|\]$/g, '')}
+                            </span>
+                          )}
                         </div>
                         <span className="text-xs text-muted-foreground">{guard.badge_number}</span>
                       </div>
@@ -307,6 +329,16 @@ const SiteAttendanceRow: React.FC<SiteAttendanceRowProps> = ({
                           <span className="text-sm text-muted-foreground italic">Empty Slot</span>
                           <Badge variant="outline" className="text-[11px] h-5 px-1.5">{slot.role_type}</Badge>
                           <Badge variant="outline" className="text-[11px] h-5 px-1.5 capitalize">{slot.shift_type}</Badge>
+                          {slot.pay_rate && (
+                            <span className="text-[11px] text-muted-foreground font-medium">
+                              ₹{Number(slot.pay_rate).toLocaleString('en-IN')}
+                            </span>
+                          )}
+                          {(slot as any).description && (
+                            <span className="text-[11px] text-primary/70 font-medium truncate max-w-[180px]">
+                              {(slot as any).description.replace(/^\[|\]$/g, '')}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <Button

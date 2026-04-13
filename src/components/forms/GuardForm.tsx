@@ -43,6 +43,7 @@ import { guardUtils } from "@/lib/guardsApi";
 const guardSchema = z.object({
   // Required
   name: z.string().min(1, "Name is required").regex(/^[A-Za-z\s]+$/, "Name should only contain letters and spaces").max(50),
+  nickname: z.string().max(30).optional(),
   phone: z.string().min(10, "Phone must be 10 digits").max(10).regex(/^\d{10}$/, "Phone must be 10 digits"),
   payType: z.enum(["monthly", "per_shift"]),
   payRate: z.number().nullable().optional(),
@@ -73,8 +74,8 @@ const guardSchema = z.object({
   upiId: z.string().optional(),
 }).refine(
   (data) => {
-    if (data.payType === "monthly") return (data.payRate ?? 0) > 0;
-    return (data.perShiftRate ?? 0) > 0;
+    if (data.payType === "monthly") return (data.payRate ?? 0) >= 0;
+    return (data.perShiftRate ?? 0) >= 0;
   },
   {
     message: "Pay rate is required",
@@ -112,6 +113,7 @@ const languageOptions = [
 
 const defaultValues: GuardFormData = {
   name: "",
+  nickname: "",
   phone: "",
   payType: "monthly",
   payRate: 15000,
@@ -247,6 +249,17 @@ const GuardForm: React.FC<GuardFormProps> = ({
                 )}
               </div>
 
+              {/* Nickname */}
+              <div className="space-y-2">
+                <Label htmlFor="nickname">Nickname</Label>
+                <Input
+                  id="nickname"
+                  {...form.register("nickname")}
+                  placeholder="e.g. Raju, Chotu"
+                  maxLength={30}
+                />
+              </div>
+
               {/* Phone */}
               <div className="space-y-2">
                 <Label htmlFor="phone">
@@ -256,10 +269,22 @@ const GuardForm: React.FC<GuardFormProps> = ({
                   id="phone"
                   {...form.register("phone")}
                   placeholder="10-digit phone number"
-                  maxLength={10}
+                  maxLength={20}
                   onInput={e => {
                     const target = e.target as HTMLInputElement;
-                    target.value = target.value.replace(/[^0-9]/g, "");
+                    let v = target.value;
+                    // 1. Strip all spaces
+                    v = v.replace(/\s/g, "");
+                    // 2. Preserve leading + then keep only digits
+                    const hasPlus = v.startsWith("+");
+                    v = v.replace(/[^0-9]/g, "");
+                    if (hasPlus) v = "+" + v;
+                    // 3. Strip +91 or 091 prefix
+                    v = v.replace(/^(\+91|091)/, "");
+                    // 4. Only digits, max 10
+                    v = v.replace(/[^0-9]/g, "").slice(0, 10);
+                    target.value = v;
+                    form.setValue("phone", v);
                     form.clearErrors("phone");
                   }}
                 />
@@ -490,10 +515,18 @@ const GuardForm: React.FC<GuardFormProps> = ({
                       id="alternatePhone"
                       {...form.register("alternatePhone")}
                       placeholder="10-digit phone number"
-                      maxLength={10}
+                      maxLength={20}
                       onInput={e => {
                         const target = e.target as HTMLInputElement;
-                        target.value = target.value.replace(/[^0-9]/g, "");
+                        let v = target.value;
+                        v = v.replace(/\s/g, "");
+                        const hasPlus = v.startsWith("+");
+                        v = v.replace(/[^0-9]/g, "");
+                        if (hasPlus) v = "+" + v;
+                        v = v.replace(/^(\+91|091)/, "");
+                        v = v.replace(/[^0-9]/g, "").slice(0, 10);
+                        target.value = v;
+                        form.setValue("alternatePhone", v);
                       }}
                     />
                     {form.formState.errors.alternatePhone && (

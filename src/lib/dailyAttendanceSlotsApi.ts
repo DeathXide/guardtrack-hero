@@ -25,6 +25,7 @@ export interface CreateSlotData {
   assigned_guard_id?: string;
   pay_rate?: number;
   is_temporary?: boolean;
+  description?: string;
 }
 
 export interface UpdateSlotData {
@@ -58,6 +59,7 @@ export interface SiteAttendanceSummary {
   absentGuards: number;
   pendingSlots: number;
   unfilledSlots: number;
+  dailyBudget: number;
   hasStaffingRequirements: boolean;
   slots: (DailyAttendanceSlot & { guards: { id: string; name: string; badge_number: string } | null })[];
 }
@@ -121,30 +123,40 @@ export const dailyAttendanceSlotsApi = {
     }
 
     // Generate slots based on staffing requirements
+    // Track running slot numbers per role_type+shift_type to handle multiple requirements for same role
     const slotsToCreate: CreateSlotData[] = [];
+    const slotCounters = new Map<string, number>();
 
     for (const req of staffingReqs) {
       // Create day slots
-      for (let i = 1; i <= req.day_slots; i++) {
+      const dayKey = `${req.role_type}_day`;
+      for (let i = 0; i < req.day_slots; i++) {
+        const currentCount = (slotCounters.get(dayKey) || 0) + 1;
+        slotCounters.set(dayKey, currentCount);
         slotsToCreate.push({
           site_id: siteId,
           attendance_date: date,
           shift_type: 'day',
           role_type: req.role_type,
-          slot_number: i,
-          pay_rate: req.budget_per_slot
+          slot_number: currentCount,
+          pay_rate: req.budget_per_slot || 0,
+          description: req.description || undefined,
         });
       }
 
       // Create night slots
-      for (let i = 1; i <= req.night_slots; i++) {
+      const nightKey = `${req.role_type}_night`;
+      for (let i = 0; i < req.night_slots; i++) {
+        const currentCount = (slotCounters.get(nightKey) || 0) + 1;
+        slotCounters.set(nightKey, currentCount);
         slotsToCreate.push({
           site_id: siteId,
           attendance_date: date,
           shift_type: 'night',
           role_type: req.role_type,
-          slot_number: i,
-          pay_rate: req.budget_per_slot
+          slot_number: currentCount,
+          pay_rate: req.budget_per_slot || 0,
+          description: req.description || undefined,
         });
       }
     }
@@ -561,6 +573,7 @@ export const dailyAttendanceSlotsApi = {
       slot_number: slot.slot_number,
       assigned_guard_id: slot.assigned_guard_id,
       pay_rate: slot.pay_rate,
+      description: slot.description, // Carry description forward
       is_temporary: slot.is_temporary, // Preserve temporary status
       // Mark as present if guard was assigned, null if no guard assigned
       is_present: slot.assigned_guard_id ? true : null
@@ -833,6 +846,7 @@ export const dailyAttendanceSlotsApi = {
       const absentGuards = siteSlots.filter(s => s.is_present === false).length;
       const pendingSlots = assignedSlots - presentGuards - absentGuards;
       const unfilledSlots = totalSlots - assignedSlots;
+      const dailyBudget = siteSlots.reduce((sum, s) => sum + (Number(s.pay_rate) || 0), 0);
 
       return {
         siteId: site.id,
@@ -847,6 +861,7 @@ export const dailyAttendanceSlotsApi = {
         absentGuards,
         pendingSlots,
         unfilledSlots,
+        dailyBudget,
         hasStaffingRequirements: sitesWithRequirements.has(site.id),
         slots: siteSlots as any,
       };
@@ -987,26 +1002,36 @@ export const dailyAttendanceSlotsApi = {
       }
 
       // Generate slots based on staffing requirements
+      // Track running slot numbers per role_type+shift_type to handle multiple requirements for same role
       const slotsToCreate: CreateSlotData[] = [];
+      const slotCounters = new Map<string, number>();
       for (const req of staffingReqs) {
-        for (let i = 1; i <= req.day_slots; i++) {
+        const dayKey = `${req.role_type}_day`;
+        for (let i = 0; i < req.day_slots; i++) {
+          const currentCount = (slotCounters.get(dayKey) || 0) + 1;
+          slotCounters.set(dayKey, currentCount);
           slotsToCreate.push({
             site_id: site.id,
             attendance_date: date,
             shift_type: 'day',
             role_type: req.role_type,
-            slot_number: i,
-            pay_rate: req.budget_per_slot,
+            slot_number: currentCount,
+            pay_rate: req.budget_per_slot || 0,
+            description: req.description || undefined,
           });
         }
-        for (let i = 1; i <= req.night_slots; i++) {
+        const nightKey = `${req.role_type}_night`;
+        for (let i = 0; i < req.night_slots; i++) {
+          const currentCount = (slotCounters.get(nightKey) || 0) + 1;
+          slotCounters.set(nightKey, currentCount);
           slotsToCreate.push({
             site_id: site.id,
             attendance_date: date,
             shift_type: 'night',
             role_type: req.role_type,
-            slot_number: i,
-            pay_rate: req.budget_per_slot,
+            slot_number: currentCount,
+            pay_rate: req.budget_per_slot || 0,
+            description: req.description || undefined,
           });
         }
       }

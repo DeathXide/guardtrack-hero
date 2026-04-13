@@ -67,6 +67,7 @@ const EnhancedGuardSelectionModal: React.FC<EnhancedGuardSelectionModalProps> = 
 
   const mapFormToSupabase = (formData: GuardFormData): CreateGuardData => ({
     name: formData.name,
+    nickname: formData.nickname || null,
     dob: formData.dateOfBirth || null,
     gender: formData.gender,
     languages: formData.languagesSpoken || [],
